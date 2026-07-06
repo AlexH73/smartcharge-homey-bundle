@@ -1,7 +1,7 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
-// Version: 0.3.7+build.7
-// Built at: 2026-07-06T22:03:46.613Z
+// Version: 0.3.9+build.9
+// Built at: 2026-07-06T22:23:09.291Z
 
 // -----------------------------------------------------------------------------
 // Source file: src/00-config/00-build-info.generated.js
@@ -12,10 +12,10 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.3.7',
-  fullVersion: '0.3.7+build.7',
-  build: 7,
-  builtAt: '2026-07-06T22:03:46.613Z',
+  version: '0.3.9',
+  fullVersion: '0.3.9+build.9',
+  build: 9,
+  builtAt: '2026-07-06T22:23:09.291Z',
 });
 
 
@@ -776,6 +776,7 @@ const SmartChargeLogger = (() => {
     BATTERY_FULL: 'battery_full',
     CHARGER_DISCONNECTED: 'charger_disconnected',
     SMARTCHARGE_ERROR: 'smartcharge_error',
+    SESSION_EXPIRED: 'session_expired',
   });
 
   const SUPPORTED_EVENT_TYPES = Object.freeze(Object.values(EVENT_TYPES));
@@ -786,6 +787,7 @@ const SmartChargeLogger = (() => {
     EVENT_TYPES.BATTERY_FULL,
     EVENT_TYPES.CHARGER_DISCONNECTED,
     EVENT_TYPES.SMARTCHARGE_ERROR,
+    EVENT_TYPES.SESSION_EXPIRED,
   ]);
 
   const LOGIC_VARIABLE_NAMES = Object.freeze({
@@ -1268,6 +1270,50 @@ async function main() {
 
     await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
 
+      try {
+        await SmartChargeLogger.logToGoogleSheets(
+          {
+            eventType: SmartChargeLogger.EVENT_TYPES.SESSION_EXPIRED,
+            sessionId: formatLocal(connectedAt),
+            loggedAt: now,
+
+            battery,
+            currentPrice: null,
+
+            connectedAt: formatLocal(connectedAt),
+            targetDeparture: formatLocal(targetDeparture),
+
+            chargeMinutes: 0,
+            chargeSlots: 0,
+            chargeHoursAhead: 0,
+
+            plannedStart: null,
+            plannedEnd: null,
+
+            shouldChargeNow: false,
+
+            plugOn: null,
+            plugPower: null,
+
+            reason,
+
+            averagePrice: null,
+            totalPrice: null,
+            priceCount: null,
+
+            source: 'smartcharge-run-decision',
+            engineVersion: BUILD_INFO.fullVersion,
+
+            message: 'Expired session blocked safety fallback',
+          },
+          {
+            webhookUrl: await getVariableValue('SMARTCHARGE_LOG_WEBHOOK_URL'),
+          },
+        );
+      } catch (error) {
+        log(`Logger error     : ${error.message}`);
+      }
+
     log('SmartCharge action: no action');
     log(`TimeZone         : ${CONFIG.timeZone}`);
     log(`Script version   : ${BUILD_INFO.fullVersion}`);
@@ -1275,33 +1321,6 @@ async function main() {
     log(`ConnectedAt      : ${formatLocal(connectedAt)}`);
     log(`TargetDeparture  : ${formatLocal(targetDeparture)}`);
     log(`Reason           : ${reason}`);
-
-    return {
-      battery,
-      chargeMinutes: 0,
-      chargeSlots: 0,
-      chargeHoursAhead: 0,
-      targetDeparture: formatLocal(targetDeparture),
-      plannedStart: null,
-      plannedEnd: null,
-      shouldChargeNow: false,
-      reason,
-    };
-  }
-
-  if (targetDeparture < now && battery < CONFIG.batteryFullPercentage) {
-    const reason = 'Session expired: target departure is in the past';
-
-    await tryUpdateVariableByName(
-      CONFIG.smartChargeShouldChargeVariableName,
-      false,
-    );
-    await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
-
-    log('SmartCharge action: no action');
-    log(`Reason           : ${reason}`);
-    log(`ConnectedAt      : ${formatLocal(connectedAt)}`);
-    log(`TargetDeparture  : ${formatLocal(targetDeparture)}`);
 
     return {
       battery,
@@ -1463,7 +1482,7 @@ async function main() {
   );
 
   log(`TimeZone         : ${CONFIG.timeZone}`);
-  log(`Script version   : ${CONFIG.engineVersion}`);
+  log(`Script version   : ${BUILD_INFO.fullVersion}`);
   log(`Available count  : ${availablePrices.length}`);
   log(
     `Available first  : ${availablePrices[0] ? formatLocal(availablePrices[0].startTime) : 'null'}`,

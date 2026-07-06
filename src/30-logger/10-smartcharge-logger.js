@@ -12,6 +12,7 @@ const SmartChargeLogger = (() => {
     BATTERY_FULL: 'battery_full',
     CHARGER_DISCONNECTED: 'charger_disconnected',
     SMARTCHARGE_ERROR: 'smartcharge_error',
+    SESSION_EXPIRED: 'session_expired',
   });
 
   const SUPPORTED_EVENT_TYPES = Object.freeze(Object.values(EVENT_TYPES));
@@ -22,6 +23,7 @@ const SmartChargeLogger = (() => {
     EVENT_TYPES.BATTERY_FULL,
     EVENT_TYPES.CHARGER_DISCONNECTED,
     EVENT_TYPES.SMARTCHARGE_ERROR,
+    EVENT_TYPES.SESSION_EXPIRED,
   ]);
 
   const LOGIC_VARIABLE_NAMES = Object.freeze({
