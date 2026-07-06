@@ -1,8 +1,745 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
+// Version: 0.3.6+build.6
+// Built at: 2026-07-06T21:57:09.005Z
 
 // -----------------------------------------------------------------------------
-// Source file: src/logger/smartcharge-logger.js
+// Source file: src/00-config/00-build-info.generated.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Auto-generated build information.
+ * Do not edit manually.
+ */
+const BUILD_INFO = Object.freeze({
+  version: '0.3.6',
+  fullVersion: '0.3.6+build.6',
+  build: 6,
+  builtAt: '2026-07-06T21:57:09.005Z',
+});
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/00-config/10-config.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Runtime configuration for SmartCharge HomeyScript.
+ *
+ * This file contains only constants and naming conventions.
+ * It must be loaded before all modules that use CONFIG.
+ */
+const CONFIG = {
+  timeZone: 'Europe/Berlin',
+
+  engineVersion: BUILD_INFO.fullVersion,
+
+  tibberAccessTokenVariableName: 'TIBBER_ACCESS_TOKEN',
+
+  mercedesDeviceNameIncludes: 'E 300',
+  plugDeviceNameIncludes: 'Auto Plug In',
+
+  chargeConnectedAtVariableName: 'ChargeConnectedAt',
+  chargeFactorVariableName: 'ChargeFactor',
+  chargeReserveVariableName: 'ChargeReserve',
+
+  chargeMinutesVariableName: 'ChargeMinutes',
+  chargeSlotsVariableName: 'ChargeSlots',
+  legacyChargeQuartersVariableName: 'ChargeQuarters',
+  chargeHoursAheadVariableName: 'ChargeHoursAhead',
+
+  smartChargePlannedStartVariableName: 'SmartChargePlannedStart',
+  smartChargePlannedEndVariableName: 'SmartChargePlannedEnd',
+  smartChargeShouldChargeVariableName: 'SmartChargeShouldCharge',
+  smartChargeReasonVariableName: 'SmartChargeReason',
+  smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',
+  smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
+
+  workdayDepartureHour: 7,
+  workdayDepartureMinute: 30,
+  weekendDepartureHour: 13,
+  weekendDepartureMinute: 0,
+
+  roundToMinutes: 5,
+  minChargeMinutes: 30,
+  maxChargeMinutes: 300,
+  minHoursAhead: 1,
+  maxHoursAhead: 24,
+
+  batteryFullPercentage: 100,
+  priceSlotMinutes: 60,
+
+  tibberApiUrl: 'https://api.tibber.com/v1-beta/gql',
+};
+
+/**
+ * Tibber GraphQL query for current, today and tomorrow prices.
+ */
+const TIBBER_PRICE_INFO_QUERY = `
+{
+  viewer {
+    homes {
+      currentSubscription {
+        priceInfo {
+          current {
+            total
+            startsAt
+          }
+          today {
+            total
+            startsAt
+          }
+          tomorrow {
+            total
+            startsAt
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/10-core/00-utils.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Normalizes names for loose Homey device matching.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function normalizeName(value) {
+  return String(value).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Rounds a number up to the next given step.
+ *
+ * @param {number} value
+ * @param {number} step
+ * @returns {number}
+ */
+function roundUp(value, step) {
+  return Math.ceil(value / step) * step;
+}
+
+/**
+ * Restricts a number to the given min/max range.
+ *
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Converts a Homey Logic value to number.
+ *
+ * @param {unknown} value
+ * @param {string} name
+ * @returns {number}
+ */
+function toNumberValue(value, name) {
+  const number = Number(value);
+
+  if (Number.isNaN(number)) {
+    throw new Error(`${name} is not numeric: ${value}`);
+  }
+
+  return number;
+}
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/10-core/10-time.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Adds minutes to a Date.
+ *
+ * @param {Date} date
+ * @param {number} minutes
+ * @returns {Date}
+ */
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+/**
+ * Parses a date value or returns fallback when missing/invalid.
+ *
+ * @param {unknown} value
+ * @param {Date} fallbackDate
+ * @returns {Date}
+ */
+function parseDateOrFallback(value, fallbackDate) {
+  if (!value || value === 'null') {
+    return fallbackDate;
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return fallbackDate;
+  }
+
+  return parsed;
+}
+
+/**
+ * Returns local date/time parts for a given timezone.
+ *
+ * @param {Date} date
+ * @param {string} timeZone
+ * @returns {{year:number,month:number,day:number,hour:number,minute:number,second:number}}
+ */
+function getLocalParts(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+
+  const map = {};
+
+  for (const part of parts) {
+    if (part.type !== 'literal') {
+      map[part.type] = part.value;
+    }
+  }
+
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+    hour: Number(map.hour),
+    minute: Number(map.minute),
+    second: Number(map.second),
+  };
+}
+
+/**
+ * Returns weekday in local timezone.
+ *
+ * Sunday = 0, Monday = 1, ... Saturday = 6.
+ *
+ * @param {Date} date
+ * @param {string} timeZone
+ * @returns {number}
+ */
+function getLocalDayOfWeek(date, timeZone) {
+  const parts = getLocalParts(date, timeZone);
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+}
+
+/**
+ * Adds days to local date parts.
+ *
+ * @param {{year:number,month:number,day:number}} parts
+ * @param {number} daysToAdd
+ * @returns {{year:number,month:number,day:number}}
+ */
+function addDaysToLocalDate(parts, daysToAdd) {
+  const date = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day + daysToAdd),
+  );
+
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+  };
+}
+
+/**
+ * Creates a Date from local timezone parts.
+ *
+ * @param {{year:number,month:number,day:number,hour:number,minute:number,second?:number}} localParts
+ * @param {string} timeZone
+ * @returns {Date}
+ */
+function createDateFromLocalParts(localParts, timeZone) {
+  const desiredUtc = Date.UTC(
+    localParts.year,
+    localParts.month - 1,
+    localParts.day,
+    localParts.hour,
+    localParts.minute,
+    localParts.second || 0,
+  );
+
+  let utc = desiredUtc;
+
+  for (let i = 0; i < 3; i++) {
+    const actual = getLocalParts(new Date(utc), timeZone);
+    const actualAsUtc = Date.UTC(
+      actual.year,
+      actual.month - 1,
+      actual.day,
+      actual.hour,
+      actual.minute,
+      actual.second,
+    );
+
+    utc -= actualAsUtc - desiredUtc;
+  }
+
+  return new Date(utc);
+}
+
+/**
+ * Calculates the target departure based on connection date and configured schedule.
+ *
+ * @param {Date} anchorDate
+ * @returns {Date}
+ */
+function getTargetDeparture(anchorDate) {
+  const day = getLocalDayOfWeek(anchorDate, CONFIG.timeZone);
+  const localAnchor = getLocalParts(anchorDate, CONFIG.timeZone);
+  const targetDate = addDaysToLocalDate(localAnchor, 1);
+
+  if (day >= 1 && day <= 4) {
+    return createDateFromLocalParts(
+      {
+        ...targetDate,
+        hour: CONFIG.workdayDepartureHour,
+        minute: CONFIG.workdayDepartureMinute,
+        second: 0,
+      },
+      CONFIG.timeZone,
+    );
+  }
+
+  if (day === 5 || day === 6) {
+    return createDateFromLocalParts(
+      {
+        ...targetDate,
+        hour: CONFIG.weekendDepartureHour,
+        minute: CONFIG.weekendDepartureMinute,
+        second: 0,
+      },
+      CONFIG.timeZone,
+    );
+  }
+
+  return createDateFromLocalParts(
+    {
+      ...targetDate,
+      hour: CONFIG.workdayDepartureHour,
+      minute: CONFIG.workdayDepartureMinute,
+      second: 0,
+    },
+    CONFIG.timeZone,
+  );
+}
+
+/**
+ * Formats a Date as local time string.
+ *
+ * @param {Date} date
+ * @returns {string}
+ */
+function formatLocal(date) {
+  return date.toLocaleString('sv-SE', {
+    timeZone: CONFIG.timeZone,
+    hour12: false,
+  });
+}
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/10-core/20-homey-logic.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Finds a Homey Logic variable by name.
+ *
+ * @param {string} name
+ * @returns {Promise<object>}
+ */
+async function getVariableByName(name) {
+  const variables = await Homey.logic.getVariables();
+  const variable = Object.values(variables).find((v) => v.name === name);
+
+  if (!variable) {
+    throw new Error(`Logic variable not found: ${name}`);
+  }
+
+  return variable;
+}
+
+/**
+ * Reads a Homey Logic variable value by name.
+ *
+ * @param {string} name
+ * @returns {Promise<unknown>}
+ */
+async function getVariableValue(name) {
+  const variable = await getVariableByName(name);
+  return variable.value;
+}
+
+/**
+ * Updates a Homey Logic variable by name.
+ *
+ * @param {string} name
+ * @param {unknown} value
+ * @returns {Promise<void>}
+ */
+async function updateVariableByName(name, value) {
+  const variable = await getVariableByName(name);
+
+  await Homey.logic.updateVariable({
+    id: variable.id,
+    variable: { value },
+  });
+}
+
+/**
+ * Updates a Homey Logic variable if it exists.
+ * Missing optional variables do not break SmartCharge.
+ *
+ * @param {string} name
+ * @param {unknown} value
+ * @returns {Promise<void>}
+ */
+async function tryUpdateVariableByName(name, value) {
+  try {
+    await updateVariableByName(name, value);
+  } catch (error) {
+    log(`Optional variable not updated: ${name} (${error.message})`);
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/10-core/30-charging.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Calculates required charging duration in minutes.
+ *
+ * Formula:
+ * missing battery percentage * factor + reserve,
+ * then rounded and clamped to configured limits.
+ *
+ * @param {number} battery
+ * @param {number} factor
+ * @param {number} reserve
+ * @returns {number}
+ */
+function calculateChargeMinutes(battery, factor, reserve) {
+  if (battery >= CONFIG.batteryFullPercentage) {
+    return 0;
+  }
+
+  const rawMinutes =
+    (CONFIG.batteryFullPercentage - battery) * factor + reserve;
+  const roundedMinutes = roundUp(rawMinutes, CONFIG.roundToMinutes);
+
+  return clamp(
+    roundedMinutes,
+    CONFIG.minChargeMinutes,
+    CONFIG.maxChargeMinutes,
+  );
+}
+
+/**
+ * Converts charging duration to price slots.
+ *
+ * @param {number} chargeMinutes
+ * @returns {number}
+ */
+function calculateChargeSlots(chargeMinutes) {
+  return Math.ceil(chargeMinutes / CONFIG.priceSlotMinutes);
+}
+
+/**
+ * Calculates how many hours are available until target departure.
+ *
+ * @param {Date} targetDeparture
+ * @param {Date} now
+ * @returns {number}
+ */
+function calculateHoursAhead(targetDeparture, now) {
+  const diffMs = targetDeparture.getTime() - now.getTime();
+  const rawHours = Math.ceil(diffMs / (1000 * 60 * 60));
+
+  return clamp(rawHours, CONFIG.minHoursAhead, CONFIG.maxHoursAhead);
+}
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/10-core/40-planner.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Checks whether a Tibber price slot is still usable.
+ *
+ * @param {{startTime: Date}} priceSlot
+ * @param {Date} now
+ * @returns {boolean}
+ */
+function isSlotAvailable(priceSlot, now) {
+  const slotEnd = addMinutes(priceSlot.startTime, CONFIG.priceSlotMinutes);
+  return slotEnd > now;
+}
+
+/**
+ * Finds the cheapest continuous charging block before target departure.
+ *
+ * @param {Array<{startTime: Date, price: number}>} prices
+ * @param {{now: Date, targetDeparture: Date, chargeSlots: number}} options
+ * @returns {{plannedStart: Date, plannedEnd: Date, totalPrice: number, averagePrice: number, slots: Array}|null}
+ */
+function findCheapestContinuousPlan(prices, options) {
+  const { now, targetDeparture, chargeSlots } = options;
+
+  if (!chargeSlots || chargeSlots <= 0) {
+    return null;
+  }
+
+  const availablePrices = prices.filter(
+    (price) => isSlotAvailable(price, now) && price.startTime < targetDeparture,
+  );
+
+  if (availablePrices.length < chargeSlots) {
+    return null;
+  }
+
+  let bestPlan = null;
+
+  for (let i = 0; i <= availablePrices.length - chargeSlots; i++) {
+    const block = availablePrices.slice(i, i + chargeSlots);
+
+    let isContinuous = true;
+
+    for (let j = 1; j < block.length; j++) {
+      const expectedStart = addMinutes(
+        block[j - 1].startTime,
+        CONFIG.priceSlotMinutes,
+      ).getTime();
+
+      if (block[j].startTime.getTime() !== expectedStart) {
+        isContinuous = false;
+        break;
+      }
+    }
+
+    if (!isContinuous) {
+      continue;
+    }
+
+    const totalPrice = block.reduce((sum, price) => sum + price.price, 0);
+    const averagePrice = totalPrice / block.length;
+    const plannedStart = block[0].startTime;
+    const plannedEnd = addMinutes(
+      block[block.length - 1].startTime,
+      CONFIG.priceSlotMinutes,
+    );
+
+    const plan = {
+      plannedStart,
+      plannedEnd,
+      totalPrice,
+      averagePrice,
+      slots: block,
+    };
+
+    if (!bestPlan || totalPrice < bestPlan.totalPrice) {
+      bestPlan = plan;
+    }
+  }
+
+  return bestPlan;
+}
+
+/**
+ * Checks whether current time is inside selected charging plan.
+ *
+ * @param {Date} now
+ * @param {{plannedStart: Date, plannedEnd: Date}|null} plan
+ * @returns {boolean}
+ */
+function isNowInsidePlan(now, plan) {
+  if (!plan) {
+    return false;
+  }
+
+  return now >= plan.plannedStart && now < plan.plannedEnd;
+}
+
+/**
+ * Safety fallback: start charging when latest safe start has been reached.
+ *
+ * @param {Date} now
+ * @param {Date} targetDeparture
+ * @param {number} chargeMinutes
+ * @param {number} battery
+ * @returns {boolean}
+ */
+function isSafetyStartRequired(now, targetDeparture, chargeMinutes, battery) {
+  if (battery >= CONFIG.batteryFullPercentage || chargeMinutes <= 0) {
+    return false;
+  }
+
+  const latestSafeStart = addMinutes(targetDeparture, -chargeMinutes);
+
+  return now >= latestSafeStart;
+}
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/10-core/50-session.js
+// -----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/10-core/60-decision.js
+// -----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/20-adapters/10-tibber.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Fetches price information from Tibber GraphQL API.
+ *
+ * @param {string} tibberAccessToken
+ * @returns {Promise<object>}
+ */
+async function fetchTibberPriceInfo(tibberAccessToken) {
+  const response = await fetch(CONFIG.tibberApiUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tibberAccessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query: TIBBER_PRICE_INFO_QUERY }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Tibber HTTP error: ${response.status}`);
+  }
+
+  const json = await response.json();
+
+  if (json.errors && json.errors.length > 0) {
+    throw new Error(`Tibber GraphQL error: ${JSON.stringify(json.errors)}`);
+  }
+
+  const homes = json?.data?.viewer?.homes || [];
+  const priceInfo = homes[0]?.currentSubscription?.priceInfo;
+
+  if (!priceInfo) {
+    throw new Error('Tibber priceInfo not found');
+  }
+
+  return priceInfo;
+}
+
+/**
+ * Converts Tibber priceInfo into sorted hourly price slots.
+ *
+ * @param {object} priceInfo
+ * @returns {Array<{startsAt:string,startTime:Date,price:number,total:number,sourceDay:string}>}
+ */
+function normalizeTibberPrices(priceInfo) {
+  const result = [];
+
+  for (const [sourceDay, entries] of [
+    ['today', priceInfo.today || []],
+    ['tomorrow', priceInfo.tomorrow || []],
+  ]) {
+    for (const entry of entries) {
+      if (!entry || !entry.startsAt || typeof entry.total !== 'number') {
+        continue;
+      }
+
+      const startTime = new Date(entry.startsAt);
+
+      if (Number.isNaN(startTime.getTime())) {
+        continue;
+      }
+
+      result.push({
+        startsAt: entry.startsAt,
+        startTime,
+        price: entry.total,
+        total: entry.total,
+        sourceDay,
+      });
+    }
+  }
+
+  return result.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+}
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/20-adapters/20-homey-devices.js
+// -----------------------------------------------------------------------------
+
+/**
+ * Finds a Homey device by partial name match.
+ *
+ * @param {string} namePart
+ * @returns {Promise<object>}
+ */
+async function getDeviceByNamePart(namePart) {
+  const devices = await Homey.devices.getDevices();
+  const normalizedNamePart = normalizeName(namePart);
+
+  const device = Object.values(devices).find((d) =>
+    normalizeName(d.name).includes(normalizedNamePart),
+  );
+
+  if (!device) {
+    throw new Error(`Device not found: ${namePart}`);
+  }
+
+  return device;
+}
+
+/**
+ * Switches a Homey device on.
+ *
+ * @param {object} device
+ * @returns {Promise<void>}
+ */
+async function setDeviceOn(device) {
+  await device.setCapabilityValue('onoff', true);
+}
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/20-adapters/30-google-sheets.js
+// -----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/20-adapters/40-homey.js
+// -----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+// Source file: src/30-logger/10-smartcharge-logger.js
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -457,702 +1194,7 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
 
 
 // -----------------------------------------------------------------------------
-// Source file: src/config/config.js
-// -----------------------------------------------------------------------------
-
-/**
- * Runtime configuration for SmartCharge HomeyScript.
- *
- * This file contains only constants and naming conventions.
- * It must be loaded before all modules that use CONFIG.
- */
-const CONFIG = {
-  timeZone: 'Europe/Berlin',
-
-  engineVersion: 'homey-script-v0.3.0',
-
-  tibberAccessTokenVariableName: 'TIBBER_ACCESS_TOKEN',
-
-  mercedesDeviceNameIncludes: 'E 300',
-  plugDeviceNameIncludes: 'Auto Plug In',
-
-  chargeConnectedAtVariableName: 'ChargeConnectedAt',
-  chargeFactorVariableName: 'ChargeFactor',
-  chargeReserveVariableName: 'ChargeReserve',
-
-  chargeMinutesVariableName: 'ChargeMinutes',
-  chargeSlotsVariableName: 'ChargeSlots',
-  legacyChargeQuartersVariableName: 'ChargeQuarters',
-  chargeHoursAheadVariableName: 'ChargeHoursAhead',
-
-  smartChargePlannedStartVariableName: 'SmartChargePlannedStart',
-  smartChargePlannedEndVariableName: 'SmartChargePlannedEnd',
-  smartChargeShouldChargeVariableName: 'SmartChargeShouldCharge',
-  smartChargeReasonVariableName: 'SmartChargeReason',
-  smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',
-  smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
-
-  workdayDepartureHour: 7,
-  workdayDepartureMinute: 30,
-  weekendDepartureHour: 13,
-  weekendDepartureMinute: 0,
-
-  roundToMinutes: 5,
-  minChargeMinutes: 30,
-  maxChargeMinutes: 300,
-  minHoursAhead: 1,
-  maxHoursAhead: 24,
-
-  batteryFullPercentage: 100,
-  priceSlotMinutes: 60,
-
-  tibberApiUrl: 'https://api.tibber.com/v1-beta/gql',
-};
-
-/**
- * Tibber GraphQL query for current, today and tomorrow prices.
- */
-const TIBBER_PRICE_INFO_QUERY = `
-{
-  viewer {
-    homes {
-      currentSubscription {
-        priceInfo {
-          current {
-            total
-            startsAt
-          }
-          today {
-            total
-            startsAt
-          }
-          tomorrow {
-            total
-            startsAt
-          }
-        }
-      }
-    }
-  }
-}
-`;
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/core/utils.js
-// -----------------------------------------------------------------------------
-
-/**
- * Normalizes names for loose Homey device matching.
- *
- * @param {unknown} value
- * @returns {string}
- */
-function normalizeName(value) {
-  return String(value).toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
-/**
- * Rounds a number up to the next given step.
- *
- * @param {number} value
- * @param {number} step
- * @returns {number}
- */
-function roundUp(value, step) {
-  return Math.ceil(value / step) * step;
-}
-
-/**
- * Restricts a number to the given min/max range.
- *
- * @param {number} value
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-/**
- * Converts a Homey Logic value to number.
- *
- * @param {unknown} value
- * @param {string} name
- * @returns {number}
- */
-function toNumberValue(value, name) {
-  const number = Number(value);
-
-  if (Number.isNaN(number)) {
-    throw new Error(`${name} is not numeric: ${value}`);
-  }
-
-  return number;
-}
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/core/time.js
-// -----------------------------------------------------------------------------
-
-/**
- * Adds minutes to a Date.
- *
- * @param {Date} date
- * @param {number} minutes
- * @returns {Date}
- */
-function addMinutes(date, minutes) {
-  return new Date(date.getTime() + minutes * 60 * 1000);
-}
-
-/**
- * Parses a date value or returns fallback when missing/invalid.
- *
- * @param {unknown} value
- * @param {Date} fallbackDate
- * @returns {Date}
- */
-function parseDateOrFallback(value, fallbackDate) {
-  if (!value || value === 'null') {
-    return fallbackDate;
-  }
-
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return fallbackDate;
-  }
-
-  return parsed;
-}
-
-/**
- * Returns local date/time parts for a given timezone.
- *
- * @param {Date} date
- * @param {string} timeZone
- * @returns {{year:number,month:number,day:number,hour:number,minute:number,second:number}}
- */
-function getLocalParts(date, timeZone) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(date);
-
-  const map = {};
-
-  for (const part of parts) {
-    if (part.type !== 'literal') {
-      map[part.type] = part.value;
-    }
-  }
-
-  return {
-    year: Number(map.year),
-    month: Number(map.month),
-    day: Number(map.day),
-    hour: Number(map.hour),
-    minute: Number(map.minute),
-    second: Number(map.second),
-  };
-}
-
-/**
- * Returns weekday in local timezone.
- *
- * Sunday = 0, Monday = 1, ... Saturday = 6.
- *
- * @param {Date} date
- * @param {string} timeZone
- * @returns {number}
- */
-function getLocalDayOfWeek(date, timeZone) {
-  const parts = getLocalParts(date, timeZone);
-  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
-}
-
-/**
- * Adds days to local date parts.
- *
- * @param {{year:number,month:number,day:number}} parts
- * @param {number} daysToAdd
- * @returns {{year:number,month:number,day:number}}
- */
-function addDaysToLocalDate(parts, daysToAdd) {
-  const date = new Date(
-    Date.UTC(parts.year, parts.month - 1, parts.day + daysToAdd),
-  );
-
-  return {
-    year: date.getUTCFullYear(),
-    month: date.getUTCMonth() + 1,
-    day: date.getUTCDate(),
-  };
-}
-
-/**
- * Creates a Date from local timezone parts.
- *
- * @param {{year:number,month:number,day:number,hour:number,minute:number,second?:number}} localParts
- * @param {string} timeZone
- * @returns {Date}
- */
-function createDateFromLocalParts(localParts, timeZone) {
-  const desiredUtc = Date.UTC(
-    localParts.year,
-    localParts.month - 1,
-    localParts.day,
-    localParts.hour,
-    localParts.minute,
-    localParts.second || 0,
-  );
-
-  let utc = desiredUtc;
-
-  for (let i = 0; i < 3; i++) {
-    const actual = getLocalParts(new Date(utc), timeZone);
-    const actualAsUtc = Date.UTC(
-      actual.year,
-      actual.month - 1,
-      actual.day,
-      actual.hour,
-      actual.minute,
-      actual.second,
-    );
-
-    utc -= actualAsUtc - desiredUtc;
-  }
-
-  return new Date(utc);
-}
-
-/**
- * Calculates the target departure based on connection date and configured schedule.
- *
- * @param {Date} anchorDate
- * @returns {Date}
- */
-function getTargetDeparture(anchorDate) {
-  const day = getLocalDayOfWeek(anchorDate, CONFIG.timeZone);
-  const localAnchor = getLocalParts(anchorDate, CONFIG.timeZone);
-  const targetDate = addDaysToLocalDate(localAnchor, 1);
-
-  if (day >= 1 && day <= 4) {
-    return createDateFromLocalParts(
-      {
-        ...targetDate,
-        hour: CONFIG.workdayDepartureHour,
-        minute: CONFIG.workdayDepartureMinute,
-        second: 0,
-      },
-      CONFIG.timeZone,
-    );
-  }
-
-  if (day === 5 || day === 6) {
-    return createDateFromLocalParts(
-      {
-        ...targetDate,
-        hour: CONFIG.weekendDepartureHour,
-        minute: CONFIG.weekendDepartureMinute,
-        second: 0,
-      },
-      CONFIG.timeZone,
-    );
-  }
-
-  return createDateFromLocalParts(
-    {
-      ...targetDate,
-      hour: CONFIG.workdayDepartureHour,
-      minute: CONFIG.workdayDepartureMinute,
-      second: 0,
-    },
-    CONFIG.timeZone,
-  );
-}
-
-/**
- * Formats a Date as local time string.
- *
- * @param {Date} date
- * @returns {string}
- */
-function formatLocal(date) {
-  return date.toLocaleString('sv-SE', {
-    timeZone: CONFIG.timeZone,
-    hour12: false,
-  });
-}
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/core/homey-logic.js
-// -----------------------------------------------------------------------------
-
-/**
- * Finds a Homey Logic variable by name.
- *
- * @param {string} name
- * @returns {Promise<object>}
- */
-async function getVariableByName(name) {
-  const variables = await Homey.logic.getVariables();
-  const variable = Object.values(variables).find((v) => v.name === name);
-
-  if (!variable) {
-    throw new Error(`Logic variable not found: ${name}`);
-  }
-
-  return variable;
-}
-
-/**
- * Reads a Homey Logic variable value by name.
- *
- * @param {string} name
- * @returns {Promise<unknown>}
- */
-async function getVariableValue(name) {
-  const variable = await getVariableByName(name);
-  return variable.value;
-}
-
-/**
- * Updates a Homey Logic variable by name.
- *
- * @param {string} name
- * @param {unknown} value
- * @returns {Promise<void>}
- */
-async function updateVariableByName(name, value) {
-  const variable = await getVariableByName(name);
-
-  await Homey.logic.updateVariable({
-    id: variable.id,
-    variable: { value },
-  });
-}
-
-/**
- * Updates a Homey Logic variable if it exists.
- * Missing optional variables do not break SmartCharge.
- *
- * @param {string} name
- * @param {unknown} value
- * @returns {Promise<void>}
- */
-async function tryUpdateVariableByName(name, value) {
-  try {
-    await updateVariableByName(name, value);
-  } catch (error) {
-    log(`Optional variable not updated: ${name} (${error.message})`);
-  }
-}
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/core/charging.js
-// -----------------------------------------------------------------------------
-
-/**
- * Calculates required charging duration in minutes.
- *
- * Formula:
- * missing battery percentage * factor + reserve,
- * then rounded and clamped to configured limits.
- *
- * @param {number} battery
- * @param {number} factor
- * @param {number} reserve
- * @returns {number}
- */
-function calculateChargeMinutes(battery, factor, reserve) {
-  if (battery >= CONFIG.batteryFullPercentage) {
-    return 0;
-  }
-
-  const rawMinutes =
-    (CONFIG.batteryFullPercentage - battery) * factor + reserve;
-  const roundedMinutes = roundUp(rawMinutes, CONFIG.roundToMinutes);
-
-  return clamp(
-    roundedMinutes,
-    CONFIG.minChargeMinutes,
-    CONFIG.maxChargeMinutes,
-  );
-}
-
-/**
- * Converts charging duration to price slots.
- *
- * @param {number} chargeMinutes
- * @returns {number}
- */
-function calculateChargeSlots(chargeMinutes) {
-  return Math.ceil(chargeMinutes / CONFIG.priceSlotMinutes);
-}
-
-/**
- * Calculates how many hours are available until target departure.
- *
- * @param {Date} targetDeparture
- * @param {Date} now
- * @returns {number}
- */
-function calculateHoursAhead(targetDeparture, now) {
-  const diffMs = targetDeparture.getTime() - now.getTime();
-  const rawHours = Math.ceil(diffMs / (1000 * 60 * 60));
-
-  return clamp(rawHours, CONFIG.minHoursAhead, CONFIG.maxHoursAhead);
-}
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/adapters/tibber.js
-// -----------------------------------------------------------------------------
-
-/**
- * Fetches price information from Tibber GraphQL API.
- *
- * @param {string} tibberAccessToken
- * @returns {Promise<object>}
- */
-async function fetchTibberPriceInfo(tibberAccessToken) {
-  const response = await fetch(CONFIG.tibberApiUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${tibberAccessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query: TIBBER_PRICE_INFO_QUERY }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Tibber HTTP error: ${response.status}`);
-  }
-
-  const json = await response.json();
-
-  if (json.errors && json.errors.length > 0) {
-    throw new Error(`Tibber GraphQL error: ${JSON.stringify(json.errors)}`);
-  }
-
-  const homes = json?.data?.viewer?.homes || [];
-  const priceInfo = homes[0]?.currentSubscription?.priceInfo;
-
-  if (!priceInfo) {
-    throw new Error('Tibber priceInfo not found');
-  }
-
-  return priceInfo;
-}
-
-/**
- * Converts Tibber priceInfo into sorted hourly price slots.
- *
- * @param {object} priceInfo
- * @returns {Array<{startsAt:string,startTime:Date,price:number,total:number,sourceDay:string}>}
- */
-function normalizeTibberPrices(priceInfo) {
-  const result = [];
-
-  for (const [sourceDay, entries] of [
-    ['today', priceInfo.today || []],
-    ['tomorrow', priceInfo.tomorrow || []],
-  ]) {
-    for (const entry of entries) {
-      if (!entry || !entry.startsAt || typeof entry.total !== 'number') {
-        continue;
-      }
-
-      const startTime = new Date(entry.startsAt);
-
-      if (Number.isNaN(startTime.getTime())) {
-        continue;
-      }
-
-      result.push({
-        startsAt: entry.startsAt,
-        startTime,
-        price: entry.total,
-        total: entry.total,
-        sourceDay,
-      });
-    }
-  }
-
-  return result.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-}
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/core/planner.js
-// -----------------------------------------------------------------------------
-
-/**
- * Checks whether a Tibber price slot is still usable.
- *
- * @param {{startTime: Date}} priceSlot
- * @param {Date} now
- * @returns {boolean}
- */
-function isSlotAvailable(priceSlot, now) {
-  const slotEnd = addMinutes(priceSlot.startTime, CONFIG.priceSlotMinutes);
-  return slotEnd > now;
-}
-
-/**
- * Finds the cheapest continuous charging block before target departure.
- *
- * @param {Array<{startTime: Date, price: number}>} prices
- * @param {{now: Date, targetDeparture: Date, chargeSlots: number}} options
- * @returns {{plannedStart: Date, plannedEnd: Date, totalPrice: number, averagePrice: number, slots: Array}|null}
- */
-function findCheapestContinuousPlan(prices, options) {
-  const { now, targetDeparture, chargeSlots } = options;
-
-  if (!chargeSlots || chargeSlots <= 0) {
-    return null;
-  }
-
-  const availablePrices = prices.filter(
-    (price) => isSlotAvailable(price, now) && price.startTime < targetDeparture,
-  );
-
-  if (availablePrices.length < chargeSlots) {
-    return null;
-  }
-
-  let bestPlan = null;
-
-  for (let i = 0; i <= availablePrices.length - chargeSlots; i++) {
-    const block = availablePrices.slice(i, i + chargeSlots);
-
-    let isContinuous = true;
-
-    for (let j = 1; j < block.length; j++) {
-      const expectedStart = addMinutes(
-        block[j - 1].startTime,
-        CONFIG.priceSlotMinutes,
-      ).getTime();
-
-      if (block[j].startTime.getTime() !== expectedStart) {
-        isContinuous = false;
-        break;
-      }
-    }
-
-    if (!isContinuous) {
-      continue;
-    }
-
-    const totalPrice = block.reduce((sum, price) => sum + price.price, 0);
-    const averagePrice = totalPrice / block.length;
-    const plannedStart = block[0].startTime;
-    const plannedEnd = addMinutes(
-      block[block.length - 1].startTime,
-      CONFIG.priceSlotMinutes,
-    );
-
-    const plan = {
-      plannedStart,
-      plannedEnd,
-      totalPrice,
-      averagePrice,
-      slots: block,
-    };
-
-    if (!bestPlan || totalPrice < bestPlan.totalPrice) {
-      bestPlan = plan;
-    }
-  }
-
-  return bestPlan;
-}
-
-/**
- * Checks whether current time is inside selected charging plan.
- *
- * @param {Date} now
- * @param {{plannedStart: Date, plannedEnd: Date}|null} plan
- * @returns {boolean}
- */
-function isNowInsidePlan(now, plan) {
-  if (!plan) {
-    return false;
-  }
-
-  return now >= plan.plannedStart && now < plan.plannedEnd;
-}
-
-/**
- * Safety fallback: start charging when latest safe start has been reached.
- *
- * @param {Date} now
- * @param {Date} targetDeparture
- * @param {number} chargeMinutes
- * @param {number} battery
- * @returns {boolean}
- */
-function isSafetyStartRequired(now, targetDeparture, chargeMinutes, battery) {
-  if (battery >= CONFIG.batteryFullPercentage || chargeMinutes <= 0) {
-    return false;
-  }
-
-  const latestSafeStart = addMinutes(targetDeparture, -chargeMinutes);
-
-  return now >= latestSafeStart;
-}
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/adapters/homey-devices.js
-// -----------------------------------------------------------------------------
-
-/**
- * Finds a Homey device by partial name match.
- *
- * @param {string} namePart
- * @returns {Promise<object>}
- */
-async function getDeviceByNamePart(namePart) {
-  const devices = await Homey.devices.getDevices();
-  const normalizedNamePart = normalizeName(namePart);
-
-  const device = Object.values(devices).find((d) =>
-    normalizeName(d.name).includes(normalizedNamePart),
-  );
-
-  if (!device) {
-    throw new Error(`Device not found: ${namePart}`);
-  }
-
-  return device;
-}
-
-/**
- * Switches a Homey device on.
- *
- * @param {object} device
- * @returns {Promise<void>}
- */
-async function setDeviceOn(device) {
-  await device.setCapabilityValue('onoff', true);
-}
-
-
-// -----------------------------------------------------------------------------
-// Source file: src/flows/run-decision.entry.js
+// Source file: src/90-flows/99-run-decision.entry.js
 // -----------------------------------------------------------------------------
 
 /**
@@ -1339,7 +1381,7 @@ async function main() {
         priceCount: prices.length,
 
         source: 'smartcharge-run-decision',
-        engineVersion: CONFIG.engineVersion,
+        engineVersion: BUILD_INFO.fullVersion,
 
         message: null,
       },
@@ -1370,6 +1412,7 @@ async function main() {
   );
 
   log(`TimeZone         : ${CONFIG.timeZone}`);
+  log(`Script version   : ${CONFIG.engineVersion}`);
   log(`Available count  : ${availablePrices.length}`);
   log(
     `Available first  : ${availablePrices[0] ? formatLocal(availablePrices[0].startTime) : 'null'}`,

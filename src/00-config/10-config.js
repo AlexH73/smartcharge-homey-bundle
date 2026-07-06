@@ -7,7 +7,7 @@
 const CONFIG = {
   timeZone: 'Europe/Berlin',
 
-  engineVersion: 'homey-script-v0.3.0',
+  engineVersion: BUILD_INFO.fullVersion,
 
   tibberAccessTokenVariableName: 'TIBBER_ACCESS_TOKEN',
 

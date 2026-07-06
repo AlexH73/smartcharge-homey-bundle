@@ -182,7 +182,7 @@ async function main() {
         priceCount: prices.length,
 
         source: 'smartcharge-run-decision',
-        engineVersion: CONFIG.engineVersion,
+        engineVersion: BUILD_INFO.fullVersion,
 
         message: null,
       },
@@ -213,6 +213,7 @@ async function main() {
   );
 
   log(`TimeZone         : ${CONFIG.timeZone}`);
+  log(`Script version   : ${CONFIG.engineVersion}`);
   log(`Available count  : ${availablePrices.length}`);
   log(
     `Available first  : ${availablePrices[0] ? formatLocal(availablePrices[0].startTime) : 'null'}`,
