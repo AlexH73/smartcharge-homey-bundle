@@ -35,23 +35,23 @@ const SmartChargeLogger = (() => {
   });
 
   // Fields that define whether a decision log entry has meaningfully changed.
-  const DECISION_LOG_KEY_FIELDS = Object.freeze([
-    'eventType',
-    'battery',
-    'currentPrice',
-    'connectedAt',
-    'targetDeparture',
-    'chargeMinutes',
-    'chargeQuarters',
-    'chargeSlots',
-    'chargeHoursAhead',
-    'shouldChargeNow',
-    'plannedStart',
-    'plannedEnd',
-    'reason',
-    'totalPrice',
-    'averagePrice',
-  ]);
+const DECISION_LOG_KEY_FIELDS = Object.freeze([
+  'eventType',
+  'battery',
+  'currentPrice',
+  'connectedAt',
+  'targetDeparture',
+  'chargeMinutes',
+  'chargeSlots',
+  'shouldChargeNow',
+  'plannedStart',
+  'plannedEnd',
+  'reason',
+  'plugOn',
+  'plugPower',
+  'totalPrice',
+  'averagePrice',
+]);
 
   // Stable payload shape expected by the Google Sheets webhook.
   const GOOGLE_SHEETS_PAYLOAD_FIELDS = Object.freeze([
