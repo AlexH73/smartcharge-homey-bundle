@@ -9,7 +9,9 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:homey": "node scripts/build-homey.js"
+    "build:decision": "node scripts/build-homey.js run-decision",
+    "build:reset": "node scripts/build-homey.js reset-session",
+    "build:homey": "npm run build:decision && npm run build:reset"
   },
   "keywords": [],
   "author": "",

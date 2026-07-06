@@ -32,10 +32,41 @@ async function main() {
     CONFIG.chargeReserveVariableName,
   );
 
-  const connectedAt = parseDateOrFallback(
-    await getVariableValue(CONFIG.chargeConnectedAtVariableName),
-    now,
+  const connectedAtRaw = await getVariableValue(
+    CONFIG.chargeConnectedAtVariableName,
   );
+
+  if (
+    (!connectedAtRaw || connectedAtRaw === 'null') &&
+    battery >= CONFIG.batteryFullPercentage
+  ) {
+    const reason = 'No active session: battery is full';
+
+    await tryUpdateVariableByName(
+      CONFIG.smartChargeShouldChargeVariableName,
+      false,
+    );
+    await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
+
+    log('SmartCharge action: no action');
+    log(`Script version   : ${BUILD_INFO.fullVersion}`);
+    log(`Battery          : ${battery}%`);
+    log(`Reason           : ${reason}`);
+
+    return {
+      battery,
+      chargeMinutes: 0,
+      chargeSlots: 0,
+      chargeHoursAhead: 0,
+      targetDeparture: null,
+      plannedStart: null,
+      plannedEnd: null,
+      shouldChargeNow: false,
+      reason,
+    };
+  }
+
+  const connectedAt = parseDateOrFallback(connectedAtRaw, now);
 
   const targetDeparture = getTargetDeparture(connectedAt);
 

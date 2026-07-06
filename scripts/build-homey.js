@@ -1,8 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 
+const target = process.argv[2] || 'run-decision';
+
 const SRC_DIR = path.resolve('src');
-const OUT_FILE = path.resolve('dist/SMARTCHARGE - Run Decision.js');
+const DIST_DIR = path.resolve('dist');
+
+const TARGETS = {
+  'run-decision': {
+    entry: 'src/90-flows/run-decision.entry.js',
+    out: 'SMARTCHARGE - Run Decision.js',
+  },
+  'reset-session': {
+    entry: 'src/90-flows/reset-session.entry.js',
+    out: 'SMARTCHARGE - Reset Session.js',
+  },
+};
+
+if (!TARGETS[target]) {
+  throw new Error(`Unknown build target: ${target}`);
+}
+
 const VERSION_FILE = path.resolve('.smartcharge-build.json');
 const BUILD_INFO_FILE = path.resolve(
   'src/00-config/00-build-info.generated.js',
@@ -12,7 +30,6 @@ function readBuildState() {
   if (!fs.existsSync(VERSION_FILE)) {
     return { major: 0, minor: 3, patch: 0, build: 0 };
   }
-
   return JSON.parse(fs.readFileSync(VERSION_FILE, 'utf8'));
 }
 
@@ -43,15 +60,16 @@ const BUILD_INFO = Object.freeze({
     'utf8',
   );
 
-  return { version, fullVersion, build: state.build, builtAt: now };
+  return { version, fullVersion, builtAt: now };
 }
 
-function collectJsFiles(dir) {
+function collectSharedFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = path.join(dir, entry.name);
 
     if (entry.isDirectory()) {
-      return collectJsFiles(fullPath);
+      if (entry.name === '90-flows') return [];
+      return collectSharedFiles(fullPath);
     }
 
     if (entry.isFile() && entry.name.endsWith('.js')) {
@@ -63,12 +81,20 @@ function collectJsFiles(dir) {
 }
 
 const buildInfo = writeBuildInfo();
-const files = collectJsFiles(SRC_DIR).sort();
+const targetConfig = TARGETS[target];
+
+const files = [
+  ...collectSharedFiles(SRC_DIR).sort(),
+  path.resolve(targetConfig.entry),
+];
+
+const outFile = path.join(DIST_DIR, targetConfig.out);
 
 let output = '';
 
 output += '// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.\n';
 output += '// Source: smartcharge-homey-bundle\n';
+output += `// Target: ${target}\n`;
 output += `// Version: ${buildInfo.fullVersion}\n`;
 output += `// Built at: ${buildInfo.builtAt.toISOString()}\n\n`;
 
@@ -84,17 +110,12 @@ for (const file of files) {
   output += '\n\n';
 }
 
-fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
-fs.writeFileSync(OUT_FILE, output, 'utf8');
+fs.mkdirSync(DIST_DIR, { recursive: true });
+fs.writeFileSync(outFile, output, 'utf8');
 
 console.log('SmartCharge Homey Builder');
 console.log('-------------------------');
+console.log(`Target  : ${target}`);
 console.log(`Version : ${buildInfo.fullVersion}`);
 console.log(`Files   : ${files.length}`);
-console.log(`Output  : ${path.relative(process.cwd(), OUT_FILE)}`);
-console.log('');
-console.log('Built files:');
-
-for (const file of files) {
-  console.log(`- ${path.relative(process.cwd(), file)}`);
-}
+console.log(`Output  : ${path.relative(process.cwd(), outFile)}`);

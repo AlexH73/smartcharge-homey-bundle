@@ -1,7 +1,8 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
-// Version: 0.3.10+build.10
-// Built at: 2026-07-06T22:31:05.958Z
+// Target: run-decision
+// Version: 0.3.16+build.16
+// Built at: 2026-07-06T23:24:58.919Z
 
 // -----------------------------------------------------------------------------
 // Source file: src/00-config/00-build-info.generated.js
@@ -12,10 +13,10 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.3.10',
-  fullVersion: '0.3.10+build.10',
-  build: 10,
-  builtAt: '2026-07-06T22:31:05.958Z',
+  version: '0.3.16',
+  fullVersion: '0.3.16+build.16',
+  build: 16,
+  builtAt: '2026-07-06T23:24:58.919Z',
 });
 
 
@@ -775,6 +776,7 @@ const SmartChargeLogger = (() => {
     CHARGER_DISCONNECTED: 'charger_disconnected',
     SMARTCHARGE_ERROR: 'smartcharge_error',
     SESSION_EXPIRED: 'session_expired',
+    SESSION_RESET: 'session_reset',
   });
 
   const SUPPORTED_EVENT_TYPES = Object.freeze(Object.values(EVENT_TYPES));
@@ -786,6 +788,7 @@ const SmartChargeLogger = (() => {
     EVENT_TYPES.CHARGER_DISCONNECTED,
     EVENT_TYPES.SMARTCHARGE_ERROR,
     EVENT_TYPES.SESSION_EXPIRED,
+    EVENT_TYPES.SESSION_RESET,
   ]);
 
   const LOGIC_VARIABLE_NAMES = Object.freeze({
@@ -916,7 +919,6 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
       eventType,
       battery: normalizeValue(logEvent.battery),
       connectedAt: normalizeValue(logEvent.connectedAt),
-      currentPrice: normalizeValue(logEvent.currentPrice),
       loggedAt: normalizeValue(logEvent.loggedAt),
       targetDeparture: normalizeValue(logEvent.targetDeparture),
       chargeMinutes: normalizeValue(logEvent.chargeMinutes),
@@ -1214,7 +1216,7 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
 
 
 // -----------------------------------------------------------------------------
-// Source file: src/90-flows/99-run-decision.entry.js
+// Source file: src/90-flows/run-decision.entry.js
 // -----------------------------------------------------------------------------
 
 /**
@@ -1251,10 +1253,41 @@ async function main() {
     CONFIG.chargeReserveVariableName,
   );
 
-  const connectedAt = parseDateOrFallback(
-    await getVariableValue(CONFIG.chargeConnectedAtVariableName),
-    now,
+  const connectedAtRaw = await getVariableValue(
+    CONFIG.chargeConnectedAtVariableName,
   );
+
+  if (
+    (!connectedAtRaw || connectedAtRaw === 'null') &&
+    battery >= CONFIG.batteryFullPercentage
+  ) {
+    const reason = 'No active session: battery is full';
+
+    await tryUpdateVariableByName(
+      CONFIG.smartChargeShouldChargeVariableName,
+      false,
+    );
+    await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
+
+    log('SmartCharge action: no action');
+    log(`Script version   : ${BUILD_INFO.fullVersion}`);
+    log(`Battery          : ${battery}%`);
+    log(`Reason           : ${reason}`);
+
+    return {
+      battery,
+      chargeMinutes: 0,
+      chargeSlots: 0,
+      chargeHoursAhead: 0,
+      targetDeparture: null,
+      plannedStart: null,
+      plannedEnd: null,
+      shouldChargeNow: false,
+      reason,
+    };
+  }
+
+  const connectedAt = parseDateOrFallback(connectedAtRaw, now);
 
   const targetDeparture = getTargetDeparture(connectedAt);
 
