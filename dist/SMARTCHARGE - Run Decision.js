@@ -490,6 +490,7 @@ const CONFIG = {
   smartChargeShouldChargeVariableName: 'SmartChargeShouldCharge',
   smartChargeReasonVariableName: 'SmartChargeReason',
   smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',
+  smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
 
   workdayDepartureHour: 7,
   workdayDepartureMinute: 30,
@@ -1194,6 +1195,34 @@ async function main() {
   );
 
   const targetDeparture = getTargetDeparture(connectedAt);
+
+  if (targetDeparture < now && battery < CONFIG.batteryFullPercentage) {
+    const reason = 'Session expired: target departure is in the past';
+
+    await tryUpdateVariableByName(
+      CONFIG.smartChargeShouldChargeVariableName,
+      false,
+    );
+    await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
+
+    log('SmartCharge action: no action');
+    log(`Reason           : ${reason}`);
+    log(`ConnectedAt      : ${formatLocal(connectedAt)}`);
+    log(`TargetDeparture  : ${formatLocal(targetDeparture)}`);
+
+    return {
+      battery,
+      chargeMinutes: 0,
+      chargeSlots: 0,
+      chargeHoursAhead: 0,
+      targetDeparture: formatLocal(targetDeparture),
+      plannedStart: null,
+      plannedEnd: null,
+      shouldChargeNow: false,
+      reason,
+    };
+  }
+
   const chargeMinutes = calculateChargeMinutes(battery, factor, reserve);
   const chargeSlots = calculateChargeSlots(chargeMinutes);
   const chargeHoursAhead = calculateHoursAhead(targetDeparture, now);

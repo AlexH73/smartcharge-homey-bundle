@@ -28,6 +28,7 @@ const CONFIG = {
   smartChargeShouldChargeVariableName: 'SmartChargeShouldCharge',
   smartChargeReasonVariableName: 'SmartChargeReason',
   smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',
+  smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
 
   workdayDepartureHour: 7,
   workdayDepartureMinute: 30,
