@@ -49,49 +49,49 @@ async function main() {
 
     await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
 
-      try {
-        await SmartChargeLogger.logToGoogleSheets(
-          {
-            eventType: SmartChargeLogger.EVENT_TYPES.SESSION_EXPIRED,
-            sessionId: formatLocal(connectedAt),
-            loggedAt: now,
+    try {
+      await SmartChargeLogger.logToGoogleSheets(
+        {
+          eventType: SmartChargeLogger.EVENT_TYPES.SESSION_EXPIRED,
+          sessionId: formatLocal(connectedAt),
+          loggedAt: now,
 
-            battery,
-            currentPrice: null,
+          battery,
+          currentPrice: null,
 
-            connectedAt: formatLocal(connectedAt),
-            targetDeparture: formatLocal(targetDeparture),
+          connectedAt: formatLocal(connectedAt),
+          targetDeparture: formatLocal(targetDeparture),
 
-            chargeMinutes: 0,
-            chargeSlots: 0,
-            chargeHoursAhead: 0,
+          chargeMinutes: 0,
+          chargeSlots: 0,
+          chargeHoursAhead: 0,
 
-            plannedStart: null,
-            plannedEnd: null,
+          plannedStart: null,
+          plannedEnd: null,
 
-            shouldChargeNow: false,
+          shouldChargeNow: false,
 
-            plugOn: null,
-            plugPower: null,
+          plugOn: null,
+          plugPower: null,
 
-            reason,
+          reason,
 
-            averagePrice: null,
-            totalPrice: null,
-            priceCount: null,
+          averagePrice: null,
+          totalPrice: null,
+          priceCount: null,
 
-            source: 'smartcharge-run-decision',
-            engineVersion: BUILD_INFO.fullVersion,
+          source: 'smartcharge-run-decision',
+          engineVersion: BUILD_INFO.fullVersion,
 
-            message: 'Expired session blocked safety fallback',
-          },
-          {
-            webhookUrl: await getVariableValue('SMARTCHARGE_LOG_WEBHOOK_URL'),
-          },
-        );
-      } catch (error) {
-        log(`Logger error     : ${error.message}`);
-      }
+          message: 'Expired session blocked safety fallback',
+        },
+        {
+          webhookUrl: await getVariableValue('SMARTCHARGE_LOG_WEBHOOK_URL'),
+        },
+      );
+    } catch (error) {
+      log(`Logger error     : ${error.message}`);
+    }
 
     log('SmartCharge action: no action');
     log(`TimeZone         : ${CONFIG.timeZone}`);

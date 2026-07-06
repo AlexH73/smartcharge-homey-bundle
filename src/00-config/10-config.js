@@ -7,8 +7,6 @@
 const CONFIG = {
   timeZone: 'Europe/Berlin',
 
-  engineVersion: BUILD_INFO.fullVersion,
-
   tibberAccessTokenVariableName: 'TIBBER_ACCESS_TOKEN',
 
   mercedesDeviceNameIncludes: 'E 300',
