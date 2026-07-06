@@ -39,6 +39,37 @@ async function main() {
 
   const targetDeparture = getTargetDeparture(connectedAt);
 
+  if (isChargingSessionExpired(now, targetDeparture, battery)) {
+    const reason = getExpiredSessionReason();
+
+    await tryUpdateVariableByName(
+      CONFIG.smartChargeShouldChargeVariableName,
+      false,
+    );
+
+    await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
+
+    log('SmartCharge action: no action');
+    log(`TimeZone         : ${CONFIG.timeZone}`);
+    log(`Script version   : ${BUILD_INFO.fullVersion}`);
+    log(`Battery          : ${battery}%`);
+    log(`ConnectedAt      : ${formatLocal(connectedAt)}`);
+    log(`TargetDeparture  : ${formatLocal(targetDeparture)}`);
+    log(`Reason           : ${reason}`);
+
+    return {
+      battery,
+      chargeMinutes: 0,
+      chargeSlots: 0,
+      chargeHoursAhead: 0,
+      targetDeparture: formatLocal(targetDeparture),
+      plannedStart: null,
+      plannedEnd: null,
+      shouldChargeNow: false,
+      reason,
+    };
+  }
+
   if (targetDeparture < now && battery < CONFIG.batteryFullPercentage) {
     const reason = 'Session expired: target departure is in the past';
 

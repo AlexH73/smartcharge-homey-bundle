@@ -1,7 +1,7 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
-// Version: 0.3.6+build.6
-// Built at: 2026-07-06T21:57:09.005Z
+// Version: 0.3.7+build.7
+// Built at: 2026-07-06T22:03:46.613Z
 
 // -----------------------------------------------------------------------------
 // Source file: src/00-config/00-build-info.generated.js
@@ -12,10 +12,10 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.3.6',
-  fullVersion: '0.3.6+build.6',
-  build: 6,
-  builtAt: '2026-07-06T21:57:09.005Z',
+  version: '0.3.7',
+  fullVersion: '0.3.7+build.7',
+  build: 7,
+  builtAt: '2026-07-06T22:03:46.613Z',
 });
 
 
@@ -604,6 +604,26 @@ function isSafetyStartRequired(now, targetDeparture, chargeMinutes, battery) {
 // Source file: src/10-core/50-session.js
 // -----------------------------------------------------------------------------
 
+/**
+ * Checks whether charging session target departure is already in the past.
+ *
+ * @param {Date} now
+ * @param {Date} targetDeparture
+ * @param {number} battery
+ * @returns {boolean}
+ */
+function isChargingSessionExpired(now, targetDeparture, battery) {
+  return targetDeparture < now && battery < CONFIG.batteryFullPercentage;
+}
+
+/**
+ * Returns reason for expired charging session.
+ *
+ * @returns {string}
+ */
+function getExpiredSessionReason() {
+  return 'Session expired: target departure is in the past';
+}
 
 
 // -----------------------------------------------------------------------------
@@ -1237,6 +1257,37 @@ async function main() {
   );
 
   const targetDeparture = getTargetDeparture(connectedAt);
+
+  if (isChargingSessionExpired(now, targetDeparture, battery)) {
+    const reason = getExpiredSessionReason();
+
+    await tryUpdateVariableByName(
+      CONFIG.smartChargeShouldChargeVariableName,
+      false,
+    );
+
+    await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
+
+    log('SmartCharge action: no action');
+    log(`TimeZone         : ${CONFIG.timeZone}`);
+    log(`Script version   : ${BUILD_INFO.fullVersion}`);
+    log(`Battery          : ${battery}%`);
+    log(`ConnectedAt      : ${formatLocal(connectedAt)}`);
+    log(`TargetDeparture  : ${formatLocal(targetDeparture)}`);
+    log(`Reason           : ${reason}`);
+
+    return {
+      battery,
+      chargeMinutes: 0,
+      chargeSlots: 0,
+      chargeHoursAhead: 0,
+      targetDeparture: formatLocal(targetDeparture),
+      plannedStart: null,
+      plannedEnd: null,
+      shouldChargeNow: false,
+      reason,
+    };
+  }
 
   if (targetDeparture < now && battery < CONFIG.batteryFullPercentage) {
     const reason = 'Session expired: target departure is in the past';
