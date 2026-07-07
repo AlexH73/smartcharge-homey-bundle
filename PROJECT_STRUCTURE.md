@@ -9,6 +9,7 @@ smartcharge-homey-bundle/
     30-logger/
     90-flows/
   scripts/
+  docs/
   simulator/
     fixtures/
     logs/
@@ -79,6 +80,14 @@ Build tooling.
 - `build-homey.js` - concatenates shared `src` modules plus one flow entrypoint
   into a standalone HomeyScript file under `dist/`.
 
+## `docs/`
+
+Engineering documentation.
+
+- `Roadmap.md` - planned product and engineering work.
+- `DevelopmentWorkflow.md` - branch model, release flow, and Definition of
+  Done.
+
 ## `simulator/`
 
 Local SmartCharge Simulator and Test Runtime. This area is separate from the
@@ -112,6 +121,8 @@ Local hourly price profiles used by the Tibber mock.
 - `price-spike.json`
 - `missing-tomorrow.json`
 - `price-update-evening.json`
+- `multi-window-adjacent.json`
+- `multi-window-separated.json`
 - `late-plan.json`
 - `no-prices.json`
 
@@ -127,6 +138,8 @@ steps, and expectations. Stored Homey Logic timestamps such as
 `ChargeConnectedAt` should use the production `YYYY-MM-DD HH:mm:ss` format.
 Tibber price grids are anchored per scenario through `priceAnchor` or `now`, so
 multi-step scenarios keep a stable `today` / `tomorrow` price grid.
+Scenarios may use `futureExpect` with `futureExpectedFailure: true` to document
+future planner behavior without changing production runtime behavior yet.
 
 ### `simulator/logs/`
 
@@ -134,8 +147,10 @@ Generated simulator output.
 
 - `events.jsonl`
 - `events.csv`
+- `events.html`
 - `<scenario>-actual-log.json`
 
+`events.html` is the human-readable report with a highlighted sticky header row.
 Generated log files are ignored by git. `.gitkeep` keeps the directory present.
 
 ## `dist/`

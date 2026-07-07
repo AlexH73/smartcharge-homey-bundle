@@ -1,0 +1,56 @@
+{
+  "name": "adjacent-cheap-slots",
+  "description": "Future multi-window planning should merge adjacent cheapest slots into one charging window; the current continuous planner already satisfies this single-window case.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "fixture": "multi-window-adjacent",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "ChargeFactor": 2,
+      "ChargeReserve": 20
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 20
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "result": {
+          "chargeMinutes": 180,
+          "chargeSlots": 3,
+          "plannedStart": "2026-07-07 21:00:00",
+          "plannedEnd": "2026-07-08 00:00:00",
+          "shouldChargeNow": false
+        },
+        "reasonIncludes": "Waiting for selected charging plan",
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": [
+      "smartcharge_decision"
+    ],
+    "tibberCalls": 1
+  }
+}
