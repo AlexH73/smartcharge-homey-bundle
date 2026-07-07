@@ -10,7 +10,13 @@ function addMinutes(date, minutes) {
 }
 
 /**
- * Parses a date value or returns fallback when missing/invalid.
+ * Parses SmartCharge datetime value or returns fallback when missing/invalid.
+ *
+ * Supported formats:
+ *  - SmartCharge local format: YYYY-MM-DD HH:mm:ss
+ *  - ISO datetime string
+ *
+ * Local SmartCharge strings are interpreted in CONFIG.timeZone.
  *
  * @param {unknown} value
  * @param {Date} fallbackDate
@@ -19,6 +25,30 @@ function addMinutes(date, minutes) {
 function parseDateOrFallback(value, fallbackDate) {
   if (!value || value === 'null') {
     return fallbackDate;
+  }
+
+  if (typeof value !== 'string') {
+    return fallbackDate;
+  }
+
+  const localMatch = value.match(
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
+  );
+
+  if (localMatch) {
+    const [, year, month, day, hour, minute, second] = localMatch;
+
+    return createDateFromLocalParts(
+      {
+        year: Number(year),
+        month: Number(month),
+        day: Number(day),
+        hour: Number(hour),
+        minute: Number(minute),
+        second: Number(second),
+      },
+      CONFIG.timeZone,
+    );
   }
 
   const parsed = new Date(value);

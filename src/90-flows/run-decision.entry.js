@@ -36,11 +36,8 @@ async function main() {
     CONFIG.chargeConnectedAtVariableName,
   );
 
-  if (
-    (!connectedAtRaw || connectedAtRaw === 'null') &&
-    battery >= CONFIG.batteryFullPercentage
-  ) {
-    const reason = 'No active session: battery is full';
+  if (!connectedAtRaw || connectedAtRaw === 'null') {
+    const reason = 'No active session';
 
     await tryUpdateVariableByName(
       CONFIG.smartChargeShouldChargeVariableName,

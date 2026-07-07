@@ -1,8 +1,8 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
 // Target: run-decision
-// Version: 0.3.16+build.16
-// Built at: 2026-07-06T23:24:58.919Z
+// Version: 0.3.25+build.25
+// Built at: 2026-07-07T10:49:14.526Z
 
 // -----------------------------------------------------------------------------
 // Source file: src/00-config/00-build-info.generated.js
@@ -13,10 +13,10 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.3.16',
-  fullVersion: '0.3.16+build.16',
-  build: 16,
-  builtAt: '2026-07-06T23:24:58.919Z',
+  version: '0.3.25',
+  fullVersion: '0.3.25+build.25',
+  build: 25,
+  builtAt: '2026-07-07T10:49:14.526Z',
 });
 
 
@@ -171,7 +171,13 @@ function addMinutes(date, minutes) {
 }
 
 /**
- * Parses a date value or returns fallback when missing/invalid.
+ * Parses SmartCharge datetime value or returns fallback when missing/invalid.
+ *
+ * Supported formats:
+ *  - SmartCharge local format: YYYY-MM-DD HH:mm:ss
+ *  - ISO datetime string
+ *
+ * Local SmartCharge strings are interpreted in CONFIG.timeZone.
  *
  * @param {unknown} value
  * @param {Date} fallbackDate
@@ -180,6 +186,30 @@ function addMinutes(date, minutes) {
 function parseDateOrFallback(value, fallbackDate) {
   if (!value || value === 'null') {
     return fallbackDate;
+  }
+
+  if (typeof value !== 'string') {
+    return fallbackDate;
+  }
+
+  const localMatch = value.match(
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
+  );
+
+  if (localMatch) {
+    const [, year, month, day, hour, minute, second] = localMatch;
+
+    return createDateFromLocalParts(
+      {
+        year: Number(year),
+        month: Number(month),
+        day: Number(day),
+        hour: Number(hour),
+        minute: Number(minute),
+        second: Number(second),
+      },
+      CONFIG.timeZone,
+    );
   }
 
   const parsed = new Date(value);
@@ -762,33 +792,35 @@ async function setDeviceOn(device) {
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// Bundled SmartCharge logger helper for HomeyScript.
+// SmartCharge logger helper for HomeyScript.
 // -----------------------------------------------------------------------------
 
 const SmartChargeLogger = (() => {
-  // Logger event names and write policy.
   const EVENT_TYPES = Object.freeze({
     SESSION_START: 'session_start',
+    SESSION_RESET: 'session_reset',
+    SESSION_EXPIRED: 'session_expired',
+
     SMARTCHARGE_DECISION: 'smartcharge_decision',
     SMARTCHARGE_ON: 'smartcharge_on',
     SMARTCHARGE_OFF: 'smartcharge_off',
+
     BATTERY_FULL: 'battery_full',
     CHARGER_DISCONNECTED: 'charger_disconnected',
     SMARTCHARGE_ERROR: 'smartcharge_error',
-    SESSION_EXPIRED: 'session_expired',
-    SESSION_RESET: 'session_reset',
   });
 
   const SUPPORTED_EVENT_TYPES = Object.freeze(Object.values(EVENT_TYPES));
+
   const CRITICAL_EVENT_TYPES = Object.freeze([
     EVENT_TYPES.SESSION_START,
+    EVENT_TYPES.SESSION_RESET,
+    EVENT_TYPES.SESSION_EXPIRED,
     EVENT_TYPES.SMARTCHARGE_ON,
     EVENT_TYPES.SMARTCHARGE_OFF,
     EVENT_TYPES.BATTERY_FULL,
     EVENT_TYPES.CHARGER_DISCONNECTED,
     EVENT_TYPES.SMARTCHARGE_ERROR,
-    EVENT_TYPES.SESSION_EXPIRED,
-    EVENT_TYPES.SESSION_RESET,
   ]);
 
   const LOGIC_VARIABLE_NAMES = Object.freeze({
@@ -801,26 +833,24 @@ const SmartChargeLogger = (() => {
     SKIPPED_UNCHANGED: 'Log key unchanged',
   });
 
-  // Fields that define whether a decision log entry has meaningfully changed.
-const DECISION_LOG_KEY_FIELDS = Object.freeze([
-  'eventType',
-  'battery',
-  'currentPrice',
-  'connectedAt',
-  'targetDeparture',
-  'chargeMinutes',
-  'chargeSlots',
-  'shouldChargeNow',
-  'plannedStart',
-  'plannedEnd',
-  'reason',
-  'plugOn',
-  'plugPower',
-  'totalPrice',
-  'averagePrice',
-]);
+  const DECISION_LOG_KEY_FIELDS = Object.freeze([
+    'eventType',
+    'battery',
+    'currentPrice',
+    'connectedAt',
+    'targetDeparture',
+    'chargeMinutes',
+    'chargeSlots',
+    'shouldChargeNow',
+    'plannedStart',
+    'plannedEnd',
+    'reason',
+    'plugOn',
+    'plugPower',
+    'totalPrice',
+    'averagePrice',
+  ]);
 
-  // Stable payload shape expected by the Google Sheets webhook.
   const GOOGLE_SHEETS_PAYLOAD_FIELDS = Object.freeze([
     'eventType',
     'sessionId',
@@ -857,19 +887,37 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     'message',
   ]);
 
-  // Validation and normalization helpers.
+  /**
+   * Ensures that a value is an object.
+   *
+   * @param {unknown} value
+   * @param {string} name
+   * @returns {void}
+   */
   function assertObject(value, name) {
     if (!value || typeof value !== 'object') {
       throw new TypeError(`${name} must be an object`);
     }
   }
 
+  /**
+   * Validates SmartCharge event type.
+   *
+   * @param {string} eventType
+   * @returns {void}
+   */
   function assertEventType(eventType) {
     if (!SUPPORTED_EVENT_TYPES.includes(eventType)) {
       throw new RangeError(`Unsupported log event type: ${eventType}`);
     }
   }
 
+  /**
+   * Extracts and validates event type from string or log event object.
+   *
+   * @param {string|object} logEventOrType
+   * @returns {string}
+   */
   function normalizeEventType(logEventOrType) {
     if (typeof logEventOrType === 'string') {
       assertEventType(logEventOrType);
@@ -880,9 +928,16 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
 
     const eventType = logEventOrType.eventType || logEventOrType.type;
     assertEventType(eventType);
+
     return eventType;
   }
 
+  /**
+   * Converts Date values to ISO strings.
+   *
+   * @param {unknown} value
+   * @returns {unknown}
+   */
   function normalizeDateLike(value) {
     if (value instanceof Date) {
       if (Number.isNaN(value.getTime())) {
@@ -895,6 +950,12 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     return value;
   }
 
+  /**
+   * Normalizes values for Google Sheets payload.
+   *
+   * @param {unknown} value
+   * @returns {unknown}
+   */
   function normalizeValue(value) {
     const normalized = normalizeDateLike(value);
 
@@ -909,6 +970,12 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     return normalized;
   }
 
+  /**
+   * Normalizes a SmartCharge log event.
+   *
+   * @param {object} logEvent
+   * @returns {object}
+   */
   function normalizeLogEvent(logEvent) {
     assertObject(logEvent, 'logEvent');
 
@@ -916,33 +983,48 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
 
     return {
       ...logEvent,
+
       eventType,
-      battery: normalizeValue(logEvent.battery),
-      connectedAt: normalizeValue(logEvent.connectedAt),
+      sessionId: normalizeValue(logEvent.sessionId),
       loggedAt: normalizeValue(logEvent.loggedAt),
+
+      battery: normalizeValue(logEvent.battery),
+      currentPrice: normalizeValue(logEvent.currentPrice),
+
+      connectedAt: normalizeValue(logEvent.connectedAt),
       targetDeparture: normalizeValue(logEvent.targetDeparture),
+
       chargeMinutes: normalizeValue(logEvent.chargeMinutes),
       chargeQuarters: normalizeValue(logEvent.chargeQuarters),
       chargeSlots: normalizeValue(logEvent.chargeSlots),
       chargeHoursAhead: normalizeValue(logEvent.chargeHoursAhead),
+
       shouldChargeNow: normalizeValue(logEvent.shouldChargeNow),
+
       plannedStart: normalizeValue(logEvent.plannedStart),
       plannedEnd: normalizeValue(logEvent.plannedEnd),
+
+      plugOn: normalizeValue(logEvent.plugOn),
+      plugPower: normalizeValue(logEvent.plugPower),
+
       reason: normalizeValue(logEvent.reason),
+
       totalPrice: normalizeValue(logEvent.totalPrice),
       averagePrice: normalizeValue(logEvent.averagePrice),
       priceCount: normalizeValue(logEvent.priceCount),
+
       source: normalizeValue(logEvent.source || 'smartcharge-engine'),
-      message: normalizeValue(logEvent.message),
-      sessionId: normalizeValue(logEvent.sessionId),
-      currentPrice: normalizeValue(logEvent.currentPrice),
-      plugOn: normalizeValue(logEvent.plugOn),
-      plugPower: normalizeValue(logEvent.plugPower),
       engineVersion: normalizeValue(logEvent.engineVersion),
+      message: normalizeValue(logEvent.message),
     };
   }
 
-  // Log key and write-decision helpers.
+  /**
+   * Formats a value for log key generation.
+   *
+   * @param {unknown} value
+   * @returns {string}
+   */
   function formatKeyValue(value) {
     if (value === null || value === undefined) {
       return '';
@@ -951,6 +1033,12 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     return String(value);
   }
 
+  /**
+   * Builds a stable key used to suppress duplicate decision logs.
+   *
+   * @param {object} logEvent
+   * @returns {string}
+   */
   function buildLogKey(logEvent) {
     const event = normalizeLogEvent(logEvent);
 
@@ -959,11 +1047,25 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     ).join('|');
   }
 
+  /**
+   * Checks whether event type is critical and must always be written.
+   *
+   * @param {string|object} eventType
+   * @returns {boolean}
+   */
   function isCriticalEvent(eventType) {
     const normalizedEventType = normalizeEventType(eventType);
     return CRITICAL_EVENT_TYPES.includes(normalizedEventType);
   }
 
+  /**
+   * Decides whether the log should be written.
+   *
+   * @param {string|null} previousKey
+   * @param {string} currentKey
+   * @param {string} eventType
+   * @returns {boolean}
+   */
   function shouldWriteLog(previousKey, currentKey, eventType) {
     const normalizedEventType = normalizeEventType(eventType);
 
@@ -978,7 +1080,12 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     return false;
   }
 
-  // Google Sheets payload and webhook helpers.
+  /**
+   * Resolves loggedAt value.
+   *
+   * @param {unknown} value
+   * @returns {string}
+   */
   function toLoggedAt(value) {
     const normalized = normalizeDateLike(value || new Date());
 
@@ -989,11 +1096,19 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     return String(normalized);
   }
 
+  /**
+   * Creates Google Sheets payload with a stable field order.
+   *
+   * @param {object} logEvent
+   * @param {object} [options]
+   * @returns {object}
+   */
   function prepareGoogleSheetsPayload(logEvent, options = {}) {
     const event = normalizeLogEvent(logEvent);
     const loggedAt = toLoggedAt(
       options.loggedAt || event.loggedAt || event.timestamp,
     );
+
     const payload = {
       ...event,
       loggedAt,
@@ -1036,9 +1151,18 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     return webhookUrl.trim();
   }
 
+  /**
+   * Sends prepared payload to Google Sheets webhook.
+   *
+   * @param {string} webhookUrl
+   * @param {object} payload
+   * @param {object} [options]
+   * @returns {Promise<{ok:boolean,status:number}>}
+   */
   async function postGoogleSheetsLog(webhookUrl, payload, options = {}) {
     const resolvedWebhookUrl = assertWebhookUrl(webhookUrl);
     const fetchImpl = resolveFetch(options.fetch);
+
     const response = await fetchImpl(resolvedWebhookUrl, {
       method: 'POST',
       headers: {
@@ -1058,7 +1182,6 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     };
   }
 
-  // Homey logic variable access used by logger integration.
   function resolveHomey(options = {}) {
     if (options.homey) {
       return options.homey;
@@ -1157,12 +1280,23 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     return getLogicVariableValue(LOGIC_VARIABLE_NAMES.WEBHOOK_URL, options);
   }
 
-  // Public logger entry point.
+  /**
+   * Main logger entry point.
+   *
+   * Writes a SmartCharge event to Google Sheets.
+   * Decision events are deduplicated by log key.
+   * Critical lifecycle events are always written.
+   *
+   * @param {object} logEvent
+   * @param {object} [options]
+   * @returns {Promise<object>}
+   */
   async function logToGoogleSheets(logEvent, options = {}) {
     const eventType = normalizeEventType(logEvent);
     const currentKey = buildLogKey(logEvent);
     const previousKey = await getPreviousLogKey(eventType, options);
     const shouldWrite = shouldWriteLog(previousKey, currentKey, eventType);
+
     const payload = prepareGoogleSheetsPayload(logEvent, {
       ...options,
       logKey: currentKey,
@@ -1179,6 +1313,7 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     }
 
     const webhookUrl = await getWebhookUrl(options);
+
     const postResult =
       typeof options.postGoogleSheetsLog === 'function'
         ? await options.postGoogleSheetsLog(webhookUrl, payload, options)
@@ -1202,11 +1337,109 @@ const DECISION_LOG_KEY_FIELDS = Object.freeze([
     };
   }
 
+  /**
+   * Writes a lifecycle event to Google Sheets.
+   *
+   * This helper automatically collects the current SmartCharge runtime state:
+   *  - sessionId / connectedAt
+   *  - battery
+   *  - plug state
+   *  - plug power
+   *
+   * It is intended for:
+   *  - session_start
+   *  - session_reset
+   *  - smartcharge_on
+   *  - smartcharge_off
+   *  - battery_full
+   *  - charger_disconnected
+   *
+   * @param {object} options
+   * @param {string} options.eventType
+   * @param {string} options.reason
+   * @param {string|null} [options.message]
+   * @param {string} [options.source]
+   * @param {number|null} [options.currentPrice]
+   * @returns {Promise<object>}
+   */
+  async function logLifecycleEvent({
+    eventType,
+    reason,
+    message = null,
+    source = 'smartcharge-runtime',
+    currentPrice = null,
+  }) {
+    const now = new Date();
+
+    const mercedes = await getDeviceByNamePart(
+      CONFIG.mercedesDeviceNameIncludes,
+    );
+
+    const plug = await getDeviceByNamePart(CONFIG.plugDeviceNameIncludes);
+
+    const battery = mercedes.capabilitiesObj.measure_battery?.value ?? null;
+    const plugOn = plug.capabilitiesObj.onoff?.value ?? null;
+    const plugPower = plug.capabilitiesObj.measure_power?.value ?? null;
+
+    const connectedAtRaw = await getVariableValue(
+      CONFIG.chargeConnectedAtVariableName,
+    );
+
+    const hasActiveSession = connectedAtRaw && connectedAtRaw !== 'null';
+
+    const sessionId = hasActiveSession ? connectedAtRaw : formatLocal(now);
+
+    const connectedAt = hasActiveSession ? connectedAtRaw : null;
+
+    return logToGoogleSheets(
+      {
+        eventType,
+
+        sessionId,
+        loggedAt: now,
+
+        battery,
+        currentPrice,
+
+        connectedAt,
+        targetDeparture: null,
+
+        chargeMinutes: null,
+        chargeSlots: null,
+        chargeHoursAhead: null,
+
+        plannedStart: null,
+        plannedEnd: null,
+
+        shouldChargeNow: false,
+
+        plugOn,
+        plugPower,
+
+        reason,
+
+        averagePrice: null,
+        totalPrice: null,
+        priceCount: null,
+
+        source,
+        engineVersion: BUILD_INFO.fullVersion,
+
+        message,
+      },
+      {
+        webhookUrl: await getVariableValue(LOGIC_VARIABLE_NAMES.WEBHOOK_URL),
+      },
+    );
+  }
+
   return {
     CRITICAL_EVENT_TYPES,
     EVENT_TYPES,
     LOGIC_VARIABLE_NAMES,
+
     buildLogKey,
+    logLifecycleEvent,
     logToGoogleSheets,
     prepareGoogleSheetsPayload,
     postGoogleSheetsLog,
@@ -1257,11 +1490,8 @@ async function main() {
     CONFIG.chargeConnectedAtVariableName,
   );
 
-  if (
-    (!connectedAtRaw || connectedAtRaw === 'null') &&
-    battery >= CONFIG.batteryFullPercentage
-  ) {
-    const reason = 'No active session: battery is full';
+  if (!connectedAtRaw || connectedAtRaw === 'null') {
+    const reason = 'No active session';
 
     await tryUpdateVariableByName(
       CONFIG.smartChargeShouldChargeVariableName,

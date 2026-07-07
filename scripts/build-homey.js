@@ -15,6 +15,10 @@ const TARGETS = {
     entry: 'src/90-flows/reset-session.entry.js',
     out: 'SMARTCHARGE - Reset Session.js',
   },
+  'start-session': {
+    entry: 'src/90-flows/start-session.entry.js',
+    out: 'SMARTCHARGE - Start Session.js',
+  },
 };
 
 if (!TARGETS[target]) {
