@@ -1,8 +1,8 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
 // Target: run-decision
-// Version: 0.3.25+build.25
-// Built at: 2026-07-07T10:49:14.526Z
+// Version: 0.3.33+build.33
+// Built at: 2026-07-07T11:12:57.977Z
 
 // -----------------------------------------------------------------------------
 // Source file: src/00-config/00-build-info.generated.js
@@ -13,10 +13,10 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.3.25',
-  fullVersion: '0.3.25+build.25',
-  build: 25,
-  builtAt: '2026-07-07T10:49:14.526Z',
+  version: '0.3.33',
+  fullVersion: '0.3.33+build.33',
+  build: 33,
+  builtAt: '2026-07-07T11:12:57.977Z',
 });
 
 

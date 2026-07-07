@@ -12,7 +12,9 @@
     "build:decision": "node scripts/build-homey.js run-decision",
     "build:reset": "node scripts/build-homey.js reset-session",
     "build:start": "node scripts/build-homey.js start-session",
-    "build:homey": "npm run build:decision && npm run build:reset && npm run build:start"
+    "build:log-on": "node scripts/build-homey.js log-on-session",
+    "build:log-off": "node scripts/build-homey.js log-off-session",
+    "build:homey": "npm run build:decision && npm run build:reset && npm run build:start && npm run build:log-on && npm run build:log-off"
   },
   "keywords": [],
   "author": "",

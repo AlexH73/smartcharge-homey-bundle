@@ -1,8 +1,8 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
 // Target: start-session
-// Version: 0.3.24+build.24
-// Built at: 2026-07-07T10:02:54.820Z
+// Version: 0.3.35+build.35
+// Built at: 2026-07-07T11:12:58.561Z
 
 // -----------------------------------------------------------------------------
 // Source file: src/00-config/00-build-info.generated.js
@@ -13,10 +13,10 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.3.24',
-  fullVersion: '0.3.24+build.24',
-  build: 24,
-  builtAt: '2026-07-07T10:02:54.820Z',
+  version: '0.3.35',
+  fullVersion: '0.3.35+build.35',
+  build: 35,
+  builtAt: '2026-07-07T11:12:58.561Z',
 });
 
 
@@ -171,7 +171,13 @@ function addMinutes(date, minutes) {
 }
 
 /**
- * Parses a date value or returns fallback when missing/invalid.
+ * Parses SmartCharge datetime value or returns fallback when missing/invalid.
+ *
+ * Supported formats:
+ *  - SmartCharge local format: YYYY-MM-DD HH:mm:ss
+ *  - ISO datetime string
+ *
+ * Local SmartCharge strings are interpreted in CONFIG.timeZone.
  *
  * @param {unknown} value
  * @param {Date} fallbackDate
@@ -180,6 +186,30 @@ function addMinutes(date, minutes) {
 function parseDateOrFallback(value, fallbackDate) {
   if (!value || value === 'null') {
     return fallbackDate;
+  }
+
+  if (typeof value !== 'string') {
+    return fallbackDate;
+  }
+
+  const localMatch = value.match(
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
+  );
+
+  if (localMatch) {
+    const [, year, month, day, hour, minute, second] = localMatch;
+
+    return createDateFromLocalParts(
+      {
+        year: Number(year),
+        month: Number(month),
+        day: Number(day),
+        hour: Number(hour),
+        minute: Number(minute),
+        second: Number(second),
+      },
+      CONFIG.timeZone,
+    );
   }
 
   const parsed = new Date(value);
@@ -1447,22 +1477,10 @@ async function main() {
   const connectedAt = formatLocal(now);
   const reason = 'Session started';
 
-  await tryUpdateVariableByName(
-    CONFIG.chargeConnectedAtVariableName,
-    connectedAt,
-  );
-  await tryUpdateVariableByName(
-    CONFIG.smartChargePlannedStartVariableName,
-    'null',
-  );
-  await tryUpdateVariableByName(
-    CONFIG.smartChargePlannedEndVariableName,
-    'null',
-  );
-  await tryUpdateVariableByName(
-    CONFIG.smartChargeShouldChargeVariableName,
-    false,
-  );
+  await tryUpdateVariableByName(CONFIG.chargeConnectedAtVariableName, connectedAt);
+  await tryUpdateVariableByName(CONFIG.smartChargePlannedStartVariableName, 'null');
+  await tryUpdateVariableByName(CONFIG.smartChargePlannedEndVariableName, 'null');
+  await tryUpdateVariableByName(CONFIG.smartChargeShouldChargeVariableName, false);
   await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
 
   let logResult = null;
@@ -1493,5 +1511,4 @@ async function main() {
 }
 
 return await main();
-
 

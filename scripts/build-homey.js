@@ -19,6 +19,14 @@ const TARGETS = {
     entry: 'src/90-flows/start-session.entry.js',
     out: 'SMARTCHARGE - Start Session.js',
   },
+  'log-on-session': {
+    entry: 'src/90-flows/log-on.entry.js',
+    out: 'SMARTCHARGE - Log On.js',
+  },
+  'log-off-session': {
+    entry: 'src/90-flows/log-off.entry.js',
+    out: 'SMARTCHARGE - Log Off.js',
+  },
 };
 
 if (!TARGETS[target]) {
