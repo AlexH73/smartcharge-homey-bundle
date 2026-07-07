@@ -1,0 +1,53 @@
+{
+  "name": "logger-payload",
+  "description": "Decision logging payload matches the expected Google Sheets contract.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T18:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 80,
+          "chargeSlots": 2,
+          "shouldChargeNow": false,
+          "plannedStart": "2026-07-08 02:00:00",
+          "plannedEnd": "2026-07-08 04:00:00"
+        },
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": [
+      "smartcharge_decision"
+    ],
+    "tibberCalls": 1,
+    "logFixture": "google-logger-payload.json"
+  }
+}

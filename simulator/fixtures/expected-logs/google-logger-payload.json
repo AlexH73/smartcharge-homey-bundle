@@ -1,0 +1,26 @@
+[
+  {
+    "eventType": "smartcharge_decision",
+    "sessionId": "2026-07-07 18:00:00",
+    "loggedAt": "2026-07-07T16:05:00.000Z",
+    "battery": 70,
+    "currentPrice": 0.58,
+    "chargeMinutes": 80,
+    "chargeSlots": 2,
+    "chargeHoursAhead": 14,
+    "connectedAt": "2026-07-07 18:00:00",
+    "targetDeparture": "2026-07-08 07:30:00",
+    "plannedStart": "2026-07-08 02:00:00",
+    "plannedEnd": "2026-07-08 04:00:00",
+    "shouldChargeNow": false,
+    "plugOn": false,
+    "plugPower": 0,
+    "reason": "Waiting for selected charging plan",
+    "averagePrice": 0.155,
+    "totalPrice": 0.31,
+    "priceCount": 48,
+    "source": "smartcharge-run-decision",
+    "engineVersion": "__ENGINE_VERSION__",
+    "message": null
+  }
+]

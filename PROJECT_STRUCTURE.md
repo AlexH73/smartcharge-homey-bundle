@@ -111,6 +111,14 @@ Local hourly price profiles used by the Tibber mock.
 - `cheap-night.json`
 - `price-spike.json`
 - `missing-tomorrow.json`
+- `price-update-evening.json`
+- `late-plan.json`
+- `no-prices.json`
+
+### `simulator/fixtures/expected-logs/`
+
+Expected Google Sheets payload snapshots used by scenarios that validate the
+full logging contract.
 
 ### `simulator/scenarios/`
 
@@ -123,6 +131,7 @@ Generated simulator output.
 
 - `events.jsonl`
 - `events.csv`
+- `<scenario>-actual-log.json`
 
 Generated log files are ignored by git. `.gitkeep` keeps the directory present.
 

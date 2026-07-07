@@ -82,6 +82,9 @@ Run a single scenario:
 npm run simulate -- overnight
 npm run simulate:battery-full
 npm run simulate:session-expired
+npm run simulate:missing-tomorrow
+npm run simulate:safety-fallback
+npm run simulate:logger-payload
 ```
 
 List scenarios:
@@ -103,6 +106,9 @@ simulator/logs/events.csv
 ```
 
 The CSV file can be opened in Excel. Generated log files are ignored by git.
+The `logger-payload` scenario also writes an actual payload snapshot to
+`simulator/logs/logger-payload-actual-log.json` and compares it with
+`simulator/fixtures/expected-logs/google-logger-payload.json`.
 
 Logged event fields include:
 
@@ -137,7 +143,17 @@ Scenario files live in `simulator/scenarios/`.
 - `battery-full` - active session with a full battery.
 - `no-active-session` - decision flow without an active session.
 - `session-expired` - expired session blocks charging and logs the event.
+- `session-expired-while-charging` - expired session while the plug is still on.
 - `price-spike` - high day prices push charging into cheaper hours.
+- `price-update` - updated Tibber prices change the plan without toggling the
+  plug.
+- `missing-tomorrow` - Tibber has not published tomorrow prices yet.
+- `safety-fallback` - charging starts immediately when remaining time is too
+  short.
+- `plan-starts-too-late` - selected plan starts after the latest safe start.
+- `multiple-sessions` - two sequential charging sessions with a reset between
+  them.
+- `logger-payload` - exact Google Sheets payload contract check.
 - `plug-disconnected` - reset flow after charger disconnect trigger.
 - `low-power-after-charging` - log-off flow after a low-power stop signal.
 - `charging-completed` - log-off plus reset after full charge.
@@ -149,7 +165,9 @@ Scenario files live in `simulator/scenarios/`.
 3. Define initial Homey Logic variables and mock device state.
 4. Add one or more flow steps.
 5. Add expectations for important results, events, plug state, and Tibber calls.
-6. Run `npm run simulate -- your-scenario-name`.
+6. Optionally add an expected log fixture in
+   `simulator/fixtures/expected-logs/` for exact payload checks.
+7. Run `npm run simulate -- your-scenario-name`.
 
 Scenario names come from the `name` field in the JSON file.
 

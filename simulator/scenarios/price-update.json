@@ -1,0 +1,73 @@
+{
+  "name": "price-update",
+  "description": "A later Tibber price update changes the plan without toggling the plug while charging is still not due.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T18:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:00:00+02:00",
+      "fixture": "cheap-night",
+      "expect": {
+        "result": {
+          "shouldChargeNow": false,
+          "plannedStart": "2026-07-08 02:00:00",
+          "plannedEnd": "2026-07-08 04:00:00"
+        },
+        "reasonIncludes": "Waiting for selected charging plan",
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:15:00+02:00",
+      "fixture": "price-update-evening",
+      "expect": {
+        "result": {
+          "shouldChargeNow": false,
+          "plannedStart": "2026-07-07 21:00:00",
+          "plannedEnd": "2026-07-07 23:00:00"
+        },
+        "reasonIncludes": "Waiting for selected charging plan",
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": [
+      "smartcharge_decision",
+      "smartcharge_decision"
+    ],
+    "tibberCalls": 2
+  }
+}

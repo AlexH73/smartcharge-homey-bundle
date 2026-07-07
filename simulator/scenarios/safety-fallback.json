@@ -1,0 +1,56 @@
+{
+  "name": "safety-fallback",
+  "description": "Charging starts immediately when required charging time is longer than remaining time to departure.",
+  "now": "2026-07-08T06:50:00+02:00",
+  "fixture": "no-prices",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T18:00:00+02:00",
+      "ChargeFactor": 2,
+      "ChargeReserve": 25
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 75
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 75,
+          "chargeSlots": 2,
+          "chargeHoursAhead": 1,
+          "shouldChargeNow": true,
+          "plannedStart": null,
+          "plannedEnd": null,
+          "reason": "Safety fallback: latest safe start reached and no plan found"
+        },
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": true,
+    "plugCommandCount": 1,
+    "eventTypes": [
+      "smartcharge_decision"
+    ],
+    "tibberCalls": 1
+  }
+}

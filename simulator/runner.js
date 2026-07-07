@@ -7,7 +7,9 @@ const { SimulatorRuntime } = require('./runtime/simulator-runtime');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const SCENARIO_DIR = path.join(__dirname, 'scenarios');
+const EXPECTED_LOG_DIR = path.join(__dirname, 'fixtures', 'expected-logs');
 const LOG_DIR = path.join(__dirname, 'logs');
+const DYNAMIC_ENGINE_VERSION = '__ENGINE_VERSION__';
 
 function loadScenarios() {
   return fs.readdirSync(SCENARIO_DIR)
@@ -72,6 +74,7 @@ async function runScenario({ scenario, scriptLoader, logWriter }) {
   }
 
   assertFinalState(scenario, runtime);
+  assertExpectedLogFixture(scenario, runtime);
 
   return {
     name: scenario.name,
@@ -110,6 +113,14 @@ function assertStep(step, stepResult) {
       stepResult.devices.plug.capabilitiesObj.onoff.value,
       expected.plugOn,
       `${label} plug onoff`,
+    );
+  }
+
+  if (expected.plugCommandCount !== undefined) {
+    assert.equal(
+      stepResult.devices.plug.commands.length,
+      expected.plugCommandCount,
+      `${label} plug command count`,
     );
   }
 
@@ -153,6 +164,14 @@ function assertFinalState(scenario, runtime) {
     );
   }
 
+  if (expected.plugCommandCount !== undefined) {
+    assert.equal(
+      runtime.homeyMock.devices.plug.commands.length,
+      expected.plugCommandCount,
+      `${scenario.name} final plug command count`,
+    );
+  }
+
   if (expected.eventTypes) {
     const eventTypes = runtime.logWriter.events
       .filter((event) => event.scenario === scenario.name)
@@ -168,6 +187,58 @@ function assertFinalState(scenario, runtime) {
       `${scenario.name} Tibber calls`,
     );
   }
+}
+
+function assertExpectedLogFixture(scenario, runtime) {
+  const fixtureName = scenario.expect?.logFixture;
+
+  if (!fixtureName) {
+    return;
+  }
+
+  const expectedPath = path.join(EXPECTED_LOG_DIR, fixtureName);
+  const actualPath = path.join(LOG_DIR, `${scenario.name}-actual-log.json`);
+  const events = runtime.logWriter.events.filter(
+    (event) => event.scenario === scenario.name,
+  );
+  const actualPayloads = events.map(toGoogleSheetsPayload);
+  const expectedPayloads = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
+
+  fs.writeFileSync(
+    actualPath,
+    `${JSON.stringify(actualPayloads, null, 2)}\n`,
+    'utf8',
+  );
+
+  assert.deepEqual(
+    normalizeDynamicLogFields(actualPayloads),
+    expectedPayloads,
+    `${scenario.name} expected log fixture`,
+  );
+}
+
+function toGoogleSheetsPayload(event) {
+  const { scenario, flow, ...payload } = event;
+  return payload;
+}
+
+function normalizeDynamicLogFields(value) {
+  if (Array.isArray(value)) {
+    return value.map(normalizeDynamicLogFields);
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      key === 'engineVersion'
+        ? DYNAMIC_ENGINE_VERSION
+        : normalizeDynamicLogFields(item),
+    ]),
+  );
 }
 
 function assertObjectContains(actual, expected, label) {

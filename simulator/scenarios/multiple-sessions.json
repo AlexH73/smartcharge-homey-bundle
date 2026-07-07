@@ -1,0 +1,218 @@
+{
+  "name": "multiple-sessions",
+  "description": "Two charging sessions run sequentially with a reset between them.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 62
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "start-session",
+      "now": "2026-07-07T18:00:00+02:00",
+      "expect": {
+        "result": {
+          "started": true,
+          "loggerWritten": true
+        },
+        "events": [
+          "session_start"
+        ]
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:05:00+02:00",
+      "fixture": "cheap-night",
+      "expect": {
+        "result": {
+          "shouldChargeNow": false
+        },
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T02:00:00+02:00",
+      "fixture": "cheap-night",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true
+        },
+        "reasonIncludes": "inside selected charging plan",
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "log-on",
+      "now": "2026-07-08T02:01:00+02:00",
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": true,
+              "measure_power": 3600
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "logged": true,
+          "eventType": "smartcharge_on",
+          "loggerWritten": true
+        },
+        "events": [
+          "smartcharge_on"
+        ],
+        "plugOn": true,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "log-off",
+      "now": "2026-07-08T03:20:00+02:00",
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": false,
+              "measure_power": 20
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "logged": true,
+          "eventType": "smartcharge_off",
+          "loggerWritten": true
+        },
+        "events": [
+          "smartcharge_off"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "reset-session",
+      "now": "2026-07-08T07:00:00+02:00",
+      "expect": {
+        "result": {
+          "reset": true,
+          "loggerWritten": true
+        },
+        "events": [
+          "session_reset"
+        ],
+        "plugOn": false,
+        "logic": {
+          "ChargeConnectedAt": "null"
+        }
+      }
+    },
+    {
+      "flow": "start-session",
+      "now": "2026-07-08T14:00:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": 68
+            }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": false,
+              "measure_power": 0
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "started": true,
+          "loggerWritten": true
+        },
+        "events": [
+          "session_start"
+        ],
+        "plugOn": false
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T14:05:00+02:00",
+      "fixture": "price-update-evening",
+      "expect": {
+        "result": {
+          "shouldChargeNow": false,
+          "plannedStart": "2026-07-08 21:00:00",
+          "plannedEnd": "2026-07-08 23:00:00"
+        },
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 1,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T21:00:00+02:00",
+      "fixture": "price-update-evening",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true
+        },
+        "reasonIncludes": "inside selected charging plan",
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": true,
+        "plugCommandCount": 2,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": true,
+    "plugCommandCount": 2,
+    "eventTypes": [
+      "session_start",
+      "smartcharge_decision",
+      "smartcharge_decision",
+      "smartcharge_on",
+      "smartcharge_off",
+      "session_reset",
+      "session_start",
+      "smartcharge_decision",
+      "smartcharge_decision"
+    ],
+    "tibberCalls": 4
+  }
+}
