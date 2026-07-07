@@ -6,6 +6,7 @@ node_modules/
 .idea/
 backup/
 simulator/logs/*.csv
+simulator/logs/*.html
 simulator/logs/*.json
 simulator/logs/*.jsonl
 dist/*

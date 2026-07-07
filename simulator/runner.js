@@ -88,10 +88,57 @@ async function runScenario({ scenario, scriptLoader, logWriter }) {
   };
 }
 
-function assertStep(step, stepResult) {
-  const expected = step.expect || {};
-  const label = `${step.flow} step`;
+async function runScenarioWithExpectedFailure(args) {
+  const { scenario } = args;
 
+  if (!scenario.futureExpectedFailure) {
+    return {
+      status: 'pass',
+      result: await runScenario(args),
+    };
+  }
+
+  try {
+    const result = await runScenario(args);
+    const error = new Error(
+      `${scenario.name} is marked futureExpectedFailure but passed`,
+    );
+    error.unexpectedPass = true;
+    error.result = result;
+    throw error;
+  } catch (error) {
+    if (error.unexpectedPass || !error.futureExpectation) {
+      throw error;
+    }
+
+    return {
+      status: 'xfail',
+      name: scenario.name,
+      description: scenario.description,
+      reason: error.message,
+    };
+  }
+}
+
+function assertStep(step, stepResult) {
+  const label = `${step.flow} step`;
+  assertStepExpect(step.expect || {}, stepResult, label);
+
+  if (step.futureExpect) {
+    try {
+      assertStepExpect(
+        step.futureExpect,
+        stepResult,
+        `${label} future expectation`,
+      );
+    } catch (error) {
+      error.futureExpectation = true;
+      throw error;
+    }
+  }
+}
+
+function assertStepExpect(expected, stepResult, label) {
   if (expected.result) {
     assertObjectContains(stepResult.result, expected.result, `${label} result`);
   }
@@ -226,7 +273,7 @@ function assertExpectedLogFixture(scenario, runtime) {
 }
 
 function toGoogleSheetsPayload(event) {
-  const { scenario, flow, ...payload } = event;
+  const { receivedAt, scenario, flow, ...payload } = event;
   return payload;
 }
 
@@ -257,8 +304,18 @@ function assertObjectContains(actual, expected, label) {
 
 function printScenarioList(scenarios) {
   for (const scenario of scenarios) {
-    console.log(`${scenario.name} - ${scenario.description}`);
+    const marker = scenario.futureExpectedFailure ? ' [future XFAIL]' : '';
+    console.log(`${scenario.name}${marker} - ${scenario.description}`);
   }
+}
+
+function printScenarioOutcome(outcome) {
+  if (outcome.status === 'xfail') {
+    printExpectedFailureResult(outcome);
+    return;
+  }
+
+  printScenarioResult(outcome.result);
 }
 
 function printScenarioResult(result) {
@@ -275,6 +332,12 @@ function printScenarioResult(result) {
   );
   console.log(`  Tibber calls: ${result.tibberCalls}`);
   console.log(`  Log events  : ${events.length > 0 ? events.join(', ') : 'none'}`);
+}
+
+function printExpectedFailureResult(result) {
+  console.log(`XFAIL ${result.name}`);
+  console.log(`  ${result.description}`);
+  console.log(`  Future expectation: ${result.reason}`);
 }
 
 function summarizeStep(step) {
@@ -316,20 +379,28 @@ async function main() {
   const results = [];
 
   for (const scenario of selectedScenarios) {
-    const result = await runScenario({
+    const result = await runScenarioWithExpectedFailure({
       scenario,
       scriptLoader,
       logWriter,
     });
 
     results.push(result);
-    printScenarioResult(result);
+    printScenarioOutcome(result);
   }
+
+  const expectedFailures = results.filter(
+    (result) => result.status === 'xfail',
+  );
 
   console.log('');
   console.log(`Scenarios : ${results.length}`);
+  if (expectedFailures.length > 0) {
+    console.log(`XFAIL     : ${expectedFailures.length}`);
+  }
   console.log(`JSONL log : ${path.relative(ROOT_DIR, logWriter.jsonlPath)}`);
   console.log(`CSV log   : ${path.relative(ROOT_DIR, logWriter.csvPath)}`);
+  console.log(`HTML log  : ${path.relative(ROOT_DIR, logWriter.htmlPath)}`);
 }
 
 main().catch((error) => {

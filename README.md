@@ -13,6 +13,12 @@ electric vehicle charging from Tibber hourly prices and Homey device state.
 The source code lives in `src/` as small reusable modules. The build script
 concatenates those modules into standalone HomeyScript files under `dist/`.
 
+## Project Documentation
+
+- [Roadmap](docs/Roadmap.md)
+- [Development Workflow](docs/DevelopmentWorkflow.md)
+- [Changelog](CHANGELOG.md)
+
 ## Runtime Lifecycle
 
 The production Homey setup is expected to call separate HomeyScript flows:
@@ -85,6 +91,10 @@ npm run simulate:session-expired
 npm run simulate:missing-tomorrow
 npm run simulate:safety-fallback
 npm run simulate:logger-payload
+npm run simulate:multi-window-needed
+npm run simulate:adjacent-cheap-slots
+npm run simulate:fallback-when-not-enough-slots
+npm run simulate:multi-window-price-update
 ```
 
 List scenarios:
@@ -103,37 +113,41 @@ would go to the webhook is captured locally and written to:
 ```text
 simulator/logs/events.jsonl
 simulator/logs/events.csv
+simulator/logs/events.html
 ```
 
-The CSV file can be opened in Excel. Generated log files are ignored by git.
+The CSV file is intended for import and machine checks. The HTML file is
+intended for human review in a browser and includes a highlighted sticky header
+row. Generated log files are ignored by git.
 The `logger-payload` scenario also writes an actual payload snapshot to
 `simulator/logs/logger-payload-actual-log.json` and compares it with
 `simulator/fixtures/expected-logs/google-logger-payload.json`.
 
 Logged event fields include:
 
+- `receivedAt`
 - `eventType`
 - `sessionId`
 - `loggedAt`
-- `battery`
-- `currentPrice`
-- `chargeMinutes`
+- `battery_%`
+- `currentPrice_€/kWh`
+- `chargeMinutes_min`
 - `chargeSlots`
-- `chargeHoursAhead`
+- `chargeHoursAhead_h`
 - `connectedAt`
 - `targetDeparture`
 - `plannedStart`
 - `plannedEnd`
 - `shouldChargeNow`
 - `plugOn`
-- `plugPower`
+- `plugPower_W`
 - `reason`
-- `averagePrice`
-- `totalPrice`
+- `averagePrice_€/kWh`
+- `totalPrice_€`
 - `priceCount`
 - `source`
 - `engineVersion`
-- `message`
+- `detailsJson`
 
 ## Included Scenarios
 
@@ -153,6 +167,15 @@ Scenario files live in `simulator/scenarios/`.
 - `plan-starts-too-late` - selected plan starts after the latest safe start.
 - `multiple-sessions` - two sequential charging sessions with a reset between
   them.
+- `multi-window-needed` - future/XFAIL coverage for separated cheapest slots
+  that should become multiple charging windows.
+- `adjacent-cheap-slots` - future multi-window coverage for preserving adjacent
+  cheap slots as one merged window.
+- `fallback-when-not-enough-slots` - safety fallback when fewer usable slots
+  remain than the charge requires.
+- `multi-window-price-update` - future/XFAIL coverage for a price update that
+  should replace one continuous plan with separated windows without plug
+  toggling.
 - `logger-payload` - exact Google Sheets payload contract check.
 - `plug-disconnected` - reset flow after charger disconnect trigger.
 - `low-power-after-charging` - log-off flow after a low-power stop signal.
@@ -167,6 +190,9 @@ Scenario files live in `simulator/scenarios/`.
    `ChargeConnectedAt`: `YYYY-MM-DD HH:mm:ss`.
 4. Add one or more flow steps.
 5. Add expectations for important results, events, plug state, and Tibber calls.
+   Use `futureExpect` plus `futureExpectedFailure: true` only for documented
+   future behavior that the current production planner is not expected to pass
+   yet.
 6. Optionally add an expected log fixture in
    `simulator/fixtures/expected-logs/` for exact payload checks.
 7. Run `npm run simulate -- your-scenario-name`.
