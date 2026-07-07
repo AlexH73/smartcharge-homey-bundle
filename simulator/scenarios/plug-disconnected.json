@@ -1,0 +1,50 @@
+{
+  "name": "plug-disconnected",
+  "description": "Reset Session handles a charger-disconnected Homey trigger.",
+  "now": "2026-07-07T22:00:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T18:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "reset-session",
+      "expect": {
+        "result": {
+          "reset": true,
+          "loggerWritten": true
+        },
+        "events": [
+          "session_reset"
+        ],
+        "plugOn": false,
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeShouldCharge": false
+        }
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "eventTypes": [
+      "session_reset"
+    ],
+    "tibberCalls": 0
+  }
+}

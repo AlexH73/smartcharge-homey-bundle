@@ -1,0 +1,105 @@
+{
+  "name": "overnight",
+  "description": "Overnight charge with cheap night prices.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 62
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "start-session",
+      "now": "2026-07-07T18:00:00+02:00",
+      "expect": {
+        "result": {
+          "started": true,
+          "loggerWritten": true
+        },
+        "events": [
+          "session_start"
+        ],
+        "logic": {
+          "SmartChargeShouldCharge": false,
+          "SmartChargeReason": "Session started"
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "result": {
+          "shouldChargeNow": false
+        },
+        "reasonIncludes": "Waiting for selected charging plan",
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T02:05:00+02:00",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true
+        },
+        "reasonIncludes": "inside selected charging plan",
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": true,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "log-on",
+      "now": "2026-07-08T02:06:00+02:00",
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": true,
+              "measure_power": 3600
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "logged": true,
+          "eventType": "smartcharge_on",
+          "loggerWritten": true
+        },
+        "events": [
+          "smartcharge_on"
+        ],
+        "plugOn": true
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": true,
+    "eventTypes": [
+      "session_start",
+      "smartcharge_decision",
+      "smartcharge_decision",
+      "smartcharge_on"
+    ],
+    "tibberCalls": 2
+  }
+}

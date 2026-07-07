@@ -1,0 +1,31 @@
+{
+  "name": "missing-tomorrow",
+  "description": "Only today's prices are available, matching Tibber periods before tomorrow prices are published.",
+  "today": [
+    0.31,
+    0.29,
+    0.28,
+    0.27,
+    0.29,
+    0.33,
+    0.39,
+    0.45,
+    0.49,
+    0.44,
+    0.39,
+    0.36,
+    0.35,
+    0.37,
+    0.4,
+    0.44,
+    0.5,
+    0.56,
+    0.54,
+    0.48,
+    0.42,
+    0.36,
+    0.32,
+    0.3
+  ],
+  "tomorrow": null
+}

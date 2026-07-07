@@ -1,0 +1,47 @@
+{
+  "name": "low-power-after-charging",
+  "description": "Log Off records a low-power charging stop signal.",
+  "now": "2026-07-08T03:30:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T18:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 82
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 18
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "log-off",
+      "expect": {
+        "result": {
+          "logged": true,
+          "eventType": "smartcharge_off",
+          "loggerWritten": true
+        },
+        "events": [
+          "smartcharge_off"
+        ],
+        "plugOn": true
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": true,
+    "eventTypes": [
+      "smartcharge_off"
+    ],
+    "tibberCalls": 0
+  }
+}

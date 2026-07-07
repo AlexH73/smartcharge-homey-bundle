@@ -1,0 +1,66 @@
+{
+  "name": "charging-completed",
+  "description": "Completed charging logs stop and clears the session.",
+  "now": "2026-07-08T06:45:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T18:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 100
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "log-off",
+      "expect": {
+        "result": {
+          "logged": true,
+          "eventType": "smartcharge_off",
+          "loggerWritten": true
+        },
+        "events": [
+          "smartcharge_off"
+        ],
+        "plugOn": false
+      }
+    },
+    {
+      "flow": "reset-session",
+      "now": "2026-07-08T06:46:00+02:00",
+      "expect": {
+        "result": {
+          "reset": true,
+          "loggerWritten": true
+        },
+        "events": [
+          "session_reset"
+        ],
+        "plugOn": false,
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeShouldCharge": false
+        }
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "eventTypes": [
+      "smartcharge_off",
+      "session_reset"
+    ],
+    "tibberCalls": 0
+  }
+}

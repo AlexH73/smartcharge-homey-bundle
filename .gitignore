@@ -5,3 +5,5 @@ node_modules/
 .vscode/
 .idea/
 backup/
+simulator/logs/*.csv
+simulator/logs/*.jsonl

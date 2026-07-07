@@ -1,8 +1,8 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.
 // Source: smartcharge-homey-bundle
 // Target: reset-session
-// Version: 0.3.34+build.34
-// Built at: 2026-07-07T11:12:58.261Z
+// Version: 0.3.39+build.39
+// Built at: 2026-07-07T11:53:30.310Z
 
 // -----------------------------------------------------------------------------
 // Source file: src/00-config/00-build-info.generated.js
@@ -13,10 +13,10 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.3.34',
-  fullVersion: '0.3.34+build.34',
-  build: 34,
-  builtAt: '2026-07-07T11:12:58.261Z',
+  version: '0.3.39',
+  fullVersion: '0.3.39+build.39',
+  build: 39,
+  builtAt: '2026-07-07T11:53:30.310Z',
 });
 
 

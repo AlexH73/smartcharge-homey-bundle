@@ -1,0 +1,43 @@
+{
+  "name": "session-expired",
+  "description": "Expired session is logged and charging is blocked.",
+  "now": "2026-07-08T10:00:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T08:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 50
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 0,
+          "chargeSlots": 0,
+          "shouldChargeNow": false
+        },
+        "reasonIncludes": "Session expired",
+        "events": [
+          "session_expired"
+        ],
+        "plugOn": false,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "eventTypes": [
+      "session_expired"
+    ],
+    "tibberCalls": 0
+  }
+}

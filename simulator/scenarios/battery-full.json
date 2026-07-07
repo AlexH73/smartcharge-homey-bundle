@@ -1,0 +1,49 @@
+{
+  "name": "battery-full",
+  "description": "Active session with a full battery should not start charging.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07T18:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 100
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 0,
+          "chargeSlots": 0,
+          "shouldChargeNow": false,
+          "reason": "Battery is already full"
+        },
+        "events": [
+          "smartcharge_decision"
+        ],
+        "plugOn": false,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "eventTypes": [
+      "smartcharge_decision"
+    ],
+    "tibberCalls": 1
+  }
+}

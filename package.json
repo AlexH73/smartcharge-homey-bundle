@@ -8,7 +8,17 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run simulate:all",
+    "simulate": "node simulator/runner.js",
+    "simulate:all": "node simulator/runner.js all",
+    "simulate:overnight": "node simulator/runner.js overnight",
+    "simulate:battery-full": "node simulator/runner.js battery-full",
+    "simulate:no-active-session": "node simulator/runner.js no-active-session",
+    "simulate:session-expired": "node simulator/runner.js session-expired",
+    "simulate:price-spike": "node simulator/runner.js price-spike",
+    "simulate:plug-disconnected": "node simulator/runner.js plug-disconnected",
+    "simulate:low-power-after-charging": "node simulator/runner.js low-power-after-charging",
+    "simulate:charging-completed": "node simulator/runner.js charging-completed",
     "build:decision": "node scripts/build-homey.js run-decision",
     "build:reset": "node scripts/build-homey.js reset-session",
     "build:start": "node scripts/build-homey.js start-session",

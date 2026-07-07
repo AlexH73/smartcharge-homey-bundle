@@ -1,0 +1,43 @@
+{
+  "name": "no-active-session",
+  "description": "Run Decision exits safely when no charging session exists.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 64
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 0,
+          "chargeSlots": 0,
+          "shouldChargeNow": false,
+          "reason": "No active session"
+        },
+        "events": [],
+        "plugOn": false,
+        "tibberCallsDelta": 0,
+        "logic": {
+          "SmartChargeShouldCharge": false,
+          "SmartChargeReason": "No active session"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "eventTypes": [],
+    "tibberCalls": 0
+  }
+}
