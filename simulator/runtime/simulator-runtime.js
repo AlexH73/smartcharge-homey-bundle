@@ -10,12 +10,14 @@ class SimulatorRuntime {
     this.currentFlow = null;
     this.currentNow = scenario.now;
     this.currentFixture = scenario.fixture || 'normal-day';
+    this.priceAnchor = scenario.priceAnchor || scenario.now;
     this.scriptLogs = [];
     this.tibberCalls = 0;
 
     const tibberFetch = createTibberFetch({
       getFixtureName: () => this.currentFixture,
       getNow: () => this.currentNow,
+      getPriceAnchor: () => this.priceAnchor,
     });
 
     this.fetch = async (url, options = {}) => {

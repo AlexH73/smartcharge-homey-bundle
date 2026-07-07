@@ -123,7 +123,10 @@ full logging contract.
 ### `simulator/scenarios/`
 
 JSON scenario definitions. Each scenario declares initial mock state, flow
-steps, and expectations.
+steps, and expectations. Stored Homey Logic timestamps such as
+`ChargeConnectedAt` should use the production `YYYY-MM-DD HH:mm:ss` format.
+Tibber price grids are anchored per scenario through `priceAnchor` or `now`, so
+multi-step scenarios keep a stable `today` / `tomorrow` price grid.
 
 ### `simulator/logs/`
 

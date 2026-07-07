@@ -108,6 +108,14 @@ function assertStep(step, stepResult) {
     assert.deepEqual(stepResult.eventTypes, expected.events, `${label} events`);
   }
 
+  if (expected.eventPayload) {
+    assertObjectContains(
+      stepResult.events[0] || {},
+      expected.eventPayload,
+      `${label} event payload`,
+    );
+  }
+
   if (expected.plugOn !== undefined) {
     assert.equal(
       stepResult.devices.plug.capabilitiesObj.onoff.value,

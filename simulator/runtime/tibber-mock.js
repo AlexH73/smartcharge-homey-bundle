@@ -15,14 +15,18 @@ function loadTibberFixture(name) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-function createTibberFetch({ getFixtureName, getNow }) {
+function createTibberFetch({ getFixtureName, getNow, getPriceAnchor }) {
   return async function tibberFetch(url) {
     if (!String(url).includes('tibber.com')) {
       return null;
     }
 
     const fixture = loadTibberFixture(getFixtureName());
-    const priceInfo = buildPriceInfo(fixture, getNow());
+    const priceInfo = buildPriceInfo(
+      fixture,
+      getPriceAnchor ? getPriceAnchor() : getNow(),
+      getNow(),
+    );
 
     return {
       ok: true,
@@ -44,30 +48,42 @@ function createTibberFetch({ getFixtureName, getNow }) {
   };
 }
 
-function buildPriceInfo(fixture, nowValue) {
-  const now = new Date(nowValue);
-  const local = getLocalParts(now);
-  const today = normalizePrices(fixture.today || [], local, getOffset(nowValue));
-  const tomorrowDate = addDays(local, 1);
+function buildPriceInfo(fixture, anchorValue, nowValue = anchorValue) {
+  const anchor = new Date(anchorValue);
+  const anchorLocal = getLocalParts(anchor);
+  const offset = getOffset(anchorValue);
+  const today = normalizePrices(fixture.today || [], anchorLocal, offset);
+  const tomorrowDate = addDays(anchorLocal, 1);
   const tomorrow =
     fixture.tomorrow === null
       ? []
       : normalizePrices(
           fixture.tomorrow || [],
           tomorrowDate,
-          getOffset(nowValue),
+          offset,
         );
+  const currentSlot = findCurrentSlot([...today, ...tomorrow], nowValue);
   const currentTotal =
     typeof fixture.current === 'number'
       ? fixture.current
-      : today[local.hour]?.total ?? today[0]?.total ?? null;
+      : currentSlot?.total ??
+        today[anchorLocal.hour]?.total ??
+        today[0]?.total ??
+        null;
+  const currentFallbackParts = getLocalParts(new Date(nowValue));
 
   return {
     current: currentTotal === null
       ? null
       : {
           total: currentTotal,
-          startsAt: createLocalIso(local, local.hour, getOffset(nowValue)),
+          startsAt:
+            currentSlot?.startsAt ||
+            createLocalIso(
+              currentFallbackParts,
+              currentFallbackParts.hour,
+              getOffset(nowValue),
+            ),
         },
     today,
     tomorrow,
@@ -79,6 +95,17 @@ function normalizePrices(values, dateParts, offset) {
     total,
     startsAt: createLocalIso(dateParts, hour, offset),
   }));
+}
+
+function findCurrentSlot(slots, nowValue) {
+  const now = new Date(nowValue).getTime();
+
+  return slots.find((slot) => {
+    const start = new Date(slot.startsAt).getTime();
+    const end = start + 60 * 60 * 1000;
+
+    return now >= start && now < end;
+  });
 }
 
 function getLocalParts(date) {

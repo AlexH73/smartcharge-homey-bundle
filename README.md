@@ -163,6 +163,8 @@ Scenario files live in `simulator/scenarios/`.
 1. Add or reuse a Tibber fixture in `simulator/fixtures/tibber/`.
 2. Create a JSON scenario in `simulator/scenarios/`.
 3. Define initial Homey Logic variables and mock device state.
+   Use production timestamp format for stored session values such as
+   `ChargeConnectedAt`: `YYYY-MM-DD HH:mm:ss`.
 4. Add one or more flow steps.
 5. Add expectations for important results, events, plug state, and Tibber calls.
 6. Optionally add an expected log fixture in
@@ -170,6 +172,9 @@ Scenario files live in `simulator/scenarios/`.
 7. Run `npm run simulate -- your-scenario-name`.
 
 Scenario names come from the `name` field in the JSON file.
+Tibber price grids are anchored to the scenario `priceAnchor` value when it is
+set, otherwise to scenario `now`. Step `now` values select the current price but
+do not rebuild the fixture date grid.
 
 ## Simulator Limitations
 
