@@ -1,7 +1,6 @@
 {
   "name": "multi-window-needed",
   "description": "FUTURE/XFAIL: charging requires three slots and the cheapest usable slots are separated, so a future planner should create multiple charging windows instead of one continuous block.",
-  "futureExpectedFailure": true,
   "now": "2026-07-07T18:00:00+02:00",
   "fixture": "multi-window-separated",
   "initial": {

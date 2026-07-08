@@ -161,11 +161,19 @@ async function main() {
   const prices = normalizeTibberPrices(priceInfo);
   const currentPrice = priceInfo.current?.total ?? null;
 
-  const plan = findCheapestContinuousPlan(prices, {
+  const continuousPlan = findCheapestContinuousPlan(prices, {
     now,
     targetDeparture,
     chargeSlots,
   });
+
+  const multiWindowPlan = findCheapestMultiWindowPlan(prices, {
+    now,
+    targetDeparture,
+    chargeSlots,
+  });
+
+  const plan = selectBestChargePlan(continuousPlan, multiWindowPlan);
 
   const safetyStartRequired = isSafetyStartRequired(
     now,
