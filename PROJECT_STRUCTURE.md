@@ -5,10 +5,13 @@ smartcharge-homey-bundle/
   src/
     00-config/
     10-core/
+      planner/
     20-adapters/
     30-logger/
     90-flows/
   scripts/
+  assets/
+    images/
   docs/
   simulator/
     fixtures/
@@ -40,9 +43,26 @@ Pure or mostly pure SmartCharge logic.
 - `10-time.js` - timezone-aware departure time helpers.
 - `20-homey-logic.js` - Homey Logic variable access helpers.
 - `30-charging.js` - charging duration and slot calculations.
-- `40-planner.js` - cheapest continuous charging block selection.
+- `40-planner.js` - continuous charging planner and shared safety helpers.
 - `50-session.js` - session expiration helpers.
 - `60-decision.js` - reserved for decision-level extraction.
+
+### `src/10-core/planner/`
+
+Planner model and multi-window planning modules.
+
+- `10-charge-window.js` - creates `ChargeWindow` objects for continuous
+  charging intervals.
+- `20-charge-plan.js` - creates `ChargePlan` objects and derived window
+  summaries.
+- `30-planner-utils.js` - shared slot sorting, cheapest-slot selection,
+  adjacent-slot merging, window building, and available-slot collection.
+- `50-multi-window-planner.js` - builds the cheapest multi-window charging
+  plan from usable price slots.
+- `60-plan-comparator.js` - selects the preferred plan between continuous and
+  multi-window candidates.
+- `70-plan-selector.js` - reserved for future selection orchestration.
+- `99-planner.exports.js` - reserved public planner API boundary.
 
 ### `src/20-adapters/`
 
@@ -79,6 +99,13 @@ Build tooling.
 
 - `build-homey.js` - concatenates shared `src` modules plus one flow entrypoint
   into a standalone HomeyScript file under `dist/`.
+
+## `assets/`
+
+Repository media assets used by documentation and project presentation.
+
+- `images/hero.png` - README cover image showing the SmartCharge architecture
+  and product positioning.
 
 ## `docs/`
 
@@ -138,8 +165,8 @@ steps, and expectations. Stored Homey Logic timestamps such as
 `ChargeConnectedAt` should use the production `YYYY-MM-DD HH:mm:ss` format.
 Tibber price grids are anchored per scenario through `priceAnchor` or `now`, so
 multi-step scenarios keep a stable `today` / `tomorrow` price grid.
-Scenarios may use `futureExpect` with `futureExpectedFailure: true` to document
-future planner behavior without changing production runtime behavior yet.
+The simulator currently includes 19 passing scenarios, including multi-window
+planner coverage.
 
 ### `simulator/logs/`
 

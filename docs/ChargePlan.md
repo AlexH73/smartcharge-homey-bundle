@@ -1,13 +1,13 @@
 # ChargePlan RFC
 
-Status: Draft  
-Scope: Architecture and data contract only  
+Status: Living RFC
+Scope: Architecture and data contract only
 Target feature: multi-window charging
 
-This document defines the future `PlanningResult`, `ChargePlan`, and
-`ChargeWindow` models for SmartCharge. It is intended to become the shared
-contract between the planner, decision engine, logger, simulator, dashboard,
-and future analytics.
+This document defines the `PlanningResult`, `ChargePlan`, and `ChargeWindow`
+models for SmartCharge. It is intended to remain the shared contract between
+the planner, decision engine, logger, simulator, dashboard, and future
+analytics.
 
 The intended architecture is:
 
@@ -21,17 +21,19 @@ Decision Engine
 ```
 
 `ChargePlan` is the result of an optimization strategy. It is not only a list of
-charging windows. Today the strategy may be continuous price optimization;
-tomorrow it may be multi-window charging, battery preservation, CO2
-optimization, solar-aware charging, or another explainable strategy.
+charging windows. Today the strategy may be continuous or multi-window price
+optimization; later it may include battery preservation, CO2 optimization,
+solar-aware charging, or another explainable strategy.
 
-No production behavior is implied by this document until the planner and runtime
-are explicitly updated in a future feature branch.
+Implementation note: the first production implementation of `ChargePlan`,
+`ChargeWindow`, and the multi-window planner now exists. Parts of this RFC that
+are not implemented yet remain design guidance for decision states, planner
+stability, dashboard history, and analytics.
 
 ## 1. Problem Statement
 
-The current planner selects one cheapest continuous charging window before the
-target departure time. This is simple and stable, but it is no longer sufficient
+The original planner selected one cheapest continuous charging window before
+the target departure time. This is simple and stable, but it is not sufficient
 for cases where the cheapest usable price slots are not adjacent.
 
 Example:
@@ -43,8 +45,8 @@ Example:
 02:00 cheap
 ```
 
-If the car needs three charging slots, the current continuous planner must pick
-one continuous three-hour block. That can be more expensive than using three
+If the car needs three charging slots, a continuous-only planner must pick one
+continuous three-hour block. That can be more expensive than using three
 separated cheap slots. Multi-window charging allows SmartCharge to charge only
 during selected cheap windows while still meeting the target departure deadline.
 
@@ -88,12 +90,12 @@ The multi-window charging feature does not include:
 
 ## 4. PlanningResult
 
-`PlanningResult` is the future decision engine output. It wraps the selected
+`PlanningResult` is the decision engine output model. It wraps the selected
 `ChargePlan`, the immediate action decision, and the explanation for that
 decision.
 
-This extra level is important because the future decision engine may use more
-inputs than the planner alone:
+This extra level is important because the decision engine may use more inputs
+than the planner alone:
 
 ```text
 Battery
@@ -292,8 +294,7 @@ slot into separate spreadsheet columns.
 ## 6. ChargePlan
 
 `ChargePlan` is the selected optimization strategy result for one decision run.
-It must expose both the future multi-window model and the existing production
-fields.
+It must expose both the multi-window model and the existing production fields.
 
 A `ChargePlan` answers "what charging strategy should this session follow?"
 It does not by itself answer every decision-engine question, such as manual
@@ -572,8 +573,8 @@ Potential future states:
 
 ## 9. Decision Strategy
 
-The future planner should evaluate both a continuous plan and a multi-window
-plan before selecting the final `ChargePlan`.
+The planner should evaluate both a continuous plan and a multi-window plan
+before selecting the final `ChargePlan`.
 
 The planner should think in terms of strategy:
 

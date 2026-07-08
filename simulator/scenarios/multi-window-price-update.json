@@ -1,6 +1,6 @@
 {
   "name": "multi-window-price-update",
-  "description": "FUTURE/XFAIL: an updated price fixture should replace one continuous plan with better separated charging windows without toggling the plug while waiting.",
+  "description": "An updated price fixture replaces one continuous plan with better separated charging windows without toggling the plug while waiting.",
   "now": "2026-07-07T18:00:00+02:00",
   "fixture": "multi-window-adjacent",
   "initial": {
