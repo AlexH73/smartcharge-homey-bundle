@@ -1,6 +1,6 @@
 {
   "name": "adjacent-cheap-slots",
-  "description": "Future multi-window planning should merge adjacent cheapest slots into one charging window; the current continuous planner already satisfies this single-window case.",
+  "description": "Multi-window planning merges adjacent cheapest slots into one charging window; this also preserves the single-window behavior when cheap slots are adjacent.",
   "now": "2026-07-07T18:00:00+02:00",
   "fixture": "multi-window-adjacent",
   "initial": {

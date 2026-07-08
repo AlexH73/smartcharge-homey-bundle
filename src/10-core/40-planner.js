@@ -13,9 +13,11 @@ function isSlotAvailable(priceSlot, now) {
 /**
  * Finds the cheapest continuous charging block before target departure.
  *
+ * Returns a ChargePlan with exactly one ChargeWindow.
+ *
  * @param {Array<{startTime: Date, price: number}>} prices
  * @param {{now: Date, targetDeparture: Date, chargeSlots: number}} options
- * @returns {{plannedStart: Date, plannedEnd: Date, totalPrice: number, averagePrice: number, slots: Array}|null}
+ * @returns {Object|null}
  */
 function findCheapestContinuousPlan(prices, options) {
   const { now, targetDeparture, chargeSlots } = options;
@@ -24,18 +26,16 @@ function findCheapestContinuousPlan(prices, options) {
     return null;
   }
 
-  const availablePrices = prices.filter(
-    (price) => isSlotAvailable(price, now) && price.startTime < targetDeparture,
-  );
+  const availableSlots = collectAvailableSlots(prices, now, targetDeparture);
 
-  if (availablePrices.length < chargeSlots) {
+  if (availableSlots.length < chargeSlots) {
     return null;
   }
 
   let bestPlan = null;
 
-  for (let i = 0; i <= availablePrices.length - chargeSlots; i++) {
-    const block = availablePrices.slice(i, i + chargeSlots);
+  for (let i = 0; i <= availableSlots.length - chargeSlots; i++) {
+    const block = availableSlots.slice(i, i + chargeSlots);
 
     let isContinuous = true;
 
@@ -63,13 +63,40 @@ function findCheapestContinuousPlan(prices, options) {
       CONFIG.priceSlotMinutes,
     );
 
-    const plan = {
+    const window = createChargeWindow({
+      windowIndex: 0,
       plannedStart,
       plannedEnd,
-      totalPrice,
+      durationMinutes: chargeSlots * CONFIG.priceSlotMinutes,
+      energyTarget: null,
+      slotCount: block.length,
       averagePrice,
+      totalPrice,
+      startsNow: isNowInsidePlan(now, {
+        plannedStart,
+        plannedEnd,
+      }),
       slots: block,
-    };
+    });
+
+    const plan = createChargePlan({
+      plannerMode: 'continuous',
+      optimizationStrategy: 'lowest-cost',
+
+      plannedStart,
+      plannedEnd,
+
+      averagePrice,
+      totalPrice,
+
+      chargeSlots,
+      totalSlotCount: block.length,
+
+      shouldChargeNow: window.startsNow,
+
+      windowCount: 1,
+      windows: [window],
+    });
 
     if (!bestPlan || totalPrice < bestPlan.totalPrice) {
       bestPlan = plan;

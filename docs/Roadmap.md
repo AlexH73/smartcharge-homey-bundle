@@ -3,15 +3,25 @@
 This roadmap captures planned SmartCharge work. Items may move between releases
 as simulator coverage, Homey testing, and production risk become clearer.
 
-## Near Term
+## Completed
 
 ### Multi-Window Charging
 
-- Select the cheapest non-adjacent usable price slots before departure.
-- Merge adjacent selected slots into continuous charging windows.
-- Avoid plug toggling while waiting for a future selected window.
-- Preserve safety fallback when not enough usable slots remain.
-- Promote current future/XFAIL simulator scenarios to normal passing scenarios.
+- ChargePlan and ChargeWindow model introduced.
+- Continuous and multi-window planner candidates are evaluated.
+- The plan comparator selects between continuous and multi-window plans.
+- Adjacent selected slots are merged into charging windows.
+- Multi-window simulator scenarios now pass as normal coverage.
+- Safety fallback remains covered when not enough usable slots remain.
+
+## Near Term
+
+### Planner Stability
+
+- Add anti-replanning rules for small savings.
+- Add maximum replans per session.
+- Add minimum interval between meaningful plan revisions.
+- Add maximum window count configuration.
 
 ### Simulator
 
@@ -27,6 +37,13 @@ as simulator coverage, Homey testing, and production risk become clearer.
 - Keep generated and local-only files out of commits unless they are intended
   release artifacts.
 
+### Energy And Cost Model
+
+- Calculate actual estimated energy per window.
+- Calculate estimated session cost from price and energy.
+- Preserve backward-compatible price-score fields while adding real cost
+  fields.
+
 ## Mid Term
 
 ### Dashboard
@@ -34,6 +51,8 @@ as simulator coverage, Homey testing, and production risk become clearer.
 - Add a local or hosted view for charging plans, decisions, and historical
   sessions.
 - Show selected windows, prices, reason text, and current Homey state.
+- Add a Sessions sheet or dashboard view for session history.
+- Show planner revisions and what changed between revisions.
 
 ### Analytics
 

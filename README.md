@@ -1,17 +1,39 @@
 # SmartCharge Homey Bundle
 
+<p align="center">
+  <img src="assets/images/hero.png" alt="SmartCharge Homey Bundle" width="100%">
+</p>
+
 ![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?logo=node.js&logoColor=white)
 ![HomeyScript](https://img.shields.io/badge/HomeyScript-runtime-00C7B7)
 ![Tibber](https://img.shields.io/badge/Tibber-price%20API-FF5A5F)
 ![Google Sheets](https://img.shields.io/badge/Google%20Sheets-logging-34A853?logo=googlesheets&logoColor=white)
 ![Local Simulator](https://img.shields.io/badge/local%20simulator-JSONL%20%2B%20CSV-6F42C1)
+![Simulator Scenarios](https://img.shields.io/badge/simulator-19%20PASS-brightgreen)
 ![License](https://img.shields.io/badge/license-ISC-blue)
 
 SmartCharge Homey Bundle contains a modular HomeyScript runtime for planning
 electric vehicle charging from Tibber hourly prices and Homey device state.
+SmartCharge supports both continuous charging plans and multi-window charging
+plans.
 
 The source code lives in `src/` as small reusable modules. The build script
 concatenates those modules into standalone HomeyScript files under `dist/`.
+
+```text
+Mercedes
+  |
+Homey
+  |
+SmartCharge Planner
+  |-- Continuous Planner
+  |-- Multi-Window Planner
+  `-- Comparator
+  |
+Google Sheets
+  |
+Dashboard
+```
 
 ## Project Documentation
 
@@ -33,6 +55,46 @@ The production Homey setup is expected to call separate HomeyScript flows:
 
 `SmartChargeLogger` writes lifecycle and decision events to the configured
 Google Sheets webhook in production.
+
+## Architecture
+
+```text
+Homey Flow
+  |
+SmartCharge Decision Engine
+  |
+Planning Engine
+  |-- Continuous Planner
+  |-- Multi-Window Planner
+  `-- Comparator
+  |
+Logger
+  |
+Google Sheets
+  |
+Dashboard / Analytics
+```
+
+Homey flows provide lifecycle triggers and device state. The SmartCharge
+decision engine calculates charging requirements, asks the planning engine for
+candidate plans, applies safety rules, and sends lifecycle or decision events
+to the logger.
+
+## Planning Engine
+
+The planning engine evaluates two plan candidates for an active charging
+session:
+
+- the continuous planner finds the cheapest single uninterrupted charging
+  window before target departure;
+- the multi-window planner selects the cheapest usable slots before target
+  departure and merges adjacent slots into charging windows;
+- the plan comparator selects the cheaper compatible `ChargePlan` while keeping
+  current compatibility fields such as `plannedStart`, `plannedEnd`,
+  `averagePrice`, `totalPrice`, `chargeSlots`, and `shouldChargeNow`.
+
+Safety fallback remains responsible for starting charging when the latest safe
+start has been reached or when not enough usable slots remain.
 
 ## Install
 
@@ -104,6 +166,8 @@ node simulator/runner.js --list
 ```
 
 `npm test` also runs `npm run simulate:all`.
+The simulator currently includes 19 scenarios. All 19 pass and no XFAIL
+scenarios remain.
 
 ## Simulator Logs
 
@@ -167,15 +231,14 @@ Scenario files live in `simulator/scenarios/`.
 - `plan-starts-too-late` - selected plan starts after the latest safe start.
 - `multiple-sessions` - two sequential charging sessions with a reset between
   them.
-- `multi-window-needed` - future/XFAIL coverage for separated cheapest slots
-  that should become multiple charging windows.
-- `adjacent-cheap-slots` - future multi-window coverage for preserving adjacent
-  cheap slots as one merged window.
+- `multi-window-needed` - separated cheapest slots are planned as multiple
+  charging windows.
+- `adjacent-cheap-slots` - adjacent cheap slots are preserved as one merged
+  charging window.
 - `fallback-when-not-enough-slots` - safety fallback when fewer usable slots
   remain than the charge requires.
-- `multi-window-price-update` - future/XFAIL coverage for a price update that
-  should replace one continuous plan with separated windows without plug
-  toggling.
+- `multi-window-price-update` - a price update replaces one continuous plan
+  with cheaper separated windows without plug toggling while waiting.
 - `logger-payload` - exact Google Sheets payload contract check.
 - `plug-disconnected` - reset flow after charger disconnect trigger.
 - `low-power-after-charging` - log-off flow after a low-power stop signal.
@@ -190,9 +253,8 @@ Scenario files live in `simulator/scenarios/`.
    `ChargeConnectedAt`: `YYYY-MM-DD HH:mm:ss`.
 4. Add one or more flow steps.
 5. Add expectations for important results, events, plug state, and Tibber calls.
-   Use `futureExpect` plus `futureExpectedFailure: true` only for documented
-   future behavior that the current production planner is not expected to pass
-   yet.
+   New planner behavior should normally be covered as a passing simulator
+   scenario before it is considered ready.
 6. Optionally add an expected log fixture in
    `simulator/fixtures/expected-logs/` for exact payload checks.
 7. Run `npm run simulate -- your-scenario-name`.
