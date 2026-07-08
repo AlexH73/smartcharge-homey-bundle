@@ -30,3 +30,32 @@ function serializeChargeWindows(windows = []) {
 
   return JSON.stringify(windows);
 }
+
+/**
+ * Sorts charging slots by price (ascending).
+ *
+ * Slots with identical prices preserve their chronological order.
+ *
+ * @param {Array<Object>} slots
+ * @returns {Array<Object>}
+ */
+function sortSlotsByPrice(slots = []) {
+  return [...slots].sort((a, b) => {
+    if (a.price !== b.price) {
+      return a.price - b.price;
+    }
+
+    return a.startTime.getTime() - b.startTime.getTime();
+  });
+}
+
+/**
+ * Selects the cheapest charging slots.
+ *
+ * @param {Array<Object>} slots
+ * @param {number} slotCount
+ * @returns {Array<Object>}
+ */
+function selectCheapestSlots(slots = [], slotCount = 0) {
+  return sortSlotsByPrice(slots).slice(0, slotCount);
+}
