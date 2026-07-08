@@ -181,3 +181,23 @@ function buildChargeWindows(mergedSlots = []) {
     });
   });
 }
+
+/**
+ * Collects charging slots that are still available before target departure.
+ *
+ * @param {Array<{startTime: Date}>} prices
+ * @param {Date} now
+ * @param {Date} targetDeparture
+ * @returns {Array}
+ */
+function collectAvailableSlots(
+  prices = [],
+  now,
+  targetDeparture,
+) {
+  return prices.filter(
+    (slot) =>
+      isSlotAvailable(slot, now) &&
+      slot.startTime < targetDeparture,
+  );
+}

@@ -12,9 +12,7 @@ function findCheapestMultiWindowPlan(prices, options) {
     return null;
   }
 
-  const availableSlots = prices.filter(
-    (slot) => isSlotAvailable(slot, now) && slot.startTime < targetDeparture,
-  );
+  const availableSlots = collectAvailableSlots(prices, now, targetDeparture);
 
   if (availableSlots.length < chargeSlots) {
     return null;

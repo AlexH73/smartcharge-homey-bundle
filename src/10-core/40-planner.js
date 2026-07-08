@@ -26,18 +26,16 @@ function findCheapestContinuousPlan(prices, options) {
     return null;
   }
 
-  const availablePrices = prices.filter(
-    (price) => isSlotAvailable(price, now) && price.startTime < targetDeparture,
-  );
+  const availableSlots = collectAvailableSlots(prices, now, targetDeparture);
 
-  if (availablePrices.length < chargeSlots) {
+  if (availableSlots.length < chargeSlots) {
     return null;
   }
 
   let bestPlan = null;
 
-  for (let i = 0; i <= availablePrices.length - chargeSlots; i++) {
-    const block = availablePrices.slice(i, i + chargeSlots);
+  for (let i = 0; i <= availableSlots.length - chargeSlots; i++) {
+    const block = availableSlots.slice(i, i + chargeSlots);
 
     let isContinuous = true;
 
