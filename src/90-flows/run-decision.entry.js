@@ -330,6 +330,12 @@ async function main() {
     plannedEnd: plan ? formatLocal(plan.plannedEnd) : null,
     shouldChargeNow,
     reason,
+    plannedWindows: plan
+      ? plan.windows.map((window) => ({
+          plannedStart: formatLocal(window.plannedStart),
+          plannedEnd: formatLocal(window.plannedEnd),
+        }))
+      : null,
   };
 }
 
