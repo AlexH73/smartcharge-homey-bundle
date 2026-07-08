@@ -7,6 +7,8 @@ The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 
 ## Unreleased
 
+- Added same-day reconnect simulator scenario for session recovery behavior.
+
 ### Added
 
 - `ChargePlan` and `ChargeWindow` planner models.
