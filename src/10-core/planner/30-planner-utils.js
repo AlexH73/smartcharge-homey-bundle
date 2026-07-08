@@ -142,3 +142,42 @@ function mergeAdjacentSlots(slots = []) {
 
   return windows;
 }
+
+/**
+ * Builds ChargeWindow models from merged charging slot groups.
+ *
+ * @param {Array<Array<{startTime: Date, price: number}>>} mergedSlots
+ * @returns {Array<Object>}
+ */
+function buildChargeWindows(mergedSlots = []) {
+  return mergedSlots.map((slots, index) => {
+    const totalPrice = slots.reduce((sum, slot) => sum + slot.price, 0);
+    const averagePrice = totalPrice / slots.length;
+
+    const plannedStart = slots[0].startTime;
+    const plannedEnd = addMinutes(
+      slots[slots.length - 1].startTime,
+      CONFIG.priceSlotMinutes,
+    );
+
+    return createChargeWindow({
+      windowIndex: index,
+
+      plannedStart,
+      plannedEnd,
+
+      durationMinutes: slots.length * CONFIG.priceSlotMinutes,
+
+      energyTarget: null,
+
+      slotCount: slots.length,
+
+      averagePrice,
+      totalPrice,
+
+      startsNow: false,
+
+      slots,
+    });
+  });
+}
