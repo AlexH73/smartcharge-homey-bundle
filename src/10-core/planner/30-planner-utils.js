@@ -59,3 +59,48 @@ function sortSlotsByPrice(slots = []) {
 function selectCheapestSlots(slots = [], slotCount = 0) {
   return sortSlotsByPrice(slots).slice(0, slotCount);
 }
+
+/**
+ * Sorts charging slots by price (ascending).
+ *
+ * Slots with the same price preserve chronological order.
+ *
+ * @param {Array<{startTime: Date, price: number}>} slots
+ * @returns {Array}
+ */
+function sortSlotsByPrice(slots = []) {
+  return [...slots].sort((a, b) => {
+    if (a.price !== b.price) {
+      return a.price - b.price;
+    }
+
+    return a.startTime.getTime() - b.startTime.getTime();
+  });
+}
+
+/**
+ * Selects the cheapest charging slots.
+ *
+ * @param {Array<{startTime: Date, price: number}>} slots
+ * @param {number} slotCount
+ * @returns {Array}
+ */
+function selectCheapestSlots(slots = [], slotCount = 0) {
+  if (slotCount <= 0) {
+    return [];
+  }
+
+  return sortSlotsByPrice(slots).slice(0, slotCount);
+}
+
+/**
+ * Sorts charging slots chronologically.
+ *
+ * @param {Array<{startTime: Date}>} slots
+ * @returns {Array}
+ */
+function sortSlotsByTime(slots = []) {
+  return [...slots].sort(
+    (a, b) => a.startTime.getTime() - b.startTime.getTime(),
+  );
+}
