@@ -104,3 +104,41 @@ function sortSlotsByTime(slots = []) {
     (a, b) => a.startTime.getTime() - b.startTime.getTime(),
   );
 }
+
+/**
+ * Merges adjacent charging slots into continuous charging windows.
+ *
+ * Input slots must already be sorted chronologically.
+ *
+ * @param {Array<{startTime: Date, price: number}>} slots
+ * @returns {Array<Array>}
+ */
+function mergeAdjacentSlots(slots = []) {
+  if (!slots.length) {
+    return [];
+  }
+
+  const windows = [];
+  let currentWindow = [slots[0]];
+
+  for (let i = 1; i < slots.length; i++) {
+    const previous = currentWindow[currentWindow.length - 1];
+    const current = slots[i];
+
+    const expectedStart = addMinutes(
+      previous.startTime,
+      CONFIG.priceSlotMinutes,
+    ).getTime();
+
+    if (current.startTime.getTime() === expectedStart) {
+      currentWindow.push(current);
+    } else {
+      windows.push(currentWindow);
+      currentWindow = [current];
+    }
+  }
+
+  windows.push(currentWindow);
+
+  return windows;
+}
