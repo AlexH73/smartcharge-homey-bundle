@@ -269,6 +269,28 @@ async function main() {
         engineVersion: BUILD_INFO.fullVersion,
 
         message: null,
+
+        plannerMode: plan ? plan.plannerMode : null,
+        windowCount: plan ? plan.windowCount : null,
+        chargeWindowsText: plan
+          ? plan.windows
+              .map(
+                (window) =>
+                  `${formatLocal(window.plannedStart)}-${formatLocal(window.plannedEnd)}`,
+              )
+              .join(' | ')
+          : null,
+        chargeWindowsJson: plan
+          ? JSON.stringify(
+              plan.windows.map((window) => ({
+                plannedStart: formatLocal(window.plannedStart),
+                plannedEnd: formatLocal(window.plannedEnd),
+                slotCount: window.slotCount,
+                averagePrice: window.averagePrice,
+                totalPrice: window.totalPrice,
+              })),
+            )
+          : null,
       },
       {
         webhookUrl: await getVariableValue('SMARTCHARGE_LOG_WEBHOOK_URL'),

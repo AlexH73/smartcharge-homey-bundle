@@ -92,6 +92,11 @@ const SmartChargeLogger = (() => {
     'engineVersion',
 
     'message',
+
+    'plannerMode',
+    'windowCount',
+    'chargeWindowsText',
+    'chargeWindowsJson',
   ]);
 
   /**
@@ -219,6 +224,11 @@ const SmartChargeLogger = (() => {
       totalPrice: normalizeValue(logEvent.totalPrice),
       averagePrice: normalizeValue(logEvent.averagePrice),
       priceCount: normalizeValue(logEvent.priceCount),
+
+      plannerMode: normalizeValue(logEvent.plannerMode),
+      windowCount: normalizeValue(logEvent.windowCount),
+      chargeWindowsText: normalizeValue(logEvent.chargeWindowsText),
+      chargeWindowsJson: normalizeValue(logEvent.chargeWindowsJson),
 
       source: normalizeValue(logEvent.source || 'smartcharge-engine'),
       engineVersion: normalizeValue(logEvent.engineVersion),
@@ -633,6 +643,11 @@ const SmartChargeLogger = (() => {
         engineVersion: BUILD_INFO.fullVersion,
 
         message,
+
+        plannerMode: null,
+        windowCount: null,
+        chargeWindowsText: null,
+        chargeWindowsJson: null,
       },
       {
         webhookUrl: await getVariableValue(LOGIC_VARIABLE_NAMES.WEBHOOK_URL),

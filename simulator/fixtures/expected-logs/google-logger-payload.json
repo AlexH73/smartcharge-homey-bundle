@@ -21,6 +21,10 @@
     "priceCount": 48,
     "source": "smartcharge-run-decision",
     "engineVersion": "__ENGINE_VERSION__",
-    "message": null
+    "message": null,
+    "plannerMode": "continuous",
+    "windowCount": 1,
+    "chargeWindowsText": "2026-07-08 02:00:00-2026-07-08 04:00:00",
+    "chargeWindowsJson": "[{\"plannedStart\":\"2026-07-08 02:00:00\",\"plannedEnd\":\"2026-07-08 04:00:00\",\"slotCount\":2,\"averagePrice\":0.155,\"totalPrice\":0.31}]"
   }
 ]

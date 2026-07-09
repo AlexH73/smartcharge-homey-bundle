@@ -31,6 +31,12 @@ private.
 Do not commit your spreadsheet ID or any deployed webhook URL back into this
 repository.
 
+`setupSmartChargeWorkbook` creates the expected sheets and headers. If an
+existing `Events` sheet is missing newer columns, the Apps Script template
+appends those headers the next time `setupSmartChargeWorkbook` or the webhook
+runs. Rows are written by header name, so existing column order is preserved.
+Update any custom formulas or charts that reference fixed column letters.
+
 ## Webhook Deployment
 
 Deploy the Apps Script project as a Web app:
@@ -81,6 +87,11 @@ Important payload fields:
 - `priceCount`
 - `source`
 - `engineVersion`
+- `detailsJson`
+- `plannerMode`
+- `windowCount`
+- `chargeWindowsText`
+- `chargeWindowsJson`
 
 Decision logs are deduplicated by `SmartChargeLastLogKey`. Critical lifecycle
 events are always written.

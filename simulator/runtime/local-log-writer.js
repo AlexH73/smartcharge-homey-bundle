@@ -25,6 +25,10 @@ const LOG_COLUMNS = Object.freeze([
   'source',
   'engineVersion',
   'detailsJson',
+  'plannerMode',
+  'windowCount',
+  'chargeWindowsText',
+  'chargeWindowsJson',
 ]);
 
 class LocalLogWriter {
@@ -106,6 +110,10 @@ function toTableRow(event) {
       flow: event.flow,
       message: event.message,
     }),
+    plannerMode: event.plannerMode,
+    windowCount: event.windowCount,
+    chargeWindowsText: event.chargeWindowsText,
+    chargeWindowsJson: event.chargeWindowsJson,
   };
 }
 
@@ -208,6 +216,8 @@ function buildHtmlReport(rows) {
     }
 
     td.reason,
+    td.chargeWindowsText,
+    td.chargeWindowsJson,
     td.detailsJson {
       white-space: normal;
       min-width: 280px;
@@ -236,7 +246,12 @@ function buildHtmlReport(rows) {
 
 function buildHtmlRow(row) {
   return `<tr>${LOG_COLUMNS.map((column) => {
-    const className = column === 'reason' || column === 'detailsJson'
+    const className = [
+      'reason',
+      'chargeWindowsText',
+      'chargeWindowsJson',
+      'detailsJson',
+    ].includes(column)
       ? ` class="${column}"`
       : '';
 

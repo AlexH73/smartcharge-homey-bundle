@@ -86,6 +86,10 @@ The `logger-payload` scenario also writes an actual payload snapshot to
 - `source`
 - `engineVersion`
 - `detailsJson`
+- `plannerMode`
+- `windowCount`
+- `chargeWindowsText`
+- `chargeWindowsJson`
 
 ## Included Scenarios
 
