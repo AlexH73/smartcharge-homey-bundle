@@ -29,7 +29,16 @@ const TARGETS = {
   },
 };
 
-if (!TARGETS[target]) {
+const BUILD_ALL_TARGET = 'all';
+const DEFAULT_BUILD_ORDER = [
+  'run-decision',
+  'reset-session',
+  'start-session',
+  'log-on-session',
+  'log-off-session',
+];
+
+if (target !== BUILD_ALL_TARGET && !TARGETS[target]) {
   throw new Error(`Unknown build target: ${target}`);
 }
 
@@ -92,42 +101,54 @@ function collectSharedFiles(dir) {
   });
 }
 
-const buildInfo = writeBuildInfo();
-const targetConfig = TARGETS[target];
+function buildTarget(targetName, buildInfo) {
+  const targetConfig = TARGETS[targetName];
 
-const files = [
-  ...collectSharedFiles(SRC_DIR).sort(),
-  path.resolve(targetConfig.entry),
-];
+  const files = [
+    ...collectSharedFiles(SRC_DIR).sort(),
+    path.resolve(targetConfig.entry),
+  ];
 
-const outFile = path.join(DIST_DIR, targetConfig.out);
+  const outFile = path.join(DIST_DIR, targetConfig.out);
 
-let output = '';
+  let output = '';
 
-output += '// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.\n';
-output += '// Source: smartcharge-homey-bundle\n';
-output += `// Target: ${target}\n`;
-output += `// Version: ${buildInfo.fullVersion}\n`;
-output += `// Built at: ${buildInfo.builtAt.toISOString()}\n\n`;
+  output += '// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.\n';
+  output += '// Source: smartcharge-homey-bundle\n';
+  output += `// Target: ${targetName}\n`;
+  output += `// Version: ${buildInfo.fullVersion}\n`;
+  output += `// Built at: ${buildInfo.builtAt.toISOString()}\n\n`;
 
-for (const file of files) {
-  const relativePath = path.relative(process.cwd(), file).replaceAll('\\', '/');
+  for (const file of files) {
+    const relativePath = path
+      .relative(process.cwd(), file)
+      .replaceAll('\\', '/');
 
-  output +=
-    '// -----------------------------------------------------------------------------\n';
-  output += `// Source file: ${relativePath}\n`;
-  output +=
-    '// -----------------------------------------------------------------------------\n\n';
-  output += fs.readFileSync(file, 'utf8');
-  output += '\n\n';
+    output +=
+      '// -----------------------------------------------------------------------------\n';
+    output += `// Source file: ${relativePath}\n`;
+    output +=
+      '// -----------------------------------------------------------------------------\n\n';
+    output += fs.readFileSync(file, 'utf8');
+    output += '\n\n';
+  }
+
+  fs.mkdirSync(DIST_DIR, { recursive: true });
+  fs.writeFileSync(outFile, output, 'utf8');
+
+  console.log(`Target  : ${targetName}`);
+  console.log(`Files   : ${files.length}`);
+  console.log(`Output  : ${path.relative(process.cwd(), outFile)}`);
 }
 
-fs.mkdirSync(DIST_DIR, { recursive: true });
-fs.writeFileSync(outFile, output, 'utf8');
+const buildInfo = writeBuildInfo();
+const targetsToBuild =
+  target === BUILD_ALL_TARGET ? DEFAULT_BUILD_ORDER : [target];
 
 console.log('SmartCharge Homey Builder');
 console.log('-------------------------');
-console.log(`Target  : ${target}`);
 console.log(`Version : ${buildInfo.fullVersion}`);
-console.log(`Files   : ${files.length}`);
-console.log(`Output  : ${path.relative(process.cwd(), outFile)}`);
+
+for (const targetName of targetsToBuild) {
+  buildTarget(targetName, buildInfo);
+}

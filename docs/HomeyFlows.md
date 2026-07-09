@@ -1,0 +1,156 @@
+# Homey Flow Setup
+
+SmartCharge expects Homey Flows to provide lifecycle triggers. The generated
+HomeyScripts contain the decision and logging logic; the flows decide when each
+script runs.
+
+Use your own device names and Homey condition cards. The examples below use
+placeholder names such as `YOUR_CHARGER_DEVICE`, `YOUR_VEHICLE_DEVICE`, and
+`YOUR_LADESTATUS_VARIABLE`.
+
+## Flow: Start Session
+
+Purpose: create a SmartCharge session when the charging cable is connected.
+
+Trigger:
+
+- Charger or vehicle status changes to connected, plugged in, or charging.
+- If you track a Homey Logic status variable, use: `YOUR_LADESTATUS_VARIABLE`
+  changed.
+
+Conditions:
+
+- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`.
+- `ChargeConnectedAt` is `null`.
+- Vehicle battery is below `100`.
+
+Actions:
+
+- Run HomeyScript `SMARTCHARGE - Start Session`.
+- Optional: wait 5 to 30 seconds.
+- Run HomeyScript `SMARTCHARGE - Run Decision`.
+
+## Flow: Run Decision
+
+Purpose: recalculate the charging plan and turn the plug on when the selected
+plan or safety fallback requires charging.
+
+Triggers:
+
+- After `Start Session`.
+- On a schedule, for example every 15 minutes while connected.
+- After a Tibber price update, if you have a separate price update trigger.
+- From the watchdog/session recovery flow.
+
+Conditions:
+
+- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`.
+- `ChargeConnectedAt` is not `null`.
+- Vehicle battery is below `100`.
+
+Actions:
+
+- Run HomeyScript `SMARTCHARGE - Run Decision`.
+
+The script writes `SmartChargeShouldCharge`, `SmartChargePlannedStart`,
+`SmartChargePlannedEnd`, `SmartChargeTargetDeparture`, and
+`SmartChargeReason`. It also turns the configured plug on when charging should
+start. It does not turn the plug off.
+
+## Flow: Log On
+
+Purpose: write a lifecycle event when SmartCharge charging starts.
+
+Triggers:
+
+- Charging plug turns on.
+- Or plug power rises above your charging threshold.
+
+Conditions:
+
+- `ChargeConnectedAt` is not `null`.
+- `SmartChargeShouldCharge` is `true`, if you want to log only SmartCharge
+  starts.
+
+Actions:
+
+- Run HomeyScript `SMARTCHARGE - Log On`.
+
+## Flow: Log Off
+
+Purpose: write a lifecycle event when SmartCharge charging stops.
+
+Triggers:
+
+- Charging plug turns off.
+- Or plug power stays below your charging threshold for a short debounce period.
+
+Conditions:
+
+- `ChargeConnectedAt` is not `null`.
+
+Actions:
+
+- Run HomeyScript `SMARTCHARGE - Log Off`.
+- If the battery is full or the charger is disconnected, run
+  `SMARTCHARGE - Reset Session`.
+
+## Flow: Reset Session
+
+Purpose: clear the active SmartCharge session after completion, disconnect, or
+manual reset.
+
+Triggers:
+
+- Vehicle battery reaches `100`.
+- Charger or cable status changes to `Unplugged`.
+- Manual Homey Flow button or maintenance flow.
+
+Conditions:
+
+- `ChargeConnectedAt` is not `null`.
+
+Actions:
+
+- Optional: turn `YOUR_CHARGER_DEVICE` off.
+- Run HomeyScript `SMARTCHARGE - Reset Session`.
+
+The reset script logs `session_reset`, clears `ChargeConnectedAt`, clears the
+planned window variables, sets `SmartChargeShouldCharge` to `false`, and writes
+the reset reason.
+
+## Flow: Watchdog / Session Recovery
+
+Purpose: recover from missed Homey triggers. This is useful after Homey
+restarts, device reconnects, or a vehicle integration misses the original cable
+connection event.
+
+Trigger:
+
+- Every 5 to 15 minutes.
+- Or after Homey starts.
+
+Conditions:
+
+- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`.
+- `ChargeConnectedAt` is `null`.
+- Vehicle battery is below `100`.
+
+Actions:
+
+- Run HomeyScript `SMARTCHARGE - Start Session`.
+- Wait 5 to 30 seconds.
+- Run HomeyScript `SMARTCHARGE - Run Decision`.
+
+This watchdog must not start a session when the vehicle is unplugged. Keep the
+`Ladestatus is not Unplugged` condition first so the recovery flow only creates
+sessions for a real connected charging cable.
+
+## Suggested Debounce Rules
+
+- Do not run `Start Session` repeatedly when `ChargeConnectedAt` already has a
+  timestamp.
+- Debounce low-power `Log Off` triggers so short power dips do not end a
+  charging session.
+- Keep `Reset Session` separate from `Log Off` so a temporary stop can be
+  logged without clearing the session unless the car is full or disconnected.
