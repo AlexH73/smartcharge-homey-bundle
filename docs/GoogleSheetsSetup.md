@@ -22,8 +22,14 @@ private.
 1. Create a Google Sheet.
 2. Copy the spreadsheet ID from the sheet URL.
 3. Open Extensions -> Apps Script.
-4. Copy `google-apps-script/SmartChargeLogger.gs` into the Apps Script editor.
-5. Replace `YOUR_GOOGLE_SHEET_ID` with your private spreadsheet ID.
+4. Copy `scripts/google-apps-script/SmartChargeLogger.gs` into the Apps Script
+   editor.
+5. Open Apps Script Project Settings and add a script property:
+
+```text
+SPREADSHEET_ID = YOUR_GOOGLE_SHEET_ID
+```
+
 6. Save the project.
 7. Run `setupSmartChargeWorkbook` once from the Apps Script editor.
 8. Authorize the script for your Google account.
@@ -36,6 +42,10 @@ existing `Events` sheet is missing newer columns, the Apps Script template
 appends those headers the next time `setupSmartChargeWorkbook` or the webhook
 runs. Rows are written by header name, so existing column order is preserved.
 Update any custom formulas or charts that reference fixed column letters.
+
+Existing Google Sheets columns should not be reordered automatically. For a
+clean public setup, create a new workbook or sheet with the Events telemetry v1
+header order below.
 
 ## Webhook Deployment
 
@@ -68,30 +78,49 @@ Important event types:
 - `session_reset`
 - `session_expired`
 
-Important payload fields:
+Events telemetry v1 headers:
 
+- `receivedAt`
+- `schemaVersion`
+- `eventType`
+- `reasonCode`
 - `sessionId`
 - `loggedAt`
-- `battery`
-- `currentPrice`
+- `batteryPct`
+- `targetBatteryPct`
+- `missingBatteryPct`
 - `connectedAt`
 - `targetDeparture`
+- `chargeFactor`
+- `chargeReservePct`
+- `chargeMinutes`
+- `chargeSlots`
+- `chargeHoursAhead`
+- `currentPriceEurKwh`
+- `avgPlanPriceEurKwh`
+- `totalPlanPrice`
+- `selectedAvgPriceEurKwh`
+- `selectedTotalPrice`
+- `baselineAvgPriceEurKwh`
+- `baselineTotalPrice`
+- `estimatedSavings`
+- `estimatedSavingsPct`
+- `priceCount`
+- `plannerMode`
+- `plannerVersion`
+- `windowCount`
 - `plannedStart`
 - `plannedEnd`
+- `chargeWindowsText`
+- `chargeWindowsJson`
 - `shouldChargeNow`
+- `decisionSource`
 - `plugOn`
-- `plugPower`
+- `plugPowerW`
 - `reason`
-- `averagePrice`
-- `totalPrice`
-- `priceCount`
 - `source`
 - `engineVersion`
 - `detailsJson`
-- `plannerMode`
-- `windowCount`
-- `chargeWindowsText`
-- `chargeWindowsJson`
 
 Decision logs are deduplicated by `SmartChargeLastLogKey`. Critical lifecycle
 events are always written.

@@ -64,32 +64,50 @@ The `logger-payload` scenario also writes an actual payload snapshot to
 ## Logged Fields
 
 - `receivedAt`
+- `schemaVersion`
 - `eventType`
+- `reasonCode`
 - `sessionId`
 - `loggedAt`
-- `battery_%`
-- `currentPrice_EUR_per_kWh`
-- `chargeMinutes_min`
-- `chargeSlots`
-- `chargeHoursAhead_h`
+- `batteryPct`
+- `targetBatteryPct`
+- `missingBatteryPct`
 - `connectedAt`
 - `targetDeparture`
+- `chargeFactor`
+- `chargeReservePct`
+- `chargeMinutes`
+- `chargeSlots`
+- `chargeHoursAhead`
+- `currentPriceEurKwh`
+- `avgPlanPriceEurKwh`
+- `totalPlanPrice`
+- `selectedAvgPriceEurKwh`
+- `selectedTotalPrice`
+- `baselineAvgPriceEurKwh`
+- `baselineTotalPrice`
+- `estimatedSavings`
+- `estimatedSavingsPct`
+- `priceCount`
+- `plannerMode`
+- `plannerVersion`
+- `windowCount`
 - `plannedStart`
 - `plannedEnd`
+- `chargeWindowsText`
+- `chargeWindowsJson`
 - `shouldChargeNow`
+- `decisionSource`
 - `plugOn`
-- `plugPower_W`
+- `plugPowerW`
 - `reason`
-- `averagePrice_EUR_per_kWh`
-- `totalPrice_EUR`
-- `priceCount`
 - `source`
 - `engineVersion`
 - `detailsJson`
-- `plannerMode`
-- `windowCount`
-- `chargeWindowsText`
-- `chargeWindowsJson`
+
+These are Events telemetry v1 headers for clean simulator output and new public
+setups. Existing Google Sheets workbooks should not have older columns
+reordered automatically; add migration or import logic explicitly if needed.
 
 ## Included Scenarios
 
