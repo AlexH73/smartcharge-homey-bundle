@@ -58,46 +58,54 @@ const SmartChargeLogger = (() => {
     'averagePrice',
   ]);
 
-  const GOOGLE_SHEETS_PAYLOAD_FIELDS = Object.freeze([
+  const GOOGLE_SHEETS_PAYLOAD_FIELDS = [
+    'schemaVersion',
     'eventType',
+    'reasonCode',
     'sessionId',
     'loggedAt',
 
     'battery',
-    'currentPrice',
+    'targetBattery',
+    'missingBatteryPercent',
+    'connectedAt',
+    'targetDeparture',
 
+    'chargeFactor',
+    'chargeReserve',
     'chargeMinutes',
     'chargeSlots',
     'chargeHoursAhead',
 
-    'connectedAt',
-    'targetDeparture',
-
-    'plannedStart',
-    'plannedEnd',
-
-    'shouldChargeNow',
-
-    'plugOn',
-    'plugPower',
-
-    'reason',
-
+    'currentPrice',
     'averagePrice',
     'totalPrice',
-
+    'selectedAveragePrice',
+    'selectedTotalPrice',
+    'baselineAveragePrice',
+    'baselineTotalPrice',
+    'estimatedSavings',
+    'estimatedSavingsPercent',
     'priceCount',
+
+    'plannerMode',
+    'plannerVersion',
+    'windowCount',
+    'plannedStart',
+    'plannedEnd',
+    'chargeWindowsText',
+    'chargeWindowsJson',
+
+    'shouldChargeNow',
+    'decisionSource',
+    'plugOn',
+    'plugPower',
+    'reason',
 
     'source',
     'engineVersion',
-
     'message',
-
-    'plannerMode',
-    'windowCount',
-    'chargeWindowsText',
-    'chargeWindowsJson',
-  ]);
+  ];
 
   /**
    * Ensures that a value is an object.
@@ -196,42 +204,51 @@ const SmartChargeLogger = (() => {
     return {
       ...logEvent,
 
-      eventType,
+      schemaVersion: normalizeValue(logEvent.schemaVersion || 1),
+      eventType: normalizeValue(logEvent.eventType),
+      reasonCode: normalizeValue(logEvent.reasonCode),
       sessionId: normalizeValue(logEvent.sessionId),
       loggedAt: normalizeValue(logEvent.loggedAt),
 
       battery: normalizeValue(logEvent.battery),
-      currentPrice: normalizeValue(logEvent.currentPrice),
-
+      targetBattery: normalizeValue(logEvent.targetBattery),
+      missingBatteryPercent: normalizeValue(logEvent.missingBatteryPercent),
       connectedAt: normalizeValue(logEvent.connectedAt),
       targetDeparture: normalizeValue(logEvent.targetDeparture),
 
+      chargeFactor: normalizeValue(logEvent.chargeFactor),
+      chargeReserve: normalizeValue(logEvent.chargeReserve),
       chargeMinutes: normalizeValue(logEvent.chargeMinutes),
-      chargeQuarters: normalizeValue(logEvent.chargeQuarters),
       chargeSlots: normalizeValue(logEvent.chargeSlots),
       chargeHoursAhead: normalizeValue(logEvent.chargeHoursAhead),
 
-      shouldChargeNow: normalizeValue(logEvent.shouldChargeNow),
-
-      plannedStart: normalizeValue(logEvent.plannedStart),
-      plannedEnd: normalizeValue(logEvent.plannedEnd),
-
-      plugOn: normalizeValue(logEvent.plugOn),
-      plugPower: normalizeValue(logEvent.plugPower),
-
-      reason: normalizeValue(logEvent.reason),
-
-      totalPrice: normalizeValue(logEvent.totalPrice),
+      currentPrice: normalizeValue(logEvent.currentPrice),
       averagePrice: normalizeValue(logEvent.averagePrice),
+      totalPrice: normalizeValue(logEvent.totalPrice),
+      selectedAveragePrice: normalizeValue(logEvent.selectedAveragePrice),
+      selectedTotalPrice: normalizeValue(logEvent.selectedTotalPrice),
+      baselineAveragePrice: normalizeValue(logEvent.baselineAveragePrice),
+      baselineTotalPrice: normalizeValue(logEvent.baselineTotalPrice),
+      estimatedSavings: normalizeValue(logEvent.estimatedSavings),
+      estimatedSavingsPercent: normalizeValue(logEvent.estimatedSavingsPercent),
       priceCount: normalizeValue(logEvent.priceCount),
 
       plannerMode: normalizeValue(logEvent.plannerMode),
+      plannerVersion: normalizeValue(logEvent.plannerVersion),
       windowCount: normalizeValue(logEvent.windowCount),
+      plannedStart: normalizeValue(logEvent.plannedStart),
+      plannedEnd: normalizeValue(logEvent.plannedEnd),
       chargeWindowsText: normalizeValue(logEvent.chargeWindowsText),
       chargeWindowsJson: normalizeValue(logEvent.chargeWindowsJson),
 
+      shouldChargeNow: normalizeValue(logEvent.shouldChargeNow),
+      decisionSource: normalizeValue(logEvent.decisionSource),
+      plugOn: normalizeValue(logEvent.plugOn),
+      plugPower: normalizeValue(logEvent.plugPower),
+      reason: normalizeValue(logEvent.reason),
+
       source: normalizeValue(logEvent.source || 'smartcharge-engine'),
-      engineVersion: normalizeValue(logEvent.engineVersion),
+      engineVersion: normalizeValue(logEvent.engineVersion || ENGINE_VERSION),
       message: normalizeValue(logEvent.message),
     };
   }
@@ -585,6 +602,29 @@ const SmartChargeLogger = (() => {
     message = null,
     source = 'smartcharge-runtime',
     currentPrice = null,
+
+    schemaVersion = 1,
+    reasonCode = null,
+    decisionSource = 'lifecycle',
+
+    targetBattery = null,
+    missingBatteryPercent = null,
+
+    chargeFactor = null,
+    chargeReserve = null,
+
+    selectedAveragePrice = null,
+    selectedTotalPrice = null,
+    baselineAveragePrice = null,
+    baselineTotalPrice = null,
+    estimatedSavings = null,
+    estimatedSavingsPercent = null,
+
+    plannerMode = null,
+    plannerVersion = null,
+    windowCount = null,
+    chargeWindowsText = null,
+    chargeWindowsJson = null,
   }) {
     const now = new Date();
 
@@ -612,11 +652,20 @@ const SmartChargeLogger = (() => {
       {
         eventType,
 
+        schemaVersion,
+        reasonCode,
+        decisionSource,
+
         sessionId,
         loggedAt: now,
 
         battery,
+        targetBattery,
+        missingBatteryPercent,
+
         currentPrice,
+        chargeFactor,
+        chargeReserve,
 
         connectedAt,
         targetDeparture: null,
@@ -637,6 +686,12 @@ const SmartChargeLogger = (() => {
 
         averagePrice: null,
         totalPrice: null,
+        selectedAveragePrice,
+        selectedTotalPrice,
+        baselineAveragePrice,
+        baselineTotalPrice,
+        estimatedSavings,
+        estimatedSavingsPercent,
         priceCount: null,
 
         source,
@@ -644,10 +699,11 @@ const SmartChargeLogger = (() => {
 
         message,
 
-        plannerMode: null,
-        windowCount: null,
-        chargeWindowsText: null,
-        chargeWindowsJson: null,
+        plannerMode,
+        plannerVersion,
+        windowCount,
+        chargeWindowsText,
+        chargeWindowsJson,
       },
       {
         webhookUrl: await getVariableValue(LOGIC_VARIABLE_NAMES.WEBHOOK_URL),

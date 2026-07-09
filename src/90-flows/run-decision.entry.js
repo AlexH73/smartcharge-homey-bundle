@@ -233,15 +233,27 @@ async function main() {
   const plugOn = plug.capabilitiesObj.onoff?.value ?? null;
   const plugPower = plug.capabilitiesObj.measure_power?.value ?? null;
 
+  const targetBattery = CONFIG.targetBattery ?? 100;
+  const missingBatteryPercent = Math.max(0, targetBattery - battery);
+  const reasonCode = getReasonCode(reason);
+  const decisionSource = getDecisionSource(reasonCode);
+
   try {
     logResult = await SmartChargeLogger.logToGoogleSheets(
       {
         eventType: SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_DECISION,
 
+        schemaVersion: 1,
+        reasonCode,
+        decisionSource,
+
         sessionId,
         loggedAt: now,
 
         battery,
+        targetBattery,
+        missingBatteryPercent,
+
         currentPrice,
 
         connectedAt: formatLocal(connectedAt),
@@ -250,6 +262,9 @@ async function main() {
         chargeMinutes,
         chargeSlots,
         chargeHoursAhead,
+
+        chargeFactor: factor,
+        chargeReserve: reserve,
 
         plannedStart: plan ? formatLocal(plan.plannedStart) : null,
         plannedEnd: plan ? formatLocal(plan.plannedEnd) : null,
@@ -263,6 +278,30 @@ async function main() {
 
         averagePrice: plan ? Number(plan.averagePrice.toFixed(4)) : null,
         totalPrice: plan ? Number(plan.totalPrice.toFixed(4)) : null,
+        selectedAveragePrice: plan
+          ? Number(plan.averagePrice.toFixed(4))
+          : null,
+        selectedTotalPrice: plan ? Number(plan.totalPrice.toFixed(4)) : null,
+        baselineAveragePrice: continuousPlan
+          ? Number(continuousPlan.averagePrice.toFixed(4))
+          : null,
+        baselineTotalPrice: continuousPlan
+          ? Number(continuousPlan.totalPrice.toFixed(4))
+          : null,
+        estimatedSavings:
+          continuousPlan && plan
+            ? Number((continuousPlan.totalPrice - plan.totalPrice).toFixed(4))
+            : null,
+        estimatedSavingsPercent:
+          continuousPlan && plan && continuousPlan.totalPrice > 0
+            ? Number(
+                (
+                  ((continuousPlan.totalPrice - plan.totalPrice) /
+                    continuousPlan.totalPrice) *
+                  100
+                ).toFixed(2),
+              )
+            : null,
         priceCount: prices.length,
 
         source: 'smartcharge-run-decision',
@@ -271,6 +310,7 @@ async function main() {
         message: null,
 
         plannerMode: plan ? plan.plannerMode : null,
+        plannerVersion: plan ? 'planner-v1' : null,
         windowCount: plan ? plan.windowCount : null,
         chargeWindowsText: plan
           ? plan.windows
@@ -367,6 +407,34 @@ async function main() {
         }))
       : null,
   };
+}
+
+function getReasonCode(reason) {
+  if (reason === 'Battery is already full') return 'BATTERY_FULL';
+  if (reason === 'Current time is inside selected charging plan')
+    return 'CURRENT_SLOT';
+  if (reason === 'Waiting for selected charging plan')
+    return 'WAITING_FOR_PLAN';
+  if (reason === 'Safety fallback: selected plan starts too late')
+    return 'SAFETY_FALLBACK_PLAN_TOO_LATE';
+  if (reason === 'Safety fallback: latest safe start reached')
+    return 'SAFETY_FALLBACK_LATEST_SAFE_START';
+  if (reason === 'Safety fallback: latest safe start reached and no plan found')
+    return 'SAFETY_FALLBACK_NO_PLAN';
+  if (reason === 'Session expired: target departure is in the past')
+    return 'SESSION_EXPIRED';
+  if (reason === 'No active session') return 'NO_ACTIVE_SESSION';
+
+  return 'UNKNOWN';
+}
+
+function getDecisionSource(reasonCode) {
+  if (reasonCode.startsWith('SAFETY_FALLBACK')) return 'safety-fallback';
+  if (reasonCode === 'BATTERY_FULL') return 'battery';
+  if (reasonCode === 'SESSION_EXPIRED') return 'session';
+  if (reasonCode === 'NO_ACTIVE_SESSION') return 'session';
+
+  return 'planner';
 }
 
 return await main();
