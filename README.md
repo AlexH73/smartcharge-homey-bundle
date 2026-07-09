@@ -22,16 +22,16 @@ simulator.
 
 ## Features
 
+- Production-tested Homey flow lifecycle.
+- Local simulator with 20 passing scenarios.
+- Multi-window planner for separated low-price slots.
+- Google Sheets event logging and analytics.
+- Live public dashboard.
 - Tibber hourly price integration.
 - HomeyScript runtime for Homey Flows.
 - Mercedes battery state through Homey device integration.
 - Continuous charging planner.
-- Multi-window planner for separated low-price slots.
 - Safety fallback when the latest safe start is reached.
-- Google Sheets event logging and analytics.
-- Live public dashboard.
-- Local simulator with 20 passing scenarios.
-- Production-tested Homey flow lifecycle.
 
 ## Architecture
 
@@ -47,7 +47,11 @@ SmartCharge HomeyScripts
   |-- Multi-window planner
   `-- Google Sheets logger
   |
-Dashboard / Analytics
+Google Sheets
+  |-- Events
+  |-- Sessions
+  |-- Statistics
+  `-- Dashboard
 ```
 
 ## Dashboard
@@ -92,9 +96,12 @@ See [docs/Simulator.md](docs/Simulator.md).
 - [Installation](docs/Installation.md)
 - [Homey Flow Setup](docs/HomeyFlows.md)
 - [Google Sheets Setup](docs/GoogleSheetsSetup.md)
+- [Data Model](docs/DataModel.md)
+- [Dashboard Architecture](docs/Dashboard.md)
 - [Public Dashboard](docs/PublicDashboard.md)
 - [Privacy And Public Release Safety](docs/Privacy.md)
 - [Simulator](docs/Simulator.md)
+- [Telemetry v2 Milestone](docs/milestones/TelemetryV2.md)
 - [ChargePlan Contract](docs/ChargePlan.md)
 - [Development Workflow](docs/DevelopmentWorkflow.md)
 - [Roadmap](docs/Roadmap.md)

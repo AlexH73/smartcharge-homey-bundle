@@ -58,6 +58,8 @@ as simulator coverage, Homey testing, and production risk become clearer.
 
 - Track energy cost, avoided high-price charging, and charging session history.
 - Add summaries that can be exported or reviewed outside Homey.
+- Plan Telemetry v2 fields after enough production data has been collected:
+  [Telemetry v2 Milestone](milestones/TelemetryV2.md).
 
 ### Logger Improvements
 
