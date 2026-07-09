@@ -69,6 +69,51 @@ const EVENT_HEADERS = [
   'detailsJson',
 ];
 
+const SESSION_HEADERS = [
+  'sessionId',
+  'connectedAt',
+
+  'chargeStartedAt',
+  'chargeStoppedAt',
+  'resetAt',
+
+  'status',
+  'firstDecisionAt',
+
+  'startBatteryPct',
+  'endBatteryPct',
+  'batteryDeltaPct',
+
+  'targetBatteryPct',
+  'missingBatteryPct',
+
+  'plannerMode',
+  'plannerVersion',
+  'windowCount',
+  'plannedStart',
+  'plannedEnd',
+  'chargeWindowsText',
+  'chargeWindowsJson',
+
+  'chargeFactor',
+  'chargeReservePct',
+  'plannedChargeMinutes',
+
+  'selectedAvgPriceEurKwh',
+  'selectedTotalPrice',
+  'baselineAvgPriceEurKwh',
+  'baselineTotalPrice',
+  'estimatedSavings',
+  'estimatedSavingsPct',
+
+  'lastReasonCode',
+  'lastReason',
+  'lastEventType',
+
+  'createdAt',
+  'updatedAt',
+];
+
 const EVENT_FIELD_BY_HEADER = {
   schemaVersion: 'schemaVersion',
   eventType: 'eventType',
@@ -120,18 +165,17 @@ const EVENT_FIELD_BY_HEADER = {
 function setupSmartChargeWorkbook() {
   const ss = openSmartChargeSpreadsheet();
 
-  ensureSheet(ss, SMARTCHARGE_CONFIG.EVENTS_SHEET_NAME, EVENT_HEADERS);
+  const eventsSheet = ensureSheet(
+    ss,
+    SMARTCHARGE_CONFIG.EVENTS_SHEET_NAME,
+    EVENT_HEADERS,
+  );
 
-  ensureSheet(ss, SMARTCHARGE_CONFIG.SESSIONS_SHEET_NAME, [
-    'sessionId',
-    'connectedAt',
-    'disconnectedAt',
-    'startBattery_%',
-    'endBattery_%',
-    'chargeMinutes_min',
-    'estimatedCost_EUR',
-    'notes',
-  ]);
+  const sessionsSheet = ensureSheet(
+    ss,
+    SMARTCHARGE_CONFIG.SESSIONS_SHEET_NAME,
+    SESSION_HEADERS,
+  );
 
   ensureSheet(ss, SMARTCHARGE_CONFIG.STATISTICS_SHEET_NAME, [
     'metric',
@@ -145,23 +189,29 @@ function setupSmartChargeWorkbook() {
     'updatedAt',
   ]);
 
+  formatEventSheet(eventsSheet);
+  formatSessionSheet(sessionsSheet);
+
   return 'SmartCharge workbook setup complete';
 }
 
 function doPost(e) {
   const ss = openSmartChargeSpreadsheet();
 
-  const sheet = ensureSheet(
+  const eventsSheet = ensureSheet(
     ss,
     SMARTCHARGE_CONFIG.EVENTS_SHEET_NAME,
     EVENT_HEADERS,
   );
 
+  formatEventSheet(eventsSheet);
+
   const data = e && e.postData && e.postData.contents
     ? JSON.parse(e.postData.contents)
     : { eventType: 'manual_test', reason: 'doPost called without postData' };
 
-  sheet.appendRow(buildEventRow(sheet, data));
+  eventsSheet.appendRow(buildEventRow(eventsSheet, data));
+  upsertSessionFromEvent(ss, data);
 
   return ContentService.createTextOutput('OK');
 }
@@ -216,6 +266,205 @@ function eventCell(header, data) {
 
   const fieldName = EVENT_FIELD_BY_HEADER[header] || header;
   return cell(data[fieldName]);
+}
+
+function upsertSessionFromEvent(ss, event) {
+  if (!event || !event.sessionId) return;
+
+  const sheet = ensureSheet(
+    ss,
+    SMARTCHARGE_CONFIG.SESSIONS_SHEET_NAME,
+    SESSION_HEADERS,
+  );
+
+  formatSessionSheet(sheet);
+
+  const headers = getHeaderValues(sheet);
+  const rowIndex = findSessionRowById(sheet, event.sessionId);
+  const now = new Date();
+
+  if (rowIndex === -1) {
+    const newRowIndex = sheet.getLastRow() + 1;
+    const emptyRow = headers.map(() => '');
+
+    sheet.appendRow(emptyRow);
+
+    writeSessionValues(sheet, headers, newRowIndex, {
+      sessionId: event.sessionId,
+      status: getSessionStatus(event),
+      createdAt: now,
+      updatedAt: now,
+      ...buildSessionUpdate(event),
+    });
+
+    return;
+  }
+
+  writeSessionValues(sheet, headers, rowIndex, {
+    status: getSessionStatus(event),
+    updatedAt: now,
+    ...buildSessionUpdate(event),
+  });
+}
+
+function findSessionRowById(sheet, sessionId) {
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) return -1;
+
+  const headers = getHeaderValues(sheet);
+  const sessionIdCol = headers.indexOf('sessionId') + 1;
+
+  if (sessionIdCol < 1) {
+    throw new Error('Sessions sheet is missing sessionId column');
+  }
+
+  const expectedSessionId = String(sessionId || '').trim();
+
+  const values = sheet
+    .getRange(2, sessionIdCol, lastRow - 1, 1)
+    .getDisplayValues();
+
+  for (let i = 0; i < values.length; i++) {
+    const currentSessionId = String(values[i][0] || '').trim();
+
+    if (currentSessionId === expectedSessionId) {
+      return i + 2;
+    }
+  }
+
+  return -1;
+}
+
+function writeSessionValues(sheet, headers, rowIndex, update) {
+  Object.keys(update).forEach((fieldName) => {
+    const columnIndex = headers.indexOf(fieldName) + 1;
+
+    if (columnIndex < 1) return;
+
+    sheet.getRange(rowIndex, columnIndex).setValue(cell(update[fieldName]));
+  });
+}
+
+function buildSessionUpdate(event) {
+  const update = {
+    lastEventType: event.eventType || '',
+    lastReasonCode: event.reasonCode || '',
+    lastReason: event.reason || '',
+  };
+
+  if (event.connectedAt) {
+    update.connectedAt = event.connectedAt;
+  }
+
+  if (event.eventType === 'session_start') {
+    update.connectedAt = event.connectedAt || event.sessionId;
+    update.startBatteryPct = event.battery;
+    update.endBatteryPct = event.battery;
+  }
+
+  if (event.eventType === 'smartcharge_decision') {
+    update.firstDecisionAt = event.loggedAt;
+    update.targetBatteryPct = event.targetBattery;
+    update.missingBatteryPct = event.missingBatteryPercent;
+
+    update.plannerMode = event.plannerMode;
+    update.plannerVersion = event.plannerVersion;
+    update.windowCount = event.windowCount;
+    update.plannedStart = event.plannedStart;
+    update.plannedEnd = event.plannedEnd;
+    update.chargeWindowsText = event.chargeWindowsText;
+    update.chargeWindowsJson = event.chargeWindowsJson;
+
+    update.chargeFactor = event.chargeFactor;
+    update.chargeReservePct = event.chargeReserve;
+    update.plannedChargeMinutes = event.chargeMinutes;
+
+    update.selectedAvgPriceEurKwh = event.selectedAveragePrice;
+    update.selectedTotalPrice = event.selectedTotalPrice;
+    update.baselineAvgPriceEurKwh = event.baselineAveragePrice;
+    update.baselineTotalPrice = event.baselineTotalPrice;
+    update.estimatedSavings = event.estimatedSavings;
+    update.estimatedSavingsPct = event.estimatedSavingsPercent;
+  }
+
+  if (event.eventType === 'smartcharge_on') {
+    update.chargeStartedAt = event.loggedAt;
+  }
+
+  if (event.eventType === 'smartcharge_off') {
+    update.chargeStoppedAt = event.loggedAt;
+  }
+
+  if (event.eventType === 'session_reset') {
+    update.resetAt = event.loggedAt;
+    update.endBatteryPct = event.battery;
+  }
+
+  if (event.battery !== null && event.battery !== undefined) {
+    update.endBatteryPct = event.battery;
+  }
+
+  return update;
+}
+
+function getSessionStatus(event) {
+  switch (event.eventType) {
+    case 'session_start':
+      return 'active';
+
+    case 'smartcharge_decision':
+      if (event.shouldChargeNow) return 'ready_to_charge';
+      return 'planned';
+
+    case 'smartcharge_on':
+      return 'charging';
+
+    case 'smartcharge_off':
+      return 'stopped';
+
+    case 'session_reset':
+      return 'completed';
+
+    case 'session_expired':
+      return 'expired';
+
+    default:
+      return 'unknown';
+  }
+}
+
+function formatEventSheet(sheet) {
+  sheet.setFrozenRows(1);
+}
+
+function formatSessionSheet(sheet) {
+  const headers = getHeaderValues(sheet);
+
+  const sessionIdCol = headers.indexOf('sessionId') + 1;
+
+  if (sessionIdCol > 0) {
+    sheet
+      .getRange(1, sessionIdCol, sheet.getMaxRows(), 1)
+      .setNumberFormat('@');
+  }
+
+  const createdAtCol = headers.indexOf('createdAt') + 1;
+  const updatedAtCol = headers.indexOf('updatedAt') + 1;
+
+  if (createdAtCol > 0) {
+    sheet
+      .getRange(1, createdAtCol, sheet.getMaxRows(), 1)
+      .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  }
+
+  if (updatedAtCol > 0) {
+    sheet
+      .getRange(1, updatedAtCol, sheet.getMaxRows(), 1)
+      .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  }
+
+  sheet.setFrozenRows(1);
 }
 
 function getHeaderValues(sheet) {
