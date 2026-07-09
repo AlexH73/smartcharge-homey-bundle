@@ -10,3 +10,5 @@ simulator/logs/*.html
 simulator/logs/*.json
 simulator/logs/*.jsonl
 dist/*
+!dist/
+!dist/README.md
