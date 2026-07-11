@@ -404,7 +404,10 @@ function buildSessionUpdate(event, currentSession) {
     update.targetBatteryPct = event.targetBattery;
     update.missingBatteryPct = event.missingBatteryPercent;
 
-    update.plannerMode = event.plannerMode;
+    if (!hasValue(currentSession.plannerMode) && hasValue(event.plannerMode)) {
+      update.plannerMode = event.plannerMode;
+    }
+
     update.plannerVersion = event.plannerVersion;
     update.windowCount = event.windowCount;
     update.plannedStart = event.plannedStart;
