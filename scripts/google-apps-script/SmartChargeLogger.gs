@@ -114,6 +114,12 @@ const SESSION_HEADERS = [
   'updatedAt',
 ];
 
+const TERMINAL_SESSION_STATUSES = [
+  'completed',
+  'expired',
+  'manual_reset',
+];
+
 const EVENT_FIELD_BY_HEADER = {
   schemaVersion: 'schemaVersion',
   eventType: 'eventType',
@@ -286,25 +292,27 @@ function upsertSessionFromEvent(ss, event) {
   if (rowIndex === -1) {
     const newRowIndex = sheet.getLastRow() + 1;
     const emptyRow = headers.map(() => '');
+    const update = buildSessionWrite(event, {}, now);
 
     sheet.appendRow(emptyRow);
 
     writeSessionValues(sheet, headers, newRowIndex, {
       sessionId: event.sessionId,
-      status: getSessionStatus(event),
       createdAt: now,
-      updatedAt: now,
-      ...buildSessionUpdate(event),
+      ...update,
     });
 
     return;
   }
 
-  writeSessionValues(sheet, headers, rowIndex, {
-    status: getSessionStatus(event),
-    updatedAt: now,
-    ...buildSessionUpdate(event),
-  });
+  const currentSession = readSessionValues(sheet, headers, rowIndex);
+
+  writeSessionValues(
+    sheet,
+    headers,
+    rowIndex,
+    buildSessionWrite(event, currentSession, now),
+  );
 }
 
 function findSessionRowById(sheet, sessionId) {
@@ -336,6 +344,20 @@ function findSessionRowById(sheet, sessionId) {
   return -1;
 }
 
+function readSessionValues(sheet, headers, rowIndex) {
+  const values = sheet
+    .getRange(rowIndex, 1, 1, headers.length)
+    .getValues()[0];
+
+  return headers.reduce((session, header, index) => {
+    if (header) {
+      session[header] = values[index];
+    }
+
+    return session;
+  }, {});
+}
+
 function writeSessionValues(sheet, headers, rowIndex, update) {
   Object.keys(update).forEach((fieldName) => {
     const columnIndex = headers.indexOf(fieldName) + 1;
@@ -346,7 +368,17 @@ function writeSessionValues(sheet, headers, rowIndex, update) {
   });
 }
 
-function buildSessionUpdate(event) {
+function buildSessionWrite(event, currentSession, now) {
+  const update = buildSessionUpdate(event, currentSession || {});
+
+  return {
+    status: getSessionStatus(event, currentSession || {}, update),
+    updatedAt: now,
+    ...update,
+  };
+}
+
+function buildSessionUpdate(event, currentSession) {
   const update = {
     lastEventType: event.eventType || '',
     lastReasonCode: event.reasonCode || '',
@@ -359,12 +391,16 @@ function buildSessionUpdate(event) {
 
   if (event.eventType === 'session_start') {
     update.connectedAt = event.connectedAt || event.sessionId;
-    update.startBatteryPct = event.battery;
-    update.endBatteryPct = event.battery;
+    if (!hasValue(currentSession.startBatteryPct)) {
+      update.startBatteryPct = event.battery;
+    }
   }
 
   if (event.eventType === 'smartcharge_decision') {
-    update.firstDecisionAt = event.loggedAt;
+    if (!hasValue(currentSession.firstDecisionAt)) {
+      update.firstDecisionAt = event.loggedAt;
+    }
+
     update.targetBatteryPct = event.targetBattery;
     update.missingBatteryPct = event.missingBatteryPercent;
 
@@ -386,6 +422,13 @@ function buildSessionUpdate(event) {
     update.baselineTotalPrice = event.baselineTotalPrice;
     update.estimatedSavings = event.estimatedSavings;
     update.estimatedSavingsPct = event.estimatedSavingsPercent;
+
+    if (
+      isCompletionEvent(event, currentSession) &&
+      canUpdateFinalBattery(currentSession)
+    ) {
+      update.endBatteryPct = event.battery;
+    }
   }
 
   if (event.eventType === 'smartcharge_on') {
@@ -393,27 +436,50 @@ function buildSessionUpdate(event) {
   }
 
   if (event.eventType === 'smartcharge_off') {
-    update.chargeStoppedAt = event.loggedAt;
+    if (!hasValue(currentSession.chargeStoppedAt)) {
+      update.chargeStoppedAt = event.loggedAt;
+    }
+
+    if (hasValue(event.battery) && canUpdateFinalBattery(currentSession)) {
+      update.endBatteryPct = event.battery;
+    }
   }
 
   if (event.eventType === 'session_reset') {
     update.resetAt = event.loggedAt;
+  }
+
+  if (
+    event.eventType === 'battery_full' &&
+    hasValue(event.battery) &&
+    canUpdateFinalBattery(currentSession)
+  ) {
     update.endBatteryPct = event.battery;
   }
 
-  if (event.battery !== null && event.battery !== undefined) {
-    update.endBatteryPct = event.battery;
-  }
+  addBatteryDelta(update, currentSession);
 
   return update;
 }
 
-function getSessionStatus(event) {
+function getSessionStatus(event, currentSession, update) {
+  const currentStatus = normalizeStatus(currentSession.status);
+
+  if (currentStatus === 'completed') return 'completed';
+
+  if (
+    currentStatus === 'expired' ||
+    currentStatus === 'manual_reset'
+  ) {
+    return currentStatus;
+  }
+
   switch (event.eventType) {
     case 'session_start':
       return 'active';
 
     case 'smartcharge_decision':
+      if (isCompletionEvent(event, currentSession)) return 'completed';
       if (event.shouldChargeNow) return 'ready_to_charge';
       return 'planned';
 
@@ -421,17 +487,115 @@ function getSessionStatus(event) {
       return 'charging';
 
     case 'smartcharge_off':
+      if (isCompletionEvent(event, currentSession)) return 'completed';
       return 'stopped';
 
     case 'session_reset':
-      return 'completed';
+      if (isCompletionUpdate(update, currentSession)) return 'completed';
+      return 'manual_reset';
 
     case 'session_expired':
       return 'expired';
 
+    case 'battery_full':
+      return 'completed';
+
+    case 'charger_disconnected':
+      if (isCompletionEvent(event, currentSession)) return 'completed';
+      return 'disconnected';
+
     default:
       return 'unknown';
   }
+}
+
+function hasValue(value) {
+  return value !== null && value !== undefined && value !== '';
+}
+
+function normalizeStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function isTerminalSession(session) {
+  return TERMINAL_SESSION_STATUSES.includes(normalizeStatus(session.status));
+}
+
+function canUpdateFinalBattery(currentSession) {
+  if (isTerminalSession(currentSession)) return false;
+
+  return !(
+    hasValue(currentSession.chargeStoppedAt) &&
+    hasValue(currentSession.endBatteryPct)
+  );
+}
+
+function isCompletionUpdate(update, currentSession) {
+  const status = normalizeStatus(currentSession.status);
+
+  if (status === 'completed') return true;
+  if (!hasValue(update.endBatteryPct)) return false;
+
+  return isBatteryAtTarget(
+    update.endBatteryPct,
+    currentSession.targetBatteryPct,
+  );
+}
+
+function isCompletionEvent(event, currentSession) {
+  if (event.eventType === 'battery_full') return true;
+  if (event.reasonCode === 'BATTERY_FULL') return true;
+  if (
+    event.eventType !== 'smartcharge_decision' &&
+    event.eventType !== 'smartcharge_off' &&
+    event.eventType !== 'charger_disconnected'
+  ) {
+    return false;
+  }
+
+  const targetBattery = hasValue(event.targetBattery)
+    ? event.targetBattery
+    : currentSession.targetBatteryPct;
+
+  return isBatteryAtTarget(event.battery, targetBattery);
+}
+
+function isBatteryAtTarget(battery, targetBattery) {
+  const batteryValue = numberOrNull(battery);
+  const targetValue = hasValue(targetBattery) ? numberOrNull(targetBattery) : 100;
+
+  return (
+    batteryValue !== null &&
+    targetValue !== null &&
+    batteryValue >= targetValue
+  );
+}
+
+function addBatteryDelta(update, currentSession) {
+  const startBattery = numberOrNull(
+    hasValue(update.startBatteryPct)
+      ? update.startBatteryPct
+      : currentSession.startBatteryPct,
+  );
+
+  const endBattery = numberOrNull(
+    hasValue(update.endBatteryPct)
+      ? update.endBatteryPct
+      : currentSession.endBatteryPct,
+  );
+
+  if (startBattery === null || endBattery === null) return;
+  if (endBattery < startBattery) return;
+
+  update.batteryDeltaPct = endBattery - startBattery;
+}
+
+function numberOrNull(value) {
+  if (!hasValue(value)) return null;
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function formatEventSheet(sheet) {

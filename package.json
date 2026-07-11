@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "npm run simulate:all",
+    "test": "node tests/apps-script-session-materializer.test.js && npm run simulate:all",
     "simulate": "node simulator/runner.js",
     "simulate:all": "node simulator/runner.js all",
     "simulate:overnight": "node simulator/runner.js overnight",
