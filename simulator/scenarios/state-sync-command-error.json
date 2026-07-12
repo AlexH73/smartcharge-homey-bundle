@@ -1,0 +1,39 @@
+{
+  "name": "state-sync-command-error",
+  "description": "State synchronization fails loudly when Homey rejects the plug command.",
+  "now": "2026-07-08T04:05:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeShouldCharge": false
+    },
+    "devices": {
+      "plug": {
+        "failSetCapabilityValue": true,
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 3600
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "state-sync",
+      "expect": {
+        "errorIncludes": "setCapabilityValue failed",
+        "events": [],
+        "plugOn": true,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": true,
+    "plugCommandCount": 0,
+    "eventTypes": [],
+    "tibberCalls": 0
+  }
+}

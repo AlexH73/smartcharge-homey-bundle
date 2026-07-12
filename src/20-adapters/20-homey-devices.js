@@ -28,3 +28,35 @@ async function getDeviceByNamePart(namePart) {
 async function setDeviceOn(device) {
   await device.setCapabilityValue('onoff', true);
 }
+
+/**
+ * Switches a Homey device off.
+ *
+ * @param {object} device
+ * @returns {Promise<void>}
+ */
+async function setDeviceOff(device) {
+  await device.setCapabilityValue('onoff', false);
+}
+
+/**
+ * Reads a Homey capability value from either Homey capability object shape or
+ * a primitive simulator/test value.
+ *
+ * @param {object} device
+ * @param {string} capabilityName
+ * @returns {unknown}
+ */
+function getCapabilityValue(device, capabilityName) {
+  const capability = device.capabilitiesObj?.[capabilityName];
+
+  if (
+    capability &&
+    typeof capability === 'object' &&
+    Object.prototype.hasOwnProperty.call(capability, 'value')
+  ) {
+    return capability.value;
+  }
+
+  return capability;
+}

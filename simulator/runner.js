@@ -139,6 +139,17 @@ function assertStep(step, stepResult) {
 }
 
 function assertStepExpect(expected, stepResult, label) {
+  if (expected.errorIncludes) {
+    assert.ok(stepResult.error, `${label} error`);
+    assert.match(
+      String(stepResult.error.message || ''),
+      new RegExp(escapeRegExp(expected.errorIncludes)),
+      `${label} error message`,
+    );
+  } else if (stepResult.error) {
+    throw stepResult.error;
+  }
+
   if (expected.result) {
     assertObjectContains(stepResult.result, expected.result, `${label} result`);
   }
@@ -341,6 +352,13 @@ function printExpectedFailureResult(result) {
 }
 
 function summarizeStep(step) {
+  if (step.error) {
+    return (
+      `${step.flow} @ ${step.now}; error=${step.error.message}; ` +
+      `tibber+${step.tibberCallsDelta}`
+    );
+  }
+
   const reason = step.result.reason ? `; reason=${step.result.reason}` : '';
   const charge = step.result.shouldChargeNow !== undefined
     ? `; shouldChargeNow=${step.result.shouldChargeNow}`

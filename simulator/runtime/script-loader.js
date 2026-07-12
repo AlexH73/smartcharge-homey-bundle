@@ -6,6 +6,7 @@ const FLOW_ENTRIES = Object.freeze({
   'start-session': 'src/90-flows/start-session.entry.js',
   'run-decision': 'src/90-flows/run-decision.entry.js',
   'reset-session': 'src/90-flows/reset-session.entry.js',
+  'state-sync': 'src/90-flows/state-sync.entry.js',
   'log-on': 'src/90-flows/log-on.entry.js',
   'log-off': 'src/90-flows/log-off.entry.js',
 });

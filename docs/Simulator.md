@@ -137,6 +137,25 @@ Scenario files live in `simulator/scenarios/`.
   remain than the charge requires.
 - `multi-window-price-update` - a price update replaces one continuous plan
   with cheaper separated windows without plug toggling while waiting.
+- `state-sync-plug-off` - state synchronization turns the plug off when the
+  planner says charging should stop.
+- `state-sync-plug-on` - state synchronization turns the plug on when the
+  planner says charging should run.
+- `state-sync-noop-off` - no command when charging should stop and the plug is
+  already off.
+- `state-sync-noop-on` - no command when charging should run and the plug is
+  already on.
+- `state-sync-no-active-session` - plug is not turned on without an active
+  session.
+- `state-sync-battery-full` - plug is not turned on when the battery is full.
+- `state-sync-battery-null` - plug is not turned on when battery telemetry is
+  `null`.
+- `state-sync-battery-blank` - blank battery telemetry is not treated as `0`.
+- `state-sync-string-true` - string `true` in `SmartChargeShouldCharge` is
+  accepted.
+- `state-sync-blank-session` - padded `null` session values are treated as no
+  active session.
+- `state-sync-command-error` - Homey plug command failures fail loudly.
 - `logger-payload` - exact Google Sheets payload contract check.
 - `plug-disconnected` - reset flow after charger disconnect trigger.
 - `low-power-after-charging` - log-off flow after a low-power stop signal.

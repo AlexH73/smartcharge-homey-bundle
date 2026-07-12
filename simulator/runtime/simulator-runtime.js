@@ -37,13 +37,20 @@ class SimulatorRuntime {
 
     const beforeEventCount = this.logWriter.events.length;
     const beforeTibberCalls = this.tibberCalls;
-    const result = await this.scriptLoader.executeFlow({
-      flow: step.flow,
-      homey: this.homeyMock.api,
-      fetch: this.fetch,
-      log: this.log.bind(this),
-      now: this.currentNow,
-    });
+    let result = null;
+    let error = null;
+
+    try {
+      result = await this.scriptLoader.executeFlow({
+        flow: step.flow,
+        homey: this.homeyMock.api,
+        fetch: this.fetch,
+        log: this.log.bind(this),
+        now: this.currentNow,
+      });
+    } catch (caughtError) {
+      error = caughtError;
+    }
 
     const events = this.logWriter.events.slice(beforeEventCount);
 
@@ -52,6 +59,7 @@ class SimulatorRuntime {
       now: this.currentNow,
       fixture: this.currentFixture,
       result,
+      error,
       events,
       eventTypes: events.map((event) => event.eventType),
       tibberCallsDelta: this.tibberCalls - beforeTibberCalls,

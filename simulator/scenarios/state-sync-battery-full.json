@@ -1,0 +1,48 @@
+{
+  "name": "state-sync-battery-full",
+  "description": "State synchronization does not turn the plug on when the battery is full.",
+  "now": "2026-07-08T02:05:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeShouldCharge": true
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 100
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "state-sync",
+      "expect": {
+        "result": {
+          "synced": true,
+          "action": "none",
+          "reason": "State sync skipped plug on: battery is full",
+          "battery": 100
+        },
+        "events": [],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": [],
+    "tibberCalls": 0
+  }
+}

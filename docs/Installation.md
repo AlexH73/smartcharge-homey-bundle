@@ -61,6 +61,7 @@ Generated files are written to `dist/`:
 
 - `SMARTCHARGE - Start Session.js`
 - `SMARTCHARGE - Run Decision.js`
+- `SMARTCHARGE - State Sync.js`
 - `SMARTCHARGE - Log On.js`
 - `SMARTCHARGE - Log Off.js`
 - `SMARTCHARGE - Reset Session.js`
@@ -78,6 +79,7 @@ Use the generated scripts in `dist/` for normal operation:
 
 - `SMARTCHARGE - Start Session`
 - `SMARTCHARGE - Run Decision`
+- `SMARTCHARGE - State Sync`
 - `SMARTCHARGE - Log On`
 - `SMARTCHARGE - Log Off`
 - `SMARTCHARGE - Reset Session`

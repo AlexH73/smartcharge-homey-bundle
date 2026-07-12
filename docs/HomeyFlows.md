@@ -57,6 +57,39 @@ The script writes `SmartChargeShouldCharge`, `SmartChargePlannedStart`,
 `SmartChargeReason`. It also turns the configured plug on when charging should
 start. It does not turn the plug off.
 
+## Flow: State Synchronization
+
+Purpose: keep the physical plug state aligned with the latest SmartCharge
+decision.
+
+Trigger:
+
+- Every minute.
+
+Conditions:
+
+- `ChargeConnectedAt` is not `null`.
+- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`, if this condition is reliable
+  in your setup.
+
+Actions:
+
+- Run HomeyScript `SMARTCHARGE - State Sync`.
+
+The script does not recalculate the plan or call Tibber. It only synchronizes
+the plug with `SmartChargeShouldCharge`. Lifecycle logging remains the
+responsibility of the existing `Log On` and `Log Off` flows triggered by the
+plug state change.
+
+The script internally checks `SmartChargeShouldCharge`, plug state, active
+session state, and vehicle battery before switching the plug on. It relies on
+`ChargeConnectedAt` and the Homey Flow cable-connected condition to represent a
+real connected charging cable.
+
+If you build this as an Advanced Flow, you may split the on and off paths into
+separate branches. Do not combine `SmartChargeShouldCharge = true` and
+`SmartChargeShouldCharge = false` as conditions in one regular Homey Flow.
+
 ## Flow: Log On
 
 Purpose: write a lifecycle event when SmartCharge charging starts.

@@ -22,10 +22,15 @@ class MockDevice {
     this.id = device.id;
     this.name = device.name;
     this.capabilitiesObj = deepClone(device.capabilitiesObj || {});
+    this.failSetCapabilityValue = Boolean(device.failSetCapabilityValue);
     this.commands = [];
   }
 
   async setCapabilityValue(capability, value) {
+    if (this.failSetCapabilityValue) {
+      throw new Error(`setCapabilityValue failed: ${this.name}.${capability}`);
+    }
+
     this.commands.push({
       capability,
       value,
@@ -117,6 +122,10 @@ class HomeyMock {
       for (const [capability, value] of Object.entries(patch.capabilitiesObj)) {
         device.capabilitiesObj[capability] = normalizeCapabilityValue(value);
       }
+    }
+
+    if (patch.failSetCapabilityValue !== undefined) {
+      device.failSetCapabilityValue = Boolean(patch.failSetCapabilityValue);
     }
   }
 

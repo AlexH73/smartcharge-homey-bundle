@@ -27,6 +27,10 @@ const TARGETS = {
     entry: 'src/90-flows/log-off.entry.js',
     out: 'SMARTCHARGE - Log Off.js',
   },
+  'state-sync': {
+    entry: 'src/90-flows/state-sync.entry.js',
+    out: 'SMARTCHARGE - State Sync.js',
+  },
 };
 
 const BUILD_ALL_TARGET = 'all';
@@ -36,6 +40,7 @@ const DEFAULT_BUILD_ORDER = [
   'start-session',
   'log-on-session',
   'log-off-session',
+  'state-sync',
 ];
 
 if (target !== BUILD_ALL_TARGET && !TARGETS[target]) {
