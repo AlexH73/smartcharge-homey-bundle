@@ -28,18 +28,10 @@ async function main() {
   const shouldCharge = isTrueValue(shouldChargeRaw);
   const hasActiveSession = isActiveSessionValue(connectedAtRaw);
 
-  const mercedes = await getDeviceByNamePart(
-    CONFIG.mercedesDeviceNameIncludes,
-  );
-
   const plug = await getDeviceByNamePart(CONFIG.plugDeviceNameIncludes);
-
-  const battery = numberOrNull(
-    getCapabilityValue(mercedes, 'measure_battery'),
-  );
-
   const plugOnBefore = getCapabilityValue(plug, 'onoff') === true;
 
+  let battery = null;
   let action = 'none';
   let reason = 'Plug already matches SmartCharge decision';
 
@@ -51,15 +43,25 @@ async function main() {
   } else if (shouldCharge && !plugOnBefore) {
     if (!hasActiveSession) {
       reason = 'State sync skipped plug on: no active session';
-    } else if (battery === null) {
-      reason = 'State sync skipped plug on: battery is unavailable';
-    } else if (battery >= CONFIG.batteryFullPercentage) {
-      reason = 'State sync skipped plug on: battery is full';
     } else {
-      await setDeviceOn(plug);
+      const mercedes = await getDeviceByNamePart(
+        CONFIG.mercedesDeviceNameIncludes,
+      );
 
-      action = 'switched_on';
-      reason = 'State sync switched plug on to match SmartCharge decision';
+      battery = numberOrNull(
+        getCapabilityValue(mercedes, 'measure_battery'),
+      );
+
+      if (battery === null) {
+        reason = 'State sync skipped plug on: battery is unavailable';
+      } else if (battery >= CONFIG.batteryFullPercentage) {
+        reason = 'State sync skipped plug on: battery is full';
+      } else {
+        await setDeviceOn(plug);
+
+        action = 'switched_on';
+        reason = 'State sync switched plug on to match SmartCharge decision';
+      }
     }
   }
 

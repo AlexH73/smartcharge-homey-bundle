@@ -139,6 +139,8 @@ Scenario files live in `simulator/scenarios/`.
   with cheaper separated windows without plug toggling while waiting.
 - `state-sync-plug-off` - state synchronization turns the plug off when the
   planner says charging should stop.
+- `state-sync-plug-off-no-vehicle` - plug-off safety path works even when the
+  vehicle device cannot be matched.
 - `state-sync-plug-on` - state synchronization turns the plug on when the
   planner says charging should run.
 - `state-sync-noop-off` - no command when charging should stop and the plug is
@@ -156,6 +158,8 @@ Scenario files live in `simulator/scenarios/`.
 - `state-sync-blank-session` - padded `null` session values are treated as no
   active session.
 - `state-sync-command-error` - Homey plug command failures fail loudly.
+- `state-sync-ambiguous-plug` - ambiguous plug name matches fail safely instead
+  of choosing the first match.
 - `logger-payload` - exact Google Sheets payload contract check.
 - `plug-disconnected` - reset flow after charger disconnect trigger.
 - `low-power-after-charging` - log-off flow after a low-power stop signal.

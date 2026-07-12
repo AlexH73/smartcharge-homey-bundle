@@ -1,0 +1,46 @@
+{
+  "name": "state-sync-plug-off-no-vehicle",
+  "description": "State synchronization can turn the plug off even when the vehicle device is unavailable.",
+  "now": "2026-07-08T04:05:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeShouldCharge": false
+    },
+    "devices": {
+      "mercedes": {
+        "name": "Vehicle Offline"
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 3600
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "state-sync",
+      "expect": {
+        "result": {
+          "synced": true,
+          "action": "switched_off",
+          "hasActiveSession": false,
+          "battery": null
+        },
+        "events": [],
+        "plugOn": false,
+        "plugCommandCount": 1,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 1,
+    "eventTypes": [],
+    "tibberCalls": 0
+  }
+}

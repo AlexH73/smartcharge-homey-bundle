@@ -41,6 +41,8 @@
     "simulate:state-sync-string-true": "node simulator/runner.js state-sync-string-true",
     "simulate:state-sync-blank-session": "node simulator/runner.js state-sync-blank-session",
     "simulate:state-sync-command-error": "node simulator/runner.js state-sync-command-error",
+    "simulate:state-sync-plug-off-no-vehicle": "node simulator/runner.js state-sync-plug-off-no-vehicle",
+    "simulate:state-sync-ambiguous-plug": "node simulator/runner.js state-sync-ambiguous-plug",
     "build:decision": "node scripts/build-homey.js run-decision",
     "build:reset": "node scripts/build-homey.js reset-session",
     "build:start": "node scripts/build-homey.js start-session",
@@ -51,7 +53,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "esbuild": "^0.28.1"
   }

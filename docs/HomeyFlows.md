@@ -68,9 +68,7 @@ Trigger:
 
 Conditions:
 
-- `ChargeConnectedAt` is not `null`.
-- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`, if this condition is reliable
-  in your setup.
+- None required for the simple scheduled flow.
 
 Actions:
 
@@ -82,12 +80,23 @@ responsibility of the existing `Log On` and `Log Off` flows triggered by the
 plug state change.
 
 The script internally checks `SmartChargeShouldCharge`, plug state, active
-session state, and vehicle battery before switching the plug on. It relies on
-`ChargeConnectedAt` and the Homey Flow cable-connected condition to represent a
-real connected charging cable.
+session state, and vehicle battery before switching the plug on. The off path is
+intentionally independent from active session and vehicle battery telemetry, so
+it can turn the plug off even after a missed reset or vehicle integration
+outage.
 
-If you build this as an Advanced Flow, you may split the on and off paths into
-separate branches. Do not combine `SmartChargeShouldCharge = true` and
+If you build this as an Advanced Flow, split the on and off paths into separate
+branches:
+
+- Off branch: `SmartChargeShouldCharge = false` and plug is on, then run
+  `SMARTCHARGE - State Sync`. Do not require `ChargeConnectedAt` or battery
+  telemetry on this branch.
+- On branch: `SmartChargeShouldCharge = true`, plug is off,
+  `ChargeConnectedAt` is not `null`, `YOUR_LADESTATUS_VARIABLE` is not
+  `Unplugged`, and vehicle battery is below `100`, then run
+  `SMARTCHARGE - State Sync`.
+
+Do not combine `SmartChargeShouldCharge = true` and
 `SmartChargeShouldCharge = false` as conditions in one regular Homey Flow.
 
 ## Flow: Log On

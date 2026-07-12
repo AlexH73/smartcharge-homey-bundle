@@ -7,16 +7,40 @@
 async function getDeviceByNamePart(namePart) {
   const devices = await Homey.devices.getDevices();
   const normalizedNamePart = normalizeName(namePart);
+  const deviceList = Object.values(devices);
 
-  const device = Object.values(devices).find((d) =>
+  const exactMatches = deviceList.filter((device) =>
+    normalizeName(device.name) === normalizedNamePart,
+  );
+
+  if (exactMatches.length === 1) {
+    return exactMatches[0];
+  }
+
+  if (exactMatches.length > 1) {
+    throwMultipleDevicesFound(namePart, exactMatches);
+  }
+
+  const partialMatches = deviceList.filter((d) =>
     normalizeName(d.name).includes(normalizedNamePart),
   );
 
-  if (!device) {
+  if (partialMatches.length === 0) {
     throw new Error(`Device not found: ${namePart}`);
   }
 
-  return device;
+  if (partialMatches.length > 1) {
+    throwMultipleDevicesFound(namePart, partialMatches);
+  }
+
+  return partialMatches[0];
+}
+
+function throwMultipleDevicesFound(namePart, devices) {
+  throw new Error(
+    `Multiple devices found for "${namePart}": ` +
+      devices.map((device) => device.name).join(', '),
+  );
 }
 
 /**
