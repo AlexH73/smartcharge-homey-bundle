@@ -31,6 +31,14 @@ const TARGETS = {
     entry: 'src/90-flows/state-sync.entry.js',
     out: 'SMARTCHARGE - State Sync.js',
   },
+  'manual-on': {
+    entry: 'src/90-flows/manual-on.entry.js',
+    out: 'SMARTCHARGE - Manual Override On.js',
+  },
+  'manual-off': {
+    entry: 'src/90-flows/manual-off.entry.js',
+    out: 'SMARTCHARGE - Manual Override Off.js',
+  },
 };
 
 const BUILD_ALL_TARGET = 'all';
@@ -41,6 +49,8 @@ const DEFAULT_BUILD_ORDER = [
   'log-on-session',
   'log-off-session',
   'state-sync',
+  'manual-on',
+  'manual-off',
 ];
 
 if (target !== BUILD_ALL_TARGET && !TARGETS[target]) {

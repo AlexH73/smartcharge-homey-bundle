@@ -11,6 +11,8 @@ const SmartChargeLogger = (() => {
     SMARTCHARGE_DECISION: 'smartcharge_decision',
     SMARTCHARGE_ON: 'smartcharge_on',
     SMARTCHARGE_OFF: 'smartcharge_off',
+    MANUAL_OVERRIDE_ENABLED: 'manual_override_enabled',
+    MANUAL_OVERRIDE_DISABLED: 'manual_override_disabled',
 
     BATTERY_FULL: 'battery_full',
     CHARGER_DISCONNECTED: 'charger_disconnected',
@@ -25,6 +27,8 @@ const SmartChargeLogger = (() => {
     EVENT_TYPES.SESSION_EXPIRED,
     EVENT_TYPES.SMARTCHARGE_ON,
     EVENT_TYPES.SMARTCHARGE_OFF,
+    EVENT_TYPES.MANUAL_OVERRIDE_ENABLED,
+    EVENT_TYPES.MANUAL_OVERRIDE_DISABLED,
     EVENT_TYPES.BATTERY_FULL,
     EVENT_TYPES.CHARGER_DISCONNECTED,
     EVENT_TYPES.SMARTCHARGE_ERROR,
@@ -594,6 +598,7 @@ const SmartChargeLogger = (() => {
    * @param {string|null} [options.message]
    * @param {string} [options.source]
    * @param {number|null} [options.currentPrice]
+   * @param {boolean|null} [options.shouldChargeNow]
    * @returns {Promise<object>}
    */
   async function logLifecycleEvent({
@@ -606,6 +611,7 @@ const SmartChargeLogger = (() => {
     schemaVersion = 1,
     reasonCode = null,
     decisionSource = 'lifecycle',
+    shouldChargeNow = null,
 
     targetBattery = null,
     missingBatteryPercent = null,
@@ -677,7 +683,7 @@ const SmartChargeLogger = (() => {
         plannedStart: null,
         plannedEnd: null,
 
-        shouldChargeNow: false,
+        shouldChargeNow,
 
         plugOn,
         plugPower,

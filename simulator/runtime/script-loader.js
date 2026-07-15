@@ -9,6 +9,8 @@ const FLOW_ENTRIES = Object.freeze({
   'state-sync': 'src/90-flows/state-sync.entry.js',
   'log-on': 'src/90-flows/log-on.entry.js',
   'log-off': 'src/90-flows/log-off.entry.js',
+  'manual-on': 'src/90-flows/manual-on.entry.js',
+  'manual-off': 'src/90-flows/manual-off.entry.js',
 });
 
 class ScriptLoader {

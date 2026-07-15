@@ -49,6 +49,8 @@
     "build:log-on": "node scripts/build-homey.js log-on-session",
     "build:log-off": "node scripts/build-homey.js log-off-session",
     "build:state-sync": "node scripts/build-homey.js state-sync",
+    "build:manual-on": "node scripts/build-homey.js manual-on",
+    "build:manual-off": "node scripts/build-homey.js manual-off",
     "build:homey": "node scripts/build-homey.js all"
   },
   "keywords": [],
