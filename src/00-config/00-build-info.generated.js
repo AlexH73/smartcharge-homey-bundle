@@ -3,8 +3,8 @@
  * Do not edit manually.
  */
 const BUILD_INFO = Object.freeze({
-  version: '0.4.3',
-  fullVersion: '0.4.3+build.3',
-  build: 3,
-  builtAt: '2026-07-12T21:08:33.555Z',
+  version: '0.4.5',
+  fullVersion: '0.4.5+build.5',
+  build: 5,
+  builtAt: '2026-07-15T22:55:33.972Z',
 });

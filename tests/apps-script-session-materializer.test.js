@@ -27,7 +27,7 @@ function loadSessionHelpers() {
 
   vm.createContext(context);
   vm.runInContext(
-    `${source}\nthis.__test = { buildSessionWrite };\n`,
+    `${source}\nthis.__test = { buildSessionWrite, ensureSheet, migrateSessionHeaders, SESSION_HEADERS };\n`,
     context,
     { filename: SCRIPT_PATH },
   );
@@ -35,7 +35,12 @@ function loadSessionHelpers() {
   return context.__test;
 }
 
-const { buildSessionWrite } = loadSessionHelpers();
+const {
+  buildSessionWrite,
+  ensureSheet,
+  migrateSessionHeaders,
+  SESSION_HEADERS,
+} = loadSessionHelpers();
 
 function applyEvent(session, event) {
   const update = buildSessionWrite(
@@ -338,11 +343,245 @@ function runPlannerModeInitializationRegression() {
   assert.equal(session.windowCount, 1);
 }
 
+function runInitialPlanSnapshotRegression() {
+  let session = {};
+
+  session = applyEvent(session, {
+    eventType: 'smartcharge_decision',
+    sessionId: '2026-07-07 18:00:00',
+    loggedAt: '2026-07-07T18:05:00Z',
+    plannerMode: 'multi-window',
+    windowCount: 2,
+    selectedTotalPrice: 0.7567,
+    baselineTotalPrice: 0.7615,
+    estimatedSavings: 0.0048,
+    estimatedSavingsPercent: 0.63,
+  });
+
+  assert.equal(session.plannerMode, 'multi-window');
+  assert.equal(session.initialWindowCount, 2);
+  assert.equal(session.windowCount, 2);
+  assert.equal(session.initialSelectedTotalPrice, 0.7567);
+  assert.equal(session.initialBaselineTotalPrice, 0.7615);
+  assert.equal(session.initialEstimatedSavings, 0.0048);
+  assert.equal(session.initialEstimatedSavingsPct, 0.63);
+  assert.equal(session.estimatedSavings, 0.0048);
+  assert.equal(session.estimatedSavingsPct, 0.63);
+
+  session = applyEvent(session, {
+    eventType: 'smartcharge_decision',
+    sessionId: '2026-07-07 18:00:00',
+    loggedAt: '2026-07-08T08:00:00Z',
+    plannerMode: 'continuous',
+    windowCount: 1,
+    selectedTotalPrice: 0.3801,
+    baselineTotalPrice: 0.3801,
+    estimatedSavings: 0,
+    estimatedSavingsPercent: 0,
+  });
+
+  assert.equal(session.plannerMode, 'multi-window');
+  assert.equal(session.initialWindowCount, 2);
+  assert.equal(session.windowCount, 1);
+  assert.equal(session.initialSelectedTotalPrice, 0.7567);
+  assert.equal(session.initialBaselineTotalPrice, 0.7615);
+  assert.equal(session.initialEstimatedSavings, 0.0048);
+  assert.equal(session.initialEstimatedSavingsPct, 0.63);
+  assert.equal(session.selectedTotalPrice, 0.3801);
+  assert.equal(session.baselineTotalPrice, 0.3801);
+  assert.equal(session.estimatedSavings, 0);
+  assert.equal(session.estimatedSavingsPct, 0);
+}
+
+function runZeroInitialSavingsRegression() {
+  let session = applyEvent({}, {
+    eventType: 'smartcharge_decision',
+    sessionId: '2026-07-07 18:00:00',
+    windowCount: 1,
+    selectedTotalPrice: 0.3801,
+    baselineTotalPrice: 0.3801,
+    estimatedSavings: 0,
+    estimatedSavingsPercent: 0,
+  });
+
+  assert.equal(session.initialEstimatedSavings, 0);
+  assert.equal(session.initialEstimatedSavingsPct, 0);
+
+  session = applyEvent(session, {
+    eventType: 'smartcharge_decision',
+    sessionId: '2026-07-07 18:00:00',
+    windowCount: 1,
+    selectedTotalPrice: 0.3,
+    baselineTotalPrice: 0.4,
+    estimatedSavings: 0.1,
+    estimatedSavingsPercent: 25,
+  });
+
+  assert.equal(session.initialEstimatedSavings, 0);
+  assert.equal(session.initialEstimatedSavingsPct, 0);
+  assert.equal(session.estimatedSavings, 0.1);
+  assert.equal(session.estimatedSavingsPct, 25);
+}
+
+function runIncompletePlanRegression() {
+  let session = applyEvent({}, {
+    eventType: 'smartcharge_decision',
+    sessionId: '2026-07-07 18:00:00',
+    plannerMode: 'continuous',
+    windowCount: 1,
+  });
+
+  assert.equal(session.plannerMode, 'continuous');
+  assert.equal(session.windowCount, 1);
+  assert.equal(session.initialWindowCount, undefined);
+  assert.equal(session.initialSelectedTotalPrice, undefined);
+  assert.equal(session.initialBaselineTotalPrice, undefined);
+  assert.equal(session.initialEstimatedSavings, undefined);
+  assert.equal(session.initialEstimatedSavingsPct, undefined);
+
+  session = applyEvent(session, {
+    eventType: 'smartcharge_decision',
+    sessionId: '2026-07-07 18:00:00',
+    windowCount: 1,
+    selectedTotalPrice: 0.41,
+    baselineTotalPrice: 0.44,
+    estimatedSavings: 0.03,
+    estimatedSavingsPercent: 6.8,
+  });
+
+  assert.equal(session.initialWindowCount, 1);
+  assert.equal(session.initialSelectedTotalPrice, 0.41);
+  assert.equal(session.initialBaselineTotalPrice, 0.44);
+  assert.equal(session.initialEstimatedSavings, 0.03);
+  assert.equal(session.initialEstimatedSavingsPct, 6.8);
+
+  session = applyEvent(session, {
+    eventType: 'smartcharge_decision',
+    sessionId: '2026-07-07 18:00:00',
+    windowCount: 2,
+    selectedTotalPrice: 0.5,
+    baselineTotalPrice: 0.6,
+    estimatedSavings: 0.1,
+    estimatedSavingsPercent: 16.67,
+  });
+
+  assert.equal(session.initialWindowCount, 1);
+  assert.equal(session.initialSelectedTotalPrice, 0.41);
+  assert.equal(session.initialBaselineTotalPrice, 0.44);
+  assert.equal(session.initialEstimatedSavings, 0.03);
+  assert.equal(session.initialEstimatedSavingsPct, 6.8);
+}
+
+function runSessionHeaderMigrationRegression() {
+  const sheet = new HeaderSheet([
+    ['sessionId', 'windowCounts', 'windowCount'],
+    ['session-1', 2, 1],
+  ]);
+
+  migrateSessionHeaders(sheet);
+
+  assert.deepEqual(sheet.rows[0], [
+    'sessionId',
+    'initialWindowCount',
+    'windowCount',
+  ]);
+  assert.deepEqual(sheet.rows[1], ['session-1', 2, 1]);
+
+  const afterFirstMigration = JSON.stringify(sheet.rows);
+  migrateSessionHeaders(sheet);
+  assert.equal(JSON.stringify(sheet.rows), afterFirstMigration);
+}
+
+function runDualSessionHeaderRegression() {
+  const sheet = new HeaderSheet([
+    ['sessionId', 'windowCounts', 'initialWindowCount', 'windowCount'],
+    ['session-1', 9, 2, 1],
+  ]);
+
+  migrateSessionHeaders(sheet);
+
+  assert.deepEqual(sheet.rows, [
+    ['sessionId', 'windowCounts', 'initialWindowCount', 'windowCount'],
+    ['session-1', 9, 2, 1],
+  ]);
+}
+
+function runMissingSessionHeaderRegression() {
+  const sheet = new HeaderSheet([['sessionId', 'windowCount']]);
+  const spreadsheet = {
+    getSheetByName() {
+      return sheet;
+    },
+    insertSheet() {
+      throw new Error('Existing Sessions sheet should be reused');
+    },
+  };
+
+  ensureSheet(spreadsheet, 'Sessions', SESSION_HEADERS);
+  ensureSheet(spreadsheet, 'Sessions', SESSION_HEADERS);
+
+  assert.equal(
+    sheet.rows[0].filter((header) => header === 'initialWindowCount').length,
+    1,
+  );
+  assert.equal(sheet.rows[0].includes('windowCounts'), false);
+}
+
+class HeaderSheet {
+  constructor(rows) {
+    this.rows = rows.map((row) => [...row]);
+  }
+
+  getLastRow() {
+    return this.rows.length;
+  }
+
+  getLastColumn() {
+    return this.rows[0] ? this.rows[0].length : 0;
+  }
+
+  appendRow(row) {
+    this.rows.push([...row]);
+  }
+
+  setFrozenRows() {}
+
+  getRange(row, column, rowCount = 1, columnCount = 1) {
+    return {
+      getValues: () => Array.from({ length: rowCount }, (_, rowOffset) =>
+        Array.from({ length: columnCount }, (_, columnOffset) =>
+          this.rows[row - 1 + rowOffset]?.[column - 1 + columnOffset] ?? '',
+        ),
+      ),
+      setValue: (value) => {
+        this.rows[row - 1][column - 1] = value;
+      },
+      setValues: (values) => {
+        values.forEach((valuesRow, rowOffset) => {
+          if (!this.rows[row - 1 + rowOffset]) {
+            this.rows[row - 1 + rowOffset] = [];
+          }
+
+          valuesRow.forEach((value, columnOffset) => {
+            this.rows[row - 1 + rowOffset][column - 1 + columnOffset] = value;
+          });
+        });
+      },
+    };
+  }
+}
+
 runExpiredSessionRegression();
 runCompletedSessionRegression();
 runManualResetRegression();
 runImmutablePlannerModeRegression();
 runContinuousPlannerModeRegression();
 runPlannerModeInitializationRegression();
+runInitialPlanSnapshotRegression();
+runZeroInitialSavingsRegression();
+runIncompletePlanRegression();
+runSessionHeaderMigrationRegression();
+runDualSessionHeaderRegression();
+runMissingSessionHeaderRegression();
 
 console.log('PASS apps-script-session-materializer');

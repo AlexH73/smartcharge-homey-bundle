@@ -12,3 +12,4 @@ simulator/logs/*.jsonl
 dist/*
 !dist/
 !dist/README.md
+/docs/linkedin/

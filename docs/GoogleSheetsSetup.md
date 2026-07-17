@@ -47,6 +47,18 @@ Existing Google Sheets columns should not be reordered automatically. For a
 clean public setup, create a new workbook or sheet with the Events telemetry v1
 header order below.
 
+Sessions preserve two planner views. Immutable `plannerMode` and `initial*`
+fields describe the first valid complete plan. `windowCount`, planned windows,
+planned duration, selected and baseline prices, and `estimatedSavings` fields
+describe the latest remaining plan and are updated during replanning. Savings
+are planner estimates, not actual cost savings calculated from consumed energy.
+
+For compatibility, setup migrates a lone legacy Sessions header
+`windowCounts` to `initialWindowCount` without moving its column or data. If
+both headers already exist, `initialWindowCount` is canonical and
+`windowCounts` is left untouched and ignored. Missing initial fields are
+appended; existing sessions are not backfilled from Events.
+
 ## Webhook Deployment
 
 Deploy the Apps Script project as a Web app:

@@ -112,6 +112,12 @@ const SESSION_HEADERS = [
 
   'createdAt',
   'updatedAt',
+
+  'initialWindowCount',
+  'initialSelectedTotalPrice',
+  'initialBaselineTotalPrice',
+  'initialEstimatedSavings',
+  'initialEstimatedSavingsPct',
 ];
 
 const TERMINAL_SESSION_STATUSES = [
@@ -241,11 +247,27 @@ function ensureSheet(ss, sheetName, headers) {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
   } else {
+    if (sheetName === SMARTCHARGE_CONFIG.SESSIONS_SHEET_NAME) {
+      migrateSessionHeaders(sheet);
+    }
+
     appendMissingHeaders(sheet, headers);
   }
 
   sheet.setFrozenRows(1);
   return sheet;
+}
+
+function migrateSessionHeaders(sheet) {
+  const headers = getHeaderValues(sheet);
+  const legacyColumnIndex = headers.indexOf('windowCounts');
+  const canonicalColumnIndex = headers.indexOf('initialWindowCount');
+
+  if (legacyColumnIndex < 0 || canonicalColumnIndex >= 0) return;
+
+  sheet
+    .getRange(1, legacyColumnIndex + 1)
+    .setValue('initialWindowCount');
 }
 
 function appendMissingHeaders(sheet, headers) {
@@ -408,6 +430,39 @@ function buildSessionUpdate(event, currentSession) {
       update.plannerMode = event.plannerMode;
     }
 
+    if (hasCompleteChargingPlan(event)) {
+      addInitialPlanValue(
+        update,
+        currentSession,
+        'initialWindowCount',
+        event.windowCount,
+      );
+      addInitialPlanValue(
+        update,
+        currentSession,
+        'initialSelectedTotalPrice',
+        event.selectedTotalPrice,
+      );
+      addInitialPlanValue(
+        update,
+        currentSession,
+        'initialBaselineTotalPrice',
+        event.baselineTotalPrice,
+      );
+      addInitialPlanValue(
+        update,
+        currentSession,
+        'initialEstimatedSavings',
+        event.estimatedSavings,
+      );
+      addInitialPlanValue(
+        update,
+        currentSession,
+        'initialEstimatedSavingsPct',
+        event.estimatedSavingsPercent,
+      );
+    }
+
     update.plannerVersion = event.plannerVersion;
     update.windowCount = event.windowCount;
     update.plannedStart = event.plannedStart;
@@ -465,6 +520,20 @@ function buildSessionUpdate(event, currentSession) {
   return update;
 }
 
+function hasCompleteChargingPlan(event) {
+  return (
+    hasValue(event.windowCount) &&
+    hasValue(event.selectedTotalPrice) &&
+    hasValue(event.baselineTotalPrice)
+  );
+}
+
+function addInitialPlanValue(update, currentSession, fieldName, value) {
+  if (!hasValue(currentSession[fieldName]) && hasValue(value)) {
+    update[fieldName] = value;
+  }
+}
+
 function getSessionStatus(event, currentSession, update) {
   const currentStatus = normalizeStatus(currentSession.status);
 
@@ -513,6 +582,8 @@ function getSessionStatus(event, currentSession, update) {
 }
 
 function hasValue(value) {
+  // Numeric zero is a valid telemetry value.
+  // Only null, undefined and empty string are considered missing.
   return value !== null && value !== undefined && value !== '';
 }
 

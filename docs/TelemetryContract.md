@@ -148,10 +148,9 @@ Some concepts appear in both entities with different semantics:
 - `sessionId`: event rows use it to link to a charging session; session rows use
   it as the primary key.
 - `plannerMode`: event rows record the mode selected during one decision; a
-  session row records the final or dominant mode used by the session.
+  session row preserves the first planner mode recorded for the session.
 - `windowCount` and `chargeWindowsJson`: event rows record the selected plan at
-  decision time; session rows record the final accepted plan or the plan that
-  actually drove charging.
+  decision time; session rows record the latest remaining plan.
 - price fields: event rows record current or selected decision prices; session
   rows record final aggregated prices and cost.
 
@@ -291,6 +290,24 @@ The minimum useful Session contains `sessionId`, `connectedAt`, `resetAt` or
 `disconnectedAt`, start/end battery values when available, and the final planner
 summary.
 
+Telemetry v1.1 keeps the original complete plan separate from the latest
+remaining-plan snapshot:
+
+- immutable first-plan fields: `plannerMode`, `initialWindowCount`,
+  `initialSelectedTotalPrice`, `initialBaselineTotalPrice`,
+  `initialEstimatedSavings`, and `initialEstimatedSavingsPct`;
+- mutable current-plan fields: `windowCount`, `plannedStart`, `plannedEnd`,
+  `chargeWindowsText`, `chargeWindowsJson`, `plannedChargeMinutes`,
+  `selectedAvgPriceEurKwh`, `selectedTotalPrice`,
+  `baselineAvgPriceEurKwh`, `baselineTotalPrice`, `estimatedSavings`, and
+  `estimatedSavingsPct`.
+
+The `initial*` fields come from the first valid decision containing a complete
+plan and are never overwritten. Mutable fields are refreshed from later
+decisions and describe only the latest remaining plan. Both savings sets are
+planner estimates; they are not actual EUR savings calculated from consumed
+energy.
+
 ### Sessions: Connection
 
 | Field | Type | Required | Status | Description | Example | Future usage |
@@ -351,15 +368,20 @@ summary.
 | `actualTotalPrice` | number | Optional | `FUTURE` | Final actual cost in EUR. | `1.76` | Accurate monthly cost and savings. |
 | `estimatedSavings` | number | Optional | `NEXT RELEASE` | Estimated EUR saved versus baseline. | `0.45` | Public dashboard savings metric. |
 | `estimatedSavingsPercent` | number | Optional | `NEXT RELEASE` | Estimated savings percentage versus baseline. | `62.5` | Public dashboard savings metric. |
+| `initialSelectedTotalPrice` | number | Optional | `CURRENT` | Selected total-price estimate from the first valid complete plan. Immutable once stored. | `0.7567` | Preserve the original plan estimate across replanning. |
+| `initialBaselineTotalPrice` | number | Optional | `CURRENT` | Baseline total-price estimate from the first valid complete plan. Immutable once stored. | `0.7615` | Preserve the original comparison baseline. |
+| `initialEstimatedSavings` | number | Optional | `CURRENT` | Savings estimate from the first valid complete plan. Immutable once stored; zero is valid. | `0.0048` | Compare original opportunity with the remaining-plan estimate. |
+| `initialEstimatedSavingsPct` | number | Optional | `CURRENT` | Savings percentage from the first valid complete plan. Immutable once stored; zero is valid. | `0.63` | Compare original and remaining-plan savings. |
 
 ### Sessions: Planner
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `plannerMode` | enum string | Optional | `CURRENT` | Final or dominant planner strategy used by the session. | `multi-window` | Compare strategy usage and value. |
+| `plannerMode` | enum string | Optional | `CURRENT` | First planner strategy recorded for the session. Immutable once stored. | `multi-window` | Compare strategy usage and value. |
 | `plannerVersion` | string | Optional | `NEXT RELEASE` | Planner algorithm version. | `multi-window-v1` | Reproducible learning and release comparison. |
-| `windowCount` | number | Optional | `CURRENT` | Number of final planned charging windows. | `3` | Public dashboard multi-window adoption metric. |
-| `chargeWindowsJson` | JSON string | Optional | `CURRENT` | Final accepted planned charging windows. | `[{"plannedStart":"2026-07-07 20:00:00","plannedEnd":"2026-07-07 21:00:00"}]` | Schedule visualization and learning features. |
+| `initialWindowCount` | number | Optional | `CURRENT` | Number of windows in the first valid complete plan. Immutable once stored. | `3` | Preserve original multi-window plan complexity. |
+| `windowCount` | number | Optional | `CURRENT` | Number of windows in the latest remaining plan. Updated during replanning. | `1` | Current schedule and remaining-plan metrics. |
+| `chargeWindowsJson` | JSON string | Optional | `CURRENT` | Latest remaining planned charging windows. | `[{"plannedStart":"2026-07-07 20:00:00","plannedEnd":"2026-07-07 21:00:00"}]` | Current schedule visualization. |
 | `planRevisionCount` | number | Optional | `NEXT RELEASE` | Number of distinct plan revisions during the session. | `2` | Planner stability metric. |
 | `fallbackCount` | number | Optional | `NEXT RELEASE` | Number of safety fallback decisions in the session. | `0` | Reliability and risk tracking. |
 | `replansCount` | number | Optional | `NEXT RELEASE` | Number of times selected windows changed. | `1` | Detect churn from price updates. |
