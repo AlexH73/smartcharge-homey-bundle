@@ -254,6 +254,34 @@ Average price for the slots in this window, in EUR/kWh.
 Sum of selected slot prices for this window. This is not the final energy cost;
 it is the planner price score for the selected hourly slots.
 
+### Estimated charging cost
+
+Tariff fields (`averagePrice`, `totalPrice`, `selectedTotalPrice`, and
+`baselineTotalPrice`) remain planner comparison metrics and must not be
+presented as charging costs.
+
+```text
+intervalCostEur = priceEurKwh * chargingPowerKw * allocatedMinutes / 60
+```
+
+`estimatedSelectedCostEur` uses the selected windows' underlying slots.
+`estimatedBaselineCostEur` is the estimated cost of charging immediately for
+the same required duration and nominal charging power. A partially elapsed
+current price slot contributes only its remaining usable minutes. Both
+allocations stop at `targetDeparture`. The immediate baseline requires
+consecutive tariff slots; a missing hour produces an explicit incomplete
+baseline instead of skipping ahead.
+
+The decision result also exposes `estimatedSavingsEur`, `estimatedSavingsPct`,
+`allocatedChargeMinutes`, `baselineAllocatedMinutes`, `chargingPowerKw`,
+`baselineAllocationComplete`, and `baselineIncompleteReason`. Public savings
+are clamped to zero; an unrounded signed difference remains available
+internally for diagnostics.
+
+These cost fields are not stored on `ChargePlan`. The planner remains
+responsible only for tariff-based plan selection; the decision layer combines
+the selected plan with the independent cost estimate.
+
 `startsNow`  
 Whether the current decision time is inside this window.
 

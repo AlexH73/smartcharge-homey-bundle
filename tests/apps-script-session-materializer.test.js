@@ -229,8 +229,8 @@ function runImmutablePlannerModeRegression() {
     selectedTotalPrice: 0.6,
     baselineAveragePrice: 0.2,
     baselineTotalPrice: 1,
-    estimatedSavings: 0.4,
-    estimatedSavingsPercent: 40,
+    estimatedSavingsEur: 0.4,
+    estimatedSavingsPct: 40,
     shouldChargeNow: false,
     reasonCode: 'WAITING_FOR_PLAN',
     reason: 'Waiting for selected charging plan',
@@ -257,8 +257,8 @@ function runImmutablePlannerModeRegression() {
     selectedTotalPrice: 0.56,
     baselineAveragePrice: 0.19,
     baselineTotalPrice: 0.76,
-    estimatedSavings: 0.2,
-    estimatedSavingsPercent: 26.32,
+    estimatedSavingsEur: 0.2,
+    estimatedSavingsPct: 26.32,
     shouldChargeNow: false,
     reasonCode: 'WAITING_FOR_PLAN',
     reason: 'Waiting for selected charging plan',
@@ -275,7 +275,7 @@ function runImmutablePlannerModeRegression() {
   assert.equal(session.selectedTotalPrice, 0.56);
   assert.equal(session.baselineAvgPriceEurKwh, 0.19);
   assert.equal(session.baselineTotalPrice, 0.76);
-  assert.equal(session.estimatedSavings, 0.2);
+  assert.equal(session.estimatedSavingsEur, 0.2);
   assert.equal(session.estimatedSavingsPct, 26.32);
   assert.equal(session.lastReasonCode, 'WAITING_FOR_PLAN');
   assert.equal(session.lastReason, 'Waiting for selected charging plan');
@@ -354,8 +354,14 @@ function runInitialPlanSnapshotRegression() {
     windowCount: 2,
     selectedTotalPrice: 0.7567,
     baselineTotalPrice: 0.7615,
-    estimatedSavings: 0.0048,
-    estimatedSavingsPercent: 0.63,
+    estimatedSelectedCostEur: 1.25,
+    estimatedBaselineCostEur: 1.5,
+    estimatedSavingsEur: 0.25,
+    estimatedSavingsPct: 16.67,
+    allocatedChargeMinutes: 180,
+    baselineAllocatedMinutes: 180,
+    chargingPowerKw: 2.6,
+    baselineAllocationComplete: true,
   });
 
   assert.equal(session.plannerMode, 'multi-window');
@@ -363,10 +369,14 @@ function runInitialPlanSnapshotRegression() {
   assert.equal(session.windowCount, 2);
   assert.equal(session.initialSelectedTotalPrice, 0.7567);
   assert.equal(session.initialBaselineTotalPrice, 0.7615);
-  assert.equal(session.initialEstimatedSavings, 0.0048);
-  assert.equal(session.initialEstimatedSavingsPct, 0.63);
-  assert.equal(session.estimatedSavings, 0.0048);
-  assert.equal(session.estimatedSavingsPct, 0.63);
+  assert.equal(session.initialEstimatedSelectedCostEur, 1.25);
+  assert.equal(session.initialEstimatedBaselineCostEur, 1.5);
+  assert.equal(session.initialEstimatedSavingsEur, 0.25);
+  assert.equal(session.initialEstimatedSavingsPct, 16.67);
+  assert.equal(session.estimatedSelectedCostEur, 1.25);
+  assert.equal(session.estimatedBaselineCostEur, 1.5);
+  assert.equal(session.estimatedSavingsEur, 0.25);
+  assert.equal(session.estimatedSavingsPct, 16.67);
 
   session = applyEvent(session, {
     eventType: 'smartcharge_decision',
@@ -376,8 +386,15 @@ function runInitialPlanSnapshotRegression() {
     windowCount: 1,
     selectedTotalPrice: 0.3801,
     baselineTotalPrice: 0.3801,
-    estimatedSavings: 0,
-    estimatedSavingsPercent: 0,
+    estimatedSelectedCostEur: 0.75,
+    estimatedBaselineCostEur: 0.75,
+    estimatedSavingsEur: 0,
+    estimatedSavingsPct: 0,
+    baselineAllocationComplete: true,
+    allocatedChargeMinutes: 90,
+    baselineAllocatedMinutes: 90,
+    chargingPowerKw: 2.6,
+    baselineAllocationComplete: true,
   });
 
   assert.equal(session.plannerMode, 'multi-window');
@@ -385,12 +402,12 @@ function runInitialPlanSnapshotRegression() {
   assert.equal(session.windowCount, 1);
   assert.equal(session.initialSelectedTotalPrice, 0.7567);
   assert.equal(session.initialBaselineTotalPrice, 0.7615);
-  assert.equal(session.initialEstimatedSavings, 0.0048);
-  assert.equal(session.initialEstimatedSavingsPct, 0.63);
+  assert.equal(session.initialEstimatedSavingsEur, 0.25);
+  assert.equal(session.initialEstimatedSavingsPct, 16.67);
+  assert.equal(session.estimatedSavingsEur, 0);
+  assert.equal(session.estimatedSavingsPct, 0);
   assert.equal(session.selectedTotalPrice, 0.3801);
   assert.equal(session.baselineTotalPrice, 0.3801);
-  assert.equal(session.estimatedSavings, 0);
-  assert.equal(session.estimatedSavingsPct, 0);
 }
 
 function runZeroInitialSavingsRegression() {
@@ -400,11 +417,14 @@ function runZeroInitialSavingsRegression() {
     windowCount: 1,
     selectedTotalPrice: 0.3801,
     baselineTotalPrice: 0.3801,
-    estimatedSavings: 0,
-    estimatedSavingsPercent: 0,
+    estimatedSelectedCostEur: 0.75,
+    estimatedBaselineCostEur: 0.75,
+    estimatedSavingsEur: 0,
+    estimatedSavingsPct: 0,
+    baselineAllocationComplete: true,
   });
 
-  assert.equal(session.initialEstimatedSavings, 0);
+  assert.equal(session.initialEstimatedSavingsEur, 0);
   assert.equal(session.initialEstimatedSavingsPct, 0);
 
   session = applyEvent(session, {
@@ -413,14 +433,17 @@ function runZeroInitialSavingsRegression() {
     windowCount: 1,
     selectedTotalPrice: 0.3,
     baselineTotalPrice: 0.4,
-    estimatedSavings: 0.1,
-    estimatedSavingsPercent: 25,
+    estimatedSelectedCostEur: 0.8,
+    estimatedBaselineCostEur: 1,
+    estimatedSavingsEur: 0.2,
+    estimatedSavingsPct: 20,
+    baselineAllocationComplete: true,
   });
 
-  assert.equal(session.initialEstimatedSavings, 0);
+  assert.equal(session.initialEstimatedSavingsEur, 0);
   assert.equal(session.initialEstimatedSavingsPct, 0);
-  assert.equal(session.estimatedSavings, 0.1);
-  assert.equal(session.estimatedSavingsPct, 25);
+  assert.equal(session.estimatedSavingsEur, 0.2);
+  assert.equal(session.estimatedSavingsPct, 20);
 }
 
 function runIncompletePlanRegression() {
@@ -436,7 +459,7 @@ function runIncompletePlanRegression() {
   assert.equal(session.initialWindowCount, undefined);
   assert.equal(session.initialSelectedTotalPrice, undefined);
   assert.equal(session.initialBaselineTotalPrice, undefined);
-  assert.equal(session.initialEstimatedSavings, undefined);
+  assert.equal(session.initialEstimatedSavingsEur, undefined);
   assert.equal(session.initialEstimatedSavingsPct, undefined);
 
   session = applyEvent(session, {
@@ -445,15 +468,20 @@ function runIncompletePlanRegression() {
     windowCount: 1,
     selectedTotalPrice: 0.41,
     baselineTotalPrice: 0.44,
-    estimatedSavings: 0.03,
-    estimatedSavingsPercent: 6.8,
+    estimatedSelectedCostEur: 0.41,
+    estimatedBaselineCostEur: 0.44,
+    estimatedSavingsEur: 0.03,
+    estimatedSavingsPct: 6.8,
+    baselineAllocationComplete: true,
   });
 
   assert.equal(session.initialWindowCount, 1);
   assert.equal(session.initialSelectedTotalPrice, 0.41);
   assert.equal(session.initialBaselineTotalPrice, 0.44);
-  assert.equal(session.initialEstimatedSavings, 0.03);
+  assert.equal(session.initialEstimatedSavingsEur, 0.03);
   assert.equal(session.initialEstimatedSavingsPct, 6.8);
+  assert.equal(session.initialEstimatedSelectedCostEur, 0.41);
+  assert.equal(session.initialEstimatedBaselineCostEur, 0.44);
 
   session = applyEvent(session, {
     eventType: 'smartcharge_decision',
@@ -461,14 +489,17 @@ function runIncompletePlanRegression() {
     windowCount: 2,
     selectedTotalPrice: 0.5,
     baselineTotalPrice: 0.6,
-    estimatedSavings: 0.1,
-    estimatedSavingsPercent: 16.67,
+    estimatedSelectedCostEur: 0.5,
+    estimatedBaselineCostEur: 0.6,
+    estimatedSavingsEur: 0.1,
+    estimatedSavingsPct: 16.67,
+    baselineAllocationComplete: true,
   });
 
   assert.equal(session.initialWindowCount, 1);
   assert.equal(session.initialSelectedTotalPrice, 0.41);
   assert.equal(session.initialBaselineTotalPrice, 0.44);
-  assert.equal(session.initialEstimatedSavings, 0.03);
+  assert.equal(session.initialEstimatedSavingsEur, 0.03);
   assert.equal(session.initialEstimatedSavingsPct, 6.8);
 }
 
@@ -527,6 +558,30 @@ function runMissingSessionHeaderRegression() {
   assert.equal(sheet.rows[0].includes('windowCounts'), false);
 }
 
+function runReusableSessionHeaderMigration() {
+  const sheet = new HeaderSheet([
+    [
+      'sessionId',
+      'startBattery_%',
+      'endBattery_%',
+      'estimatedCost_EUR',
+      'chargeMinutes_min',
+      'notes',
+    ],
+  ]);
+
+  migrateSessionHeaders(sheet);
+
+  assert.deepEqual(sheet.rows[0], [
+    'sessionId',
+    'startBatteryPct',
+    'endBatteryPct',
+    'estimatedSelectedCostEur',
+    'chargeMinutes_min',
+    'notes',
+  ]);
+}
+
 class HeaderSheet {
   constructor(rows) {
     this.rows = rows.map((row) => [...row]);
@@ -583,5 +638,6 @@ runIncompletePlanRegression();
 runSessionHeaderMigrationRegression();
 runDualSessionHeaderRegression();
 runMissingSessionHeaderRegression();
+runReusableSessionHeaderMigration();
 
 console.log('PASS apps-script-session-materializer');

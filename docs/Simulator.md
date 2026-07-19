@@ -86,7 +86,7 @@ The `logger-payload` scenario also writes an actual payload snapshot to
 - `selectedTotalPrice`
 - `baselineAvgPriceEurKwh`
 - `baselineTotalPrice`
-- `estimatedSavings`
+- `estimatedSavingsEur`
 - `estimatedSavingsPct`
 - `priceCount`
 - `plannerMode`
@@ -104,8 +104,15 @@ The `logger-payload` scenario also writes an actual payload snapshot to
 - `source`
 - `engineVersion`
 - `detailsJson`
+- `estimatedSelectedCostEur`
+- `estimatedBaselineCostEur`
+- `allocatedChargeMinutes`
+- `baselineAllocatedMinutes`
+- `chargingPowerKw`
+- `baselineAllocationComplete`
+- `baselineIncompleteReason`
 
-These are Events telemetry v1 headers for clean simulator output and new public
+These are Events telemetry v2 headers for clean simulator output and new public
 setups. Existing Google Sheets workbooks should not have older columns
 reordered automatically; add migration or import logic explicitly if needed.
 

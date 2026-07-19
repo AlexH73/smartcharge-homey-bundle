@@ -41,6 +41,10 @@ const CONFIG = {
 
   batteryFullPercentage: 100,
   priceSlotMinutes: 60,
+  // Nominal charging power used only for estimated energy costs.
+  chargingPowerKw: 2.6,
+  plannerVersion: 'planner-v2',
+  telemetrySchemaVersion: 2,
 
   tibberApiUrl: 'https://api.tibber.com/v1-beta/gql',
 };

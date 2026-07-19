@@ -46,7 +46,7 @@ const EVENT_HEADERS = [
   'selectedTotalPrice',
   'baselineAvgPriceEurKwh',
   'baselineTotalPrice',
-  'estimatedSavings',
+  'estimatedSavingsEur',
   'estimatedSavingsPct',
   'priceCount',
 
@@ -67,6 +67,13 @@ const EVENT_HEADERS = [
   'source',
   'engineVersion',
   'detailsJson',
+  'estimatedSelectedCostEur',
+  'estimatedBaselineCostEur',
+  'allocatedChargeMinutes',
+  'baselineAllocatedMinutes',
+  'chargingPowerKw',
+  'baselineAllocationComplete',
+  'baselineIncompleteReason',
 ];
 
 const SESSION_HEADERS = [
@@ -103,7 +110,7 @@ const SESSION_HEADERS = [
   'selectedTotalPrice',
   'baselineAvgPriceEurKwh',
   'baselineTotalPrice',
-  'estimatedSavings',
+  'estimatedSavingsEur',
   'estimatedSavingsPct',
 
   'lastReasonCode',
@@ -116,8 +123,17 @@ const SESSION_HEADERS = [
   'initialWindowCount',
   'initialSelectedTotalPrice',
   'initialBaselineTotalPrice',
-  'initialEstimatedSavings',
+  'initialEstimatedSavingsEur',
   'initialEstimatedSavingsPct',
+  'estimatedSelectedCostEur',
+  'estimatedBaselineCostEur',
+  'allocatedChargeMinutes',
+  'baselineAllocatedMinutes',
+  'chargingPowerKw',
+  'baselineAllocationComplete',
+  'baselineIncompleteReason',
+  'initialEstimatedSelectedCostEur',
+  'initialEstimatedBaselineCostEur',
 ];
 
 const TERMINAL_SESSION_STATUSES = [
@@ -152,8 +168,8 @@ const EVENT_FIELD_BY_HEADER = {
   selectedTotalPrice: 'selectedTotalPrice',
   baselineAvgPriceEurKwh: 'baselineAveragePrice',
   baselineTotalPrice: 'baselineTotalPrice',
-  estimatedSavings: 'estimatedSavings',
-  estimatedSavingsPct: 'estimatedSavingsPercent',
+  estimatedSavingsEur: 'estimatedSavingsEur',
+  estimatedSavingsPct: 'estimatedSavingsPct',
   priceCount: 'priceCount',
 
   plannerMode: 'plannerMode',
@@ -172,6 +188,13 @@ const EVENT_FIELD_BY_HEADER = {
 
   source: 'source',
   engineVersion: 'engineVersion',
+  estimatedSelectedCostEur: 'estimatedSelectedCostEur',
+  estimatedBaselineCostEur: 'estimatedBaselineCostEur',
+  allocatedChargeMinutes: 'allocatedChargeMinutes',
+  baselineAllocatedMinutes: 'baselineAllocatedMinutes',
+  chargingPowerKw: 'chargingPowerKw',
+  baselineAllocationComplete: 'baselineAllocationComplete',
+  baselineIncompleteReason: 'baselineIncompleteReason',
 };
 
 function setupSmartChargeWorkbook() {
@@ -260,14 +283,24 @@ function ensureSheet(ss, sheetName, headers) {
 
 function migrateSessionHeaders(sheet) {
   const headers = getHeaderValues(sheet);
-  const legacyColumnIndex = headers.indexOf('windowCounts');
-  const canonicalColumnIndex = headers.indexOf('initialWindowCount');
+  const reusableHeaders = {
+    windowCounts: 'initialWindowCount',
+    'startBattery_%': 'startBatteryPct',
+    'endBattery_%': 'endBatteryPct',
+    estimatedCost_EUR: 'estimatedSelectedCostEur',
+  };
 
-  if (legacyColumnIndex < 0 || canonicalColumnIndex >= 0) return;
+  Object.keys(reusableHeaders).forEach((existingHeader) => {
+    const canonicalHeader = reusableHeaders[existingHeader];
+    const existingColumnIndex = headers.indexOf(existingHeader);
+    const canonicalColumnIndex = headers.indexOf(canonicalHeader);
 
-  sheet
-    .getRange(1, legacyColumnIndex + 1)
-    .setValue('initialWindowCount');
+    if (existingColumnIndex < 0 || canonicalColumnIndex >= 0) return;
+
+    sheet
+      .getRange(1, existingColumnIndex + 1)
+      .setValue(canonicalHeader);
+  });
 }
 
 function appendMissingHeaders(sheet, headers) {
@@ -452,14 +485,26 @@ function buildSessionUpdate(event, currentSession) {
       addInitialPlanValue(
         update,
         currentSession,
-        'initialEstimatedSavings',
-        event.estimatedSavings,
+        'initialEstimatedSavingsEur',
+        event.estimatedSavingsEur,
       );
       addInitialPlanValue(
         update,
         currentSession,
         'initialEstimatedSavingsPct',
-        event.estimatedSavingsPercent,
+        event.estimatedSavingsPct,
+      );
+      addInitialPlanValue(
+        update,
+        currentSession,
+        'initialEstimatedSelectedCostEur',
+        event.estimatedSelectedCostEur,
+      );
+      addInitialPlanValue(
+        update,
+        currentSession,
+        'initialEstimatedBaselineCostEur',
+        event.estimatedBaselineCostEur,
       );
     }
 
@@ -478,8 +523,15 @@ function buildSessionUpdate(event, currentSession) {
     update.selectedTotalPrice = event.selectedTotalPrice;
     update.baselineAvgPriceEurKwh = event.baselineAveragePrice;
     update.baselineTotalPrice = event.baselineTotalPrice;
-    update.estimatedSavings = event.estimatedSavings;
-    update.estimatedSavingsPct = event.estimatedSavingsPercent;
+    update.estimatedSavingsEur = event.estimatedSavingsEur;
+    update.estimatedSavingsPct = event.estimatedSavingsPct;
+    update.estimatedSelectedCostEur = event.estimatedSelectedCostEur;
+    update.estimatedBaselineCostEur = event.estimatedBaselineCostEur;
+    update.allocatedChargeMinutes = event.allocatedChargeMinutes;
+    update.baselineAllocatedMinutes = event.baselineAllocatedMinutes;
+    update.chargingPowerKw = event.chargingPowerKw;
+    update.baselineAllocationComplete = event.baselineAllocationComplete;
+    update.baselineIncompleteReason = event.baselineIncompleteReason;
 
     if (
       isCompletionEvent(event, currentSession) &&
@@ -524,7 +576,12 @@ function hasCompleteChargingPlan(event) {
   return (
     hasValue(event.windowCount) &&
     hasValue(event.selectedTotalPrice) &&
-    hasValue(event.baselineTotalPrice)
+    hasValue(event.baselineTotalPrice) &&
+    hasValue(event.estimatedSelectedCostEur) &&
+    hasValue(event.estimatedBaselineCostEur) &&
+    hasValue(event.estimatedSavingsEur) &&
+    hasValue(event.estimatedSavingsPct) &&
+    event.baselineAllocationComplete === true
   );
 }
 

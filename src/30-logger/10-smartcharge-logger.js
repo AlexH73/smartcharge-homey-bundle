@@ -60,6 +60,18 @@ const SmartChargeLogger = (() => {
     'plugPower',
     'totalPrice',
     'averagePrice',
+    'estimatedSelectedCostEur',
+    'estimatedBaselineCostEur',
+    'estimatedSavingsEur',
+    'estimatedSavingsPct',
+    'allocatedChargeMinutes',
+    'baselineAllocatedMinutes',
+    'chargingPowerKw',
+    'baselineAllocationComplete',
+    'baselineIncompleteReason',
+    'plannerMode',
+    'windowCount',
+    'chargeWindowsJson',
   ]);
 
   const GOOGLE_SHEETS_PAYLOAD_FIELDS = [
@@ -88,8 +100,8 @@ const SmartChargeLogger = (() => {
     'selectedTotalPrice',
     'baselineAveragePrice',
     'baselineTotalPrice',
-    'estimatedSavings',
-    'estimatedSavingsPercent',
+    'estimatedSavingsEur',
+    'estimatedSavingsPct',
     'priceCount',
 
     'plannerMode',
@@ -109,6 +121,13 @@ const SmartChargeLogger = (() => {
     'source',
     'engineVersion',
     'message',
+    'estimatedSelectedCostEur',
+    'estimatedBaselineCostEur',
+    'allocatedChargeMinutes',
+    'baselineAllocatedMinutes',
+    'chargingPowerKw',
+    'baselineAllocationComplete',
+    'baselineIncompleteReason',
   ];
 
   /**
@@ -208,8 +227,10 @@ const SmartChargeLogger = (() => {
     return {
       ...logEvent,
 
-      schemaVersion: normalizeValue(logEvent.schemaVersion || 1),
-      eventType: normalizeValue(logEvent.eventType),
+      schemaVersion: normalizeValue(
+        logEvent.schemaVersion || CONFIG.telemetrySchemaVersion,
+      ),
+      eventType: normalizeValue(eventType),
       reasonCode: normalizeValue(logEvent.reasonCode),
       sessionId: normalizeValue(logEvent.sessionId),
       loggedAt: normalizeValue(logEvent.loggedAt),
@@ -233,8 +254,8 @@ const SmartChargeLogger = (() => {
       selectedTotalPrice: normalizeValue(logEvent.selectedTotalPrice),
       baselineAveragePrice: normalizeValue(logEvent.baselineAveragePrice),
       baselineTotalPrice: normalizeValue(logEvent.baselineTotalPrice),
-      estimatedSavings: normalizeValue(logEvent.estimatedSavings),
-      estimatedSavingsPercent: normalizeValue(logEvent.estimatedSavingsPercent),
+      estimatedSavingsEur: normalizeValue(logEvent.estimatedSavingsEur),
+      estimatedSavingsPct: normalizeValue(logEvent.estimatedSavingsPct),
       priceCount: normalizeValue(logEvent.priceCount),
 
       plannerMode: normalizeValue(logEvent.plannerMode),
@@ -254,6 +275,25 @@ const SmartChargeLogger = (() => {
       source: normalizeValue(logEvent.source || 'smartcharge-engine'),
       engineVersion: normalizeValue(logEvent.engineVersion || ENGINE_VERSION),
       message: normalizeValue(logEvent.message),
+      estimatedSelectedCostEur: normalizeValue(
+        logEvent.estimatedSelectedCostEur,
+      ),
+      estimatedBaselineCostEur: normalizeValue(
+        logEvent.estimatedBaselineCostEur,
+      ),
+      allocatedChargeMinutes: normalizeValue(
+        logEvent.allocatedChargeMinutes,
+      ),
+      baselineAllocatedMinutes: normalizeValue(
+        logEvent.baselineAllocatedMinutes,
+      ),
+      chargingPowerKw: normalizeValue(logEvent.chargingPowerKw),
+      baselineAllocationComplete: normalizeValue(
+        logEvent.baselineAllocationComplete,
+      ),
+      baselineIncompleteReason: normalizeValue(
+        logEvent.baselineIncompleteReason,
+      ),
     };
   }
 
@@ -608,7 +648,7 @@ const SmartChargeLogger = (() => {
     source = 'smartcharge-runtime',
     currentPrice = null,
 
-    schemaVersion = 1,
+    schemaVersion = CONFIG.telemetrySchemaVersion,
     reasonCode = null,
     decisionSource = 'lifecycle',
     shouldChargeNow = null,
@@ -623,8 +663,8 @@ const SmartChargeLogger = (() => {
     selectedTotalPrice = null,
     baselineAveragePrice = null,
     baselineTotalPrice = null,
-    estimatedSavings = null,
-    estimatedSavingsPercent = null,
+    estimatedSavingsEur = null,
+    estimatedSavingsPct = null,
 
     plannerMode = null,
     plannerVersion = null,
@@ -696,8 +736,8 @@ const SmartChargeLogger = (() => {
         selectedTotalPrice,
         baselineAveragePrice,
         baselineTotalPrice,
-        estimatedSavings,
-        estimatedSavingsPercent,
+        estimatedSavingsEur,
+        estimatedSavingsPct,
         priceCount: null,
 
         source,

@@ -42,7 +42,7 @@ Recommended public KPI cards:
 | `totalSessions` | Total number of tracked charging sessions. | `Statistics` |
 | `completedSessions` | Sessions that reached a completed or reset state. | `Statistics` |
 | `avgSelectedPrice` | Average selected charging price. | `Statistics` |
-| `totalEstimatedSavings` | Estimated total savings versus baseline. | `Statistics` |
+| `totalEstimatedSavingsEur` | Sum of immutable initial estimated EUR savings for completed sessions. | `Statistics` |
 | `multiWindowUsagePct` | Share of sessions using Multi-Window Planner. | `Statistics` |
 | `avgWindowCount` | Average number of planned charging windows. | `Statistics` |
 | `latestEngineVersion` | Latest SmartCharge engine version seen in telemetry. | `Statistics` |
@@ -50,6 +50,12 @@ Recommended public KPI cards:
 
 KPI cards should be aggregate and rounded. They should not include exact
 session timestamps, session IDs, or raw vehicle data.
+
+The `ESTIMATED SAVINGS — Total` card must read
+`totalEstimatedSavingsEur` and may keep `€0.00` formatting. It must not sum
+mutable current-plan fields. Every savings KPI is based on
+`estimatedSavingsEur` or `estimatedSavingsPct`; tariff proxy fields are used
+only for planner-price analysis.
 
 ## Future Dashboard Blocks
 

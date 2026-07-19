@@ -73,6 +73,24 @@ engine version into every generated HomeyScript file. Individual target builds,
 such as `npm run build:decision`, still increment the build number when run
 alone.
 
+For an explicit release version, keep the project-wide build counter monotonic:
+
+```bash
+npm run build:homey -- --release 0.5.0
+```
+
+This sets the requested semantic version and increments only the existing
+project build counter.
+
+To regenerate all Homey targets while reviewing an already-versioned release
+without incrementing its metadata:
+
+```bash
+npm run build:homey -- --reuse-version
+```
+
+Use this only for validation before the versioned release commit.
+
 ## Required HomeyScripts
 
 Use the generated scripts in `dist/` for normal operation:
