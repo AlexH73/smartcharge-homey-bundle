@@ -1,6 +1,6 @@
 [
   {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "eventType": "smartcharge_decision",
     "reasonCode": "WAITING_FOR_PLAN",
     "sessionId": "2026-07-07 18:00:00",
@@ -22,11 +22,9 @@
     "selectedTotalPrice": 0.31,
     "baselineAveragePrice": 0.155,
     "baselineTotalPrice": 0.31,
-    "estimatedSavings": 0,
-    "estimatedSavingsPercent": 0,
     "priceCount": 48,
     "plannerMode": "continuous",
-    "plannerVersion": "planner-v1",
+    "plannerVersion": "planner-v2",
     "windowCount": 1,
     "plannedStart": "2026-07-08 02:00:00",
     "plannedEnd": "2026-07-08 04:00:00",
@@ -39,6 +37,15 @@
     "reason": "Waiting for selected charging plan",
     "source": "smartcharge-run-decision",
     "engineVersion": "__ENGINE_VERSION__",
-    "message": null
+    "message": null,
+    "estimatedSelectedCostEur": 0.546,
+    "estimatedBaselineCostEur": 1.9673,
+    "estimatedSavingsEur": 1.4213,
+    "estimatedSavingsPct": 72.25,
+    "allocatedChargeMinutes": 80,
+    "baselineAllocatedMinutes": 80,
+    "chargingPowerKw": 2.6,
+    "baselineAllocationComplete": true,
+    "baselineIncompleteReason": null
   }
 ]

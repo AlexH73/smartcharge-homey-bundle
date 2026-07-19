@@ -44,14 +44,42 @@ runs. Rows are written by header name, so existing column order is preserved.
 Update any custom formulas or charts that reference fixed column letters.
 
 Existing Google Sheets columns should not be reordered automatically. For a
-clean public setup, create a new workbook or sheet with the Events telemetry v1
+clean public setup, create a new workbook or sheet with the Events telemetry v2
 header order below.
 
 Sessions preserve two planner views. Immutable `plannerMode` and `initial*`
 fields describe the first valid complete plan. `windowCount`, planned windows,
-planned duration, selected and baseline prices, and `estimatedSavings` fields
-describe the latest remaining plan and are updated during replanning. Savings
-are planner estimates, not actual cost savings calculated from consumed energy.
+planned duration, tariff metrics, estimated costs, and EUR savings describe
+the latest remaining plan and are updated during replanning.
+
+`selectedTotalPrice` and `baselineTotalPrice` remain tariff proxies.
+`estimatedSelectedCostEur` and `estimatedBaselineCostEur` are charging costs.
+`estimatedSavingsEur` and `estimatedSavingsPct` are the only savings metrics.
+
+New columns are appended; setup does not reorder production columns. Sessions
+store immutable `initialEstimatedSelectedCostEur`,
+`initialEstimatedBaselineCostEur`, `initialEstimatedSavingsEur`, and
+`initialEstimatedSavingsPct`, plus mutable latest-plan equivalents.
+Numeric zero is a valid initial value.
+
+Add these completed-session-only metrics to the private `Statistics` sheet:
+
+```text
+totalEstimatedSavingsEur
+  =SUMIF(Sessions!status:status,"completed",Sessions!initialEstimatedSavingsEur:initialEstimatedSavingsEur)
+averageEstimatedSavingsEur
+  =AVERAGEIF(Sessions!status:status,"completed",Sessions!initialEstimatedSavingsEur:initialEstimatedSavingsEur)
+averageEstimatedSavingsPct
+  =AVERAGEIF(Sessions!status:status,"completed",Sessions!initialEstimatedSavingsPct:initialEstimatedSavingsPct)
+totalEstimatedSelectedCostEur
+  =SUMIF(Sessions!status:status,"completed",Sessions!initialEstimatedSelectedCostEur:initialEstimatedSelectedCostEur)
+totalEstimatedBaselineCostEur
+  =SUMIF(Sessions!status:status,"completed",Sessions!initialEstimatedBaselineCostEur:initialEstimatedBaselineCostEur)
+```
+
+Replace each symbolic `Sessions!header:header` reference with the actual column
+letter after workbook setup. Active, planned, expired, and manual-reset
+sessions are excluded.
 
 For compatibility, setup migrates a lone legacy Sessions header
 `windowCounts` to `initialWindowCount` without moving its column or data. If
@@ -90,7 +118,7 @@ Important event types:
 - `session_reset`
 - `session_expired`
 
-Events telemetry v1 headers:
+Events telemetry v2 headers:
 
 - `receivedAt`
 - `schemaVersion`
@@ -115,7 +143,7 @@ Events telemetry v1 headers:
 - `selectedTotalPrice`
 - `baselineAvgPriceEurKwh`
 - `baselineTotalPrice`
-- `estimatedSavings`
+- `estimatedSavingsEur`
 - `estimatedSavingsPct`
 - `priceCount`
 - `plannerMode`
@@ -133,6 +161,13 @@ Events telemetry v1 headers:
 - `source`
 - `engineVersion`
 - `detailsJson`
+- `estimatedSelectedCostEur`
+- `estimatedBaselineCostEur`
+- `allocatedChargeMinutes`
+- `baselineAllocatedMinutes`
+- `chargingPowerKw`
+- `baselineAllocationComplete`
+- `baselineIncompleteReason`
 
 Decision logs are deduplicated by `SmartChargeLastLogKey`. Critical lifecycle
 events are always written.

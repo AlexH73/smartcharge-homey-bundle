@@ -5,10 +5,11 @@
 </p>
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![SmartCharge](https://img.shields.io/badge/SmartCharge-v0.5.0-blue)](docs/DevelopmentWorkflow.md)
 [![HomeyScript](https://img.shields.io/badge/HomeyScript-runtime-00C7B7)](https://homey.app/en-us/app/com.athom.homeyscript/HomeyScript/)
 [![Tibber](https://img.shields.io/badge/Tibber-price%20API-FF5A5F)](https://developer.tibber.com/)
 [![Google Sheets](https://img.shields.io/badge/Google%20Sheets-analytics-34A853?logo=googlesheets&logoColor=white)](docs/GoogleSheetsSetup.md)
-[![Local Simulator](https://img.shields.io/badge/local%20simulator-33%20scenarios-6F42C1)](docs/Simulator.md)
+[![Local Simulator](https://img.shields.io/badge/local%20simulator-38%20scenarios-6F42C1)](docs/Simulator.md)
 [![Production Tested](https://img.shields.io/badge/production-tested-brightgreen)](#features)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -23,7 +24,7 @@ simulator.
 ## Features
 
 - Production-tested Homey flow lifecycle.
-- Local simulator with 33 passing scenarios.
+- Local simulator with 38 passing scenarios.
 - Multi-window planner for separated low-price slots.
 - Google Sheets event logging and analytics.
 - Live public dashboard.
@@ -86,8 +87,9 @@ npm test
 npm run simulate -- overnight
 ```
 
-Current coverage: 33 passing scenarios, including multi-window planner cases,
-session lifecycle cases, safety fallback, and logger payload validation.
+Current coverage: 38 passing scenarios, including estimated-cost,
+multi-window planner, session lifecycle, safety fallback, and logger payload
+validation.
 
 See [docs/Simulator.md](docs/Simulator.md).
 
@@ -114,7 +116,7 @@ Completed:
 
 - Multi-window charging planner.
 - `selectChargePlan()` planner API.
-- 33 passing simulator scenarios.
+- 38 passing simulator scenarios.
 - Public setup docs and privacy guidance.
 
 Next:

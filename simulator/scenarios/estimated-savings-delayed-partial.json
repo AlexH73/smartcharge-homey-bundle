@@ -1,0 +1,47 @@
+{
+  "name": "estimated-savings-delayed-partial",
+  "description": "Expensive immediate charging is compared with a cheaper delayed continuous plan using an exact partial-hour duration.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 80,
+          "estimatedSelectedCostEur": 0.546,
+          "estimatedBaselineCostEur": 1.9673,
+          "estimatedSavingsEur": 1.4213,
+          "estimatedSavingsPct": 72.25,
+          "allocatedChargeMinutes": 80,
+          "baselineAllocatedMinutes": 80,
+          "chargingPowerKw": 2.6,
+          "baselineAllocationComplete": true
+        },
+        "eventPayload": {
+          "plannerMode": "continuous",
+          "estimatedSavingsEur": 1.4213
+        },
+        "events": ["smartcharge_decision"]
+      }
+    }
+  ]
+}

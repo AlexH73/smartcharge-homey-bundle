@@ -174,6 +174,22 @@ async function main() {
   });
 
   const plan = selectBestChargePlan(continuousPlan, multiWindowPlan);
+  const costEstimate = plan
+    ? estimatePlanCosts({
+        plan,
+        prices,
+        now,
+        targetDeparture,
+        chargeMinutes,
+        chargingPowerKw: CONFIG.chargingPowerKw,
+      })
+    : null;
+
+  const estimatedCostOutput = formatEstimatedCostOutput(
+    costEstimate,
+    CONFIG.chargingPowerKw,
+  );
+  const tariffOutput = formatTariffOutput(plan, continuousPlan);
 
   const safetyStartRequired = isSafetyStartRequired(
     now,
@@ -243,7 +259,7 @@ async function main() {
       {
         eventType: SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_DECISION,
 
-        schemaVersion: 1,
+        schemaVersion: CONFIG.telemetrySchemaVersion,
         reasonCode,
         decisionSource,
 
@@ -276,32 +292,8 @@ async function main() {
 
         reason,
 
-        averagePrice: plan ? Number(plan.averagePrice.toFixed(4)) : null,
-        totalPrice: plan ? Number(plan.totalPrice.toFixed(4)) : null,
-        selectedAveragePrice: plan
-          ? Number(plan.averagePrice.toFixed(4))
-          : null,
-        selectedTotalPrice: plan ? Number(plan.totalPrice.toFixed(4)) : null,
-        baselineAveragePrice: continuousPlan
-          ? Number(continuousPlan.averagePrice.toFixed(4))
-          : null,
-        baselineTotalPrice: continuousPlan
-          ? Number(continuousPlan.totalPrice.toFixed(4))
-          : null,
-        estimatedSavings:
-          continuousPlan && plan
-            ? Number((continuousPlan.totalPrice - plan.totalPrice).toFixed(4))
-            : null,
-        estimatedSavingsPercent:
-          continuousPlan && plan && continuousPlan.totalPrice > 0
-            ? Number(
-                (
-                  ((continuousPlan.totalPrice - plan.totalPrice) /
-                    continuousPlan.totalPrice) *
-                  100
-                ).toFixed(2),
-              )
-            : null,
+        ...tariffOutput,
+        ...estimatedCostOutput,
         priceCount: prices.length,
 
         source: 'smartcharge-run-decision',
@@ -310,7 +302,7 @@ async function main() {
         message: null,
 
         plannerMode: plan ? plan.plannerMode : null,
-        plannerVersion: plan ? 'planner-v1' : null,
+        plannerVersion: plan ? CONFIG.plannerVersion : null,
         windowCount: plan ? plan.windowCount : null,
         chargeWindowsText: plan
           ? plan.windows
@@ -406,6 +398,50 @@ async function main() {
           plannedEnd: formatLocal(window.plannedEnd),
         }))
       : null,
+    ...estimatedCostOutput,
+  };
+}
+
+function roundNullable(value, decimalPlaces) {
+  return value === null || value === undefined
+    ? null
+    : Number(value.toFixed(decimalPlaces));
+}
+
+function formatEstimatedCostOutput(costEstimate, chargingPowerKw) {
+  return {
+    estimatedSelectedCostEur: roundNullable(
+      costEstimate?.estimatedSelectedCostEur,
+      4,
+    ),
+    estimatedBaselineCostEur: roundNullable(
+      costEstimate?.estimatedBaselineCostEur,
+      4,
+    ),
+    estimatedSavingsEur: roundNullable(costEstimate?.estimatedSavingsEur, 4),
+    estimatedSavingsPct: roundNullable(costEstimate?.estimatedSavingsPct, 2),
+    allocatedChargeMinutes: costEstimate?.allocatedChargeMinutes ?? null,
+    baselineAllocatedMinutes:
+      costEstimate?.baselineAllocatedMinutes ?? null,
+    chargingPowerKw,
+    baselineAllocationComplete:
+      costEstimate?.baselineAllocationComplete ?? null,
+    baselineIncompleteReason:
+      costEstimate?.baselineIncompleteReason ?? null,
+  };
+}
+
+function formatTariffOutput(plan, baselinePlan) {
+  const selectedAveragePrice = roundNullable(plan?.averagePrice, 4);
+  const selectedTotalPrice = roundNullable(plan?.totalPrice, 4);
+
+  return {
+    averagePrice: selectedAveragePrice,
+    totalPrice: selectedTotalPrice,
+    selectedAveragePrice,
+    selectedTotalPrice,
+    baselineAveragePrice: roundNullable(baselinePlan?.averagePrice, 4),
+    baselineTotalPrice: roundNullable(baselinePlan?.totalPrice, 4),
   };
 }
 

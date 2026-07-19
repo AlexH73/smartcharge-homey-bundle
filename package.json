@@ -1,6 +1,6 @@
 {
   "name": "smartcharge-homey-bundle",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -8,7 +8,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "node tests/apps-script-session-materializer.test.js && npm run simulate:all",
+    "test": "node tests/estimated-cost-engine.test.js && node tests/apps-script-session-materializer.test.js && npm run simulate:all",
+    "test:cost": "node tests/estimated-cost-engine.test.js",
     "simulate": "node simulator/runner.js",
     "simulate:all": "node simulator/runner.js all",
     "simulate:overnight": "node simulator/runner.js overnight",

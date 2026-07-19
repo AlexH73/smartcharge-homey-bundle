@@ -9,14 +9,27 @@ Run:
 npm run build:homey
 ```
 
+For an explicit release version:
+
+```bash
+npm run build:homey -- --release 0.5.0
+```
+
+The release build keeps the project-wide build number monotonic. The current
+release metadata is `0.5.0+build.8`.
+
 The build writes standalone HomeyScript files here:
 
 - `SMARTCHARGE - Start Session.js` - creates a charging session.
 - `SMARTCHARGE - Run Decision.js` - calculates the plan and starts charging
   when needed.
+- `SMARTCHARGE - State Sync.js` - reconciles the physical plug state with the
+  latest SmartCharge decision.
 - `SMARTCHARGE - Log On.js` - logs SmartCharge charging start.
 - `SMARTCHARGE - Log Off.js` - logs SmartCharge charging stop.
 - `SMARTCHARGE - Reset Session.js` - clears the active session.
+- `SMARTCHARGE - Manual Override On.js` - logs manual override activation.
+- `SMARTCHARGE - Manual Override Off.js` - logs manual override deactivation.
 
 Copy generated files into Homey manually. Do not commit local generated builds,
 because they include local build numbers and timestamps.

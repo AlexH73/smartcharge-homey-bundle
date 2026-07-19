@@ -79,7 +79,7 @@ selectedAvgPriceEurKwh
 selectedTotalPrice
 baselineAvgPriceEurKwh
 baselineTotalPrice
-estimatedSavings
+estimatedSavingsEur
 estimatedSavingsPct
 priceCount
 plannerMode
@@ -97,6 +97,13 @@ reason
 source
 engineVersion
 detailsJson
+estimatedSelectedCostEur
+estimatedBaselineCostEur
+allocatedChargeMinutes
+baselineAllocatedMinutes
+chargingPowerKw
+baselineAllocationComplete
+baselineIncompleteReason
 ```
 
 The runtime may use internal JSON aliases such as `battery`, `currentPrice`,
@@ -181,8 +188,8 @@ Known event types:
 | `sessionId` | string | Required for session events | `CURRENT` | Stable identifier for the charging session. | `2026-07-07 18:00:00` | Join Events to Sessions and rebuild session aggregates. |
 | `loggedAt` | datetime | Required | `CURRENT` | Runtime timestamp when the event was produced. | `2026-07-07T16:05:00.000Z` | Timeline ordering and session duration calculations. |
 | `source` | string | Required | `CURRENT` | Runtime component that produced the event. | `smartcharge-run-decision` | Debug ownership and component-level reliability metrics. |
-| `engineVersion` | string | Required | `CURRENT` | SmartCharge engine version used by the producer. | `0.4.1+build.1` | Compare behavior across releases. |
-| `schemaVersion` | integer | Optional | `CURRENT` | Telemetry schema version. | `1` | Safe parsing and future migrations. |
+| `engineVersion` | string | Required | `CURRENT` | SmartCharge engine version used by the producer. | `0.5.0+build.8` | Compare behavior across releases. |
+| `schemaVersion` | integer | Optional | `CURRENT` | Telemetry schema version. Savings cleanup uses v2. | `2` | Safe parsing and future migrations. |
 | `flowName` | enum string | Optional | `NEXT RELEASE` | Homey Flow that triggered the event. | `Run Decision` | Flow-level dashboard filters. |
 | `scriptName` | string | Optional | `NEXT RELEASE` | HomeyScript name or generated script target. | `SmartCharge - Run Decision` | Deployment validation and support diagnostics. |
 | `message` | string | Optional | `CURRENT` | Short human-readable message for lifecycle events. | `Charging plug turned on` | User-facing dashboard activity feed. |
@@ -214,7 +221,7 @@ Known event types:
 | `windowCount` | number | Optional | `CURRENT` | Number of selected charging windows. | `3` | Dashboard distribution and toggle-risk metrics. |
 | `chargeWindowsText` | string | Optional | `CURRENT` | Human-readable list of planned windows. | `2026-07-07 20:00:00-2026-07-07 21:00:00 | 2026-07-07 23:00:00-2026-07-08 00:00:00` | Quick spreadsheet inspection. |
 | `chargeWindowsJson` | JSON string | Optional | `CURRENT` | Machine-readable list of selected windows. | `[{"plannedStart":"2026-07-07 20:00:00","plannedEnd":"2026-07-07 21:00:00","slotCount":1}]` | Dashboard charts and Learning Engine plan reconstruction. |
-| `plannerVersion` | string | Optional | `CURRENT` | Planner algorithm version independent of engine build. | `multi-window-v1` | A/B comparison and learning reproducibility. |
+| `plannerVersion` | string | Optional | `CURRENT` | Planner algorithm version independent of engine build. | `planner-v2` | A/B comparison and learning reproducibility. |
 | `planRevision` | integer | Optional | `NEXT RELEASE` | Revision number within one session. | `2` | Detect replanning churn after price updates. |
 | `chargeFactor` | number | Optional | `CURRENT` | Estimated minutes per missing battery percent. | `2.5` | Learning Engine baseline and per-car calibration. |
 | `chargeReservePct` | number | Optional | `CURRENT` | Extra reserve percentage added to the plan. | `5` | Explain conservative planning and missed target prevention. |
@@ -237,13 +244,20 @@ Known event types:
 | `avgPlanPriceEurKwh` | number | Optional | `CURRENT` | Average price of the selected plan. | `0.155` | Dashboard estimate and comparison to baseline. |
 | `totalPlanPrice` | number | Optional | `CURRENT` | Sum of selected slot prices, not full session cost. | `0.31` | Backward-compatible cost proxy. |
 | `priceCount` | number | Optional | `CURRENT` | Number of price entries available to the planner. | `48` | Detect missing Tibber tomorrow prices. |
-| `baselineMode` | enum string | Optional | `NEXT RELEASE` | Baseline strategy used for comparison. | `continuous-cheapest` | Savings calculation and public dashboard storytelling. |
-| `baselineAvgPriceEurKwh` | number | Optional | `CURRENT` | Average price of the baseline plan. | `0.24` | Compare selected planner to legacy behavior. |
-| `baselineTotalPrice` | number | Optional | `CURRENT` | Total price proxy for the baseline plan. | `0.72` | Savings estimate. |
+| `baselineMode` | enum string | Optional | `NEXT RELEASE` | Tariff-comparison baseline strategy. | `continuous-cheapest` | Explain tariff planner comparisons; this is not the EUR-cost baseline. |
+| `baselineAvgPriceEurKwh` | number | Optional | `CURRENT` | Average tariff of the cheapest continuous comparison plan. | `0.24` | Compare selected multi-window and continuous tariff plans. |
+| `baselineTotalPrice` | number | Optional | `CURRENT` | Sum-of-tariffs proxy for the continuous comparison plan. | `0.72` | Tariff-plan analysis only. |
 | `selectedAvgPriceEurKwh` | number | Optional | `CURRENT` | Average price of the selected plan. | `0.09` | Replacement for ambiguous `averagePrice`. |
 | `selectedTotalPrice` | number | Optional | `CURRENT` | Total price proxy for the selected plan. | `0.27` | Replacement for ambiguous `totalPrice`. |
-| `estimatedSavings` | number | Optional | `CURRENT` | Estimated EUR saved versus baseline. | `0.45` | Public dashboard savings metrics. |
-| `estimatedSavingsPct` | number | Optional | `CURRENT` | Estimated savings percentage versus baseline. | `62.5` | Public dashboard efficiency metrics. |
+| `estimatedSelectedCostEur` | number | Optional | `CURRENT` | Estimated selected-plan charging cost using exact minutes and nominal power. | `1.2400` | Cost KPI. |
+| `estimatedBaselineCostEur` | number | Optional | `CURRENT` | Cost of charging immediately for the same duration and nominal power. | `1.7800` | Savings baseline. |
+| `estimatedSavingsEur` | number | Optional | `CURRENT` | Non-negative public savings versus immediate charging. | `0.5400` | Public savings KPI. |
+| `estimatedSavingsPct` | number | Optional | `CURRENT` | Percentage of real EUR savings versus immediate charging. | `30.34` | Public efficiency KPI. |
+| `allocatedChargeMinutes` | number | Optional | `CURRENT` | Exact minutes allocated to selected slots. | `165` | Completeness diagnostics. |
+| `baselineAllocatedMinutes` | number | Optional | `CURRENT` | Exact minutes allocated to immediate charging. | `165` | Baseline completeness. |
+| `chargingPowerKw` | number | Optional | `CURRENT` | Nominal estimated charging power. | `2.6` | Cost input. |
+| `baselineAllocationComplete` | boolean | Optional | `CURRENT` | Whether all baseline minutes fit before departure. | `true` | Data-quality filter. |
+| `baselineIncompleteReason` | string | Optional | `CURRENT` | Reason for incomplete baseline allocation. | `INSUFFICIENT_USABLE_TIME_BEFORE_DEPARTURE` or `NON_CONSECUTIVE_PRICE_SLOTS` | Diagnostics. |
 
 ### Events: Decision
 
@@ -290,23 +304,25 @@ The minimum useful Session contains `sessionId`, `connectedAt`, `resetAt` or
 `disconnectedAt`, start/end battery values when available, and the final planner
 summary.
 
-Telemetry v1.1 keeps the original complete plan separate from the latest
+Telemetry v2 keeps the original complete plan separate from the latest
 remaining-plan snapshot:
 
 - immutable first-plan fields: `plannerMode`, `initialWindowCount`,
   `initialSelectedTotalPrice`, `initialBaselineTotalPrice`,
-  `initialEstimatedSavings`, and `initialEstimatedSavingsPct`;
+  `initialEstimatedSelectedCostEur`, `initialEstimatedBaselineCostEur`,
+  `initialEstimatedSavingsEur`, and `initialEstimatedSavingsPct`;
 - mutable current-plan fields: `windowCount`, `plannedStart`, `plannedEnd`,
   `chargeWindowsText`, `chargeWindowsJson`, `plannedChargeMinutes`,
   `selectedAvgPriceEurKwh`, `selectedTotalPrice`,
-  `baselineAvgPriceEurKwh`, `baselineTotalPrice`, `estimatedSavings`, and
-  `estimatedSavingsPct`.
+  `baselineAvgPriceEurKwh`, `baselineTotalPrice`,
+  `estimatedSelectedCostEur`, `estimatedBaselineCostEur`,
+  `estimatedSavingsEur`, and `estimatedSavingsPct`.
 
 The `initial*` fields come from the first valid decision containing a complete
 plan and are never overwritten. Mutable fields are refreshed from later
 decisions and describe only the latest remaining plan. Both savings sets are
-planner estimates; they are not actual EUR savings calculated from consumed
-energy.
+estimated EUR values calculated from exact planned minutes and nominal
+charging power. They are not realized savings derived from metered energy.
 
 ### Sessions: Connection
 
@@ -358,27 +374,34 @@ energy.
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `estimatedCost` | number | Optional | `CURRENT` | Estimated session cost in EUR. | `1.84` | Public dashboard cost summary. |
-| `baselineMode` | enum string | Optional | `NEXT RELEASE` | Strategy used as comparison baseline. | `continuous-cheapest` | Savings narrative and regression checks. |
-| `baselineAveragePrice` | number | Optional | `NEXT RELEASE` | Average price for the baseline plan. | `0.24` | Compare selected planner against legacy strategy. |
-| `baselineTotalPrice` | number | Optional | `NEXT RELEASE` | Total price proxy or estimated cost for baseline plan. | `0.72` | Savings calculation. |
-| `selectedAveragePrice` | number | Optional | `NEXT RELEASE` | Average price for the selected plan. | `0.09` | Dashboard planner quality metric. |
-| `selectedTotalPrice` | number | Optional | `NEXT RELEASE` | Total price proxy or estimated cost for selected plan. | `0.27` | Savings calculation. |
+| `estimatedSelectedCostEur` | number | Optional | `CURRENT` | Latest estimated selected-plan charging cost. | `1.84` | Public dashboard cost summary. |
+| `estimatedBaselineCostEur` | number | Optional | `CURRENT` | Latest immediate-charge cost estimate for equal minutes and nominal power. | `2.29` | EUR savings comparison. |
+| `baselineAvgPriceEurKwh` | number | Optional | `CURRENT` | Average tariff of the continuous comparison plan. | `0.24` | Tariff planner analysis. |
+| `baselineTotalPrice` | number | Optional | `CURRENT` | Sum-of-tariffs proxy for the continuous comparison plan. | `0.72` | Tariff planner analysis. |
+| `selectedAvgPriceEurKwh` | number | Optional | `CURRENT` | Average tariff of the selected plan. | `0.09` | Dashboard planner quality metric. |
+| `selectedTotalPrice` | number | Optional | `CURRENT` | Sum-of-tariffs proxy for the selected plan. | `0.27` | Tariff planner analysis. |
 | `actualAveragePrice` | number | Optional | `FUTURE` | Average price of actual charged energy or charged slots. | `0.11` | Validate plan execution against real charging. |
 | `actualTotalPrice` | number | Optional | `FUTURE` | Final actual cost in EUR. | `1.76` | Accurate monthly cost and savings. |
-| `estimatedSavings` | number | Optional | `NEXT RELEASE` | Estimated EUR saved versus baseline. | `0.45` | Public dashboard savings metric. |
-| `estimatedSavingsPercent` | number | Optional | `NEXT RELEASE` | Estimated savings percentage versus baseline. | `62.5` | Public dashboard savings metric. |
+| `estimatedSavingsEur` | number | Optional | `CURRENT` | Estimated EUR saved versus immediate-charge baseline. | `0.45` | Public dashboard savings metric. |
+| `estimatedSavingsPct` | number | Optional | `CURRENT` | EUR savings percentage versus immediate-charge baseline. | `62.5` | Public dashboard savings metric. |
 | `initialSelectedTotalPrice` | number | Optional | `CURRENT` | Selected total-price estimate from the first valid complete plan. Immutable once stored. | `0.7567` | Preserve the original plan estimate across replanning. |
 | `initialBaselineTotalPrice` | number | Optional | `CURRENT` | Baseline total-price estimate from the first valid complete plan. Immutable once stored. | `0.7615` | Preserve the original comparison baseline. |
-| `initialEstimatedSavings` | number | Optional | `CURRENT` | Savings estimate from the first valid complete plan. Immutable once stored; zero is valid. | `0.0048` | Compare original opportunity with the remaining-plan estimate. |
+| `initialEstimatedSavingsEur` | number | Optional | `CURRENT` | EUR savings from the first valid complete plan. Immutable once stored; zero is valid. | `0.0048` | Compare original opportunity with the remaining-plan estimate. |
 | `initialEstimatedSavingsPct` | number | Optional | `CURRENT` | Savings percentage from the first valid complete plan. Immutable once stored; zero is valid. | `0.63` | Compare original and remaining-plan savings. |
+| `initialEstimatedSelectedCostEur` | number | Optional | `CURRENT` | Selected cost from the first complete cost estimate. Immutable once stored. | `1.84` | Preserve the original cost estimate. |
+| `initialEstimatedBaselineCostEur` | number | Optional | `CURRENT` | Immediate baseline cost from the first complete cost estimate. Immutable once stored. | `2.29` | Preserve the original savings baseline. |
+| `allocatedChargeMinutes` | number | Optional | `CURRENT` | Minutes allocated to the latest selected plan. | `165` | Plan completeness diagnostics. |
+| `baselineAllocatedMinutes` | number | Optional | `CURRENT` | Minutes allocated to the latest immediate baseline. | `165` | Baseline completeness diagnostics. |
+| `chargingPowerKw` | number | Optional | `CURRENT` | Nominal power used by the latest cost estimate. | `2.6` | Explain cost estimates. |
+| `baselineAllocationComplete` | boolean | Optional | `CURRENT` | Whether the immediate baseline allocated every required minute. | `true` | Filter incomplete estimates. |
+| `baselineIncompleteReason` | string | Optional | `CURRENT` | Reason for an incomplete immediate baseline. | `NON_CONSECUTIVE_PRICE_SLOTS` | Diagnostics. |
 
 ### Sessions: Planner
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
 | `plannerMode` | enum string | Optional | `CURRENT` | First planner strategy recorded for the session. Immutable once stored. | `multi-window` | Compare strategy usage and value. |
-| `plannerVersion` | string | Optional | `NEXT RELEASE` | Planner algorithm version. | `multi-window-v1` | Reproducible learning and release comparison. |
+| `plannerVersion` | string | Optional | `CURRENT` | Planner algorithm version. | `planner-v2` | Reproducible learning and release comparison. |
 | `initialWindowCount` | number | Optional | `CURRENT` | Number of windows in the first valid complete plan. Immutable once stored. | `3` | Preserve original multi-window plan complexity. |
 | `windowCount` | number | Optional | `CURRENT` | Number of windows in the latest remaining plan. Updated during replanning. | `1` | Current schedule and remaining-plan metrics. |
 | `chargeWindowsJson` | JSON string | Optional | `CURRENT` | Latest remaining planned charging windows. | `[{"plannedStart":"2026-07-07 20:00:00","plannedEnd":"2026-07-07 21:00:00"}]` | Current schedule visualization. |
@@ -403,8 +426,26 @@ energy.
 | `dataQuality` | enum string | Optional | `NEXT RELEASE` | Overall quality of the session telemetry. | `complete` | Filter dashboard and learning samples. |
 | `incompleteReason` | enum string | Optional | `NEXT RELEASE` | Why the session is incomplete or excluded. | `MISSING_LOG_OFF` | Debug missing Homey events. |
 | `priceCoveragePercent` | number | Optional | `NEXT RELEASE` | Share of required planning horizon covered by price data. | `100` | Explain fallback or weak savings. |
-| `telemetrySchemaVersion` | integer | Optional | `NEXT RELEASE` | Schema version used to derive the session row. | `1` | Session table migrations. |
+| `telemetrySchemaVersion` | integer | Optional | `NEXT RELEASE` | Schema version used to derive the session row. | `2` | Session table migrations. |
 | `notes` | string | Optional | `CURRENT` | Manual or derived notes. | `Low power stop detected` | Support and manual review. |
+
+### Existing reserved Session columns
+
+Existing workbook columns are not deleted or reordered during the v2 cleanup.
+Where an existing display header differs from the canonical contract, reuse
+its current position:
+
+| Existing column | Classification | Recommendation |
+| --- | --- | --- |
+| `disconnectedAt` | keep reserved | Keep for a future explicit cable-disconnect timestamp. Current reset timestamps are not always equivalent. |
+| `startBattery_%` | reuse now | Use as the physical column for canonical `startBatteryPct`. |
+| `endBattery_%` | reuse now | Use as the physical column for canonical `endBatteryPct`. |
+| `chargeMinutes_min` | keep reserved | Reserve for future measured `actualChargeMinutes`; do not store planned minutes here. |
+| `estimatedCost_EUR` | reuse now | Rename/reuse in place as canonical `estimatedSelectedCostEur`. |
+| `notes` | future use | Retain for a future human-readable or materialized diagnostic note. |
+
+These recommendations preserve physical column order. The current Apps Script
+contract uses canonical camelCase headers for newly created workbooks.
 
 ## Field Placement Rules
 
@@ -513,7 +554,7 @@ For existing private Google Sheets workbooks, do not reorder old columns in
 place. Append missing Events v1 columns or create a new clean `Events` sheet
 with the v1 order and migrate/import data intentionally.
 
-After Events telemetry v1, the next telemetry work should prioritize:
+After Events telemetry v2, the next telemetry work should prioritize:
 
 1. Populate currently nullable v1 fields such as `reasonCode`,
    `decisionSource`, `targetBatteryPct`, baseline pricing, and selected pricing.

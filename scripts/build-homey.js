@@ -2,6 +2,14 @@ const fs = require('fs');
 const path = require('path');
 
 const target = process.argv[2] || 'run-decision';
+const releaseArgumentIndex = process.argv.indexOf('--release');
+const releaseVersion =
+  releaseArgumentIndex >= 0 ? process.argv[releaseArgumentIndex + 1] : null;
+const reuseVersion = process.argv.includes('--reuse-version');
+
+if (releaseVersion && reuseVersion) {
+  throw new Error('--release and --reuse-version cannot be used together');
+}
 
 const SRC_DIR = path.resolve('src');
 const DIST_DIR = path.resolve('dist');
@@ -71,8 +79,23 @@ function readBuildState() {
 
 function writeBuildInfo() {
   const state = readBuildState();
-  state.build += 1;
-  state.patch += 1;
+  if (!reuseVersion) {
+    state.build += 1;
+  }
+
+  if (releaseVersion) {
+    const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(releaseVersion);
+
+    if (!match) {
+      throw new Error(`Invalid release version: ${releaseVersion}`);
+    }
+
+    state.major = Number(match[1]);
+    state.minor = Number(match[2]);
+    state.patch = Number(match[3]);
+  } else if (!reuseVersion) {
+    state.patch += 1;
+  }
 
   const now = new Date();
   const version = `${state.major}.${state.minor}.${state.patch}`;
