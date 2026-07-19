@@ -36,9 +36,7 @@
           "shouldChargeNow": true,
           "reason": "Safety fallback: latest safe start reached and no plan found"
         },
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": true,
         "plugCommandCount": 1,
         "tibberCallsDelta": 1
@@ -48,9 +46,7 @@
   "expect": {
     "plugOn": true,
     "plugCommandCount": 1,
-    "eventTypes": [
-      "smartcharge_decision"
-    ],
+    "eventTypes": ["smartcharge_decision"],
     "tibberCalls": 1
   }
 }

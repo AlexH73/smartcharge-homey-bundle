@@ -167,7 +167,9 @@ function mergeDevice(base, override) {
   };
 
   if (override.capabilitiesObj) {
-    for (const [capability, value] of Object.entries(override.capabilitiesObj)) {
+    for (const [capability, value] of Object.entries(
+      override.capabilitiesObj,
+    )) {
       result.capabilitiesObj[capability] = normalizeCapabilityValue(value);
     }
   }

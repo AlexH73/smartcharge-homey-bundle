@@ -93,6 +93,23 @@ validation.
 
 See [docs/Simulator.md](docs/Simulator.md).
 
+## Developer Commands
+
+```bash
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+npm run verify
+```
+
+- `lint` checks the repository with ESLint.
+- `lint:fix` applies safe ESLint fixes.
+- `format` formats supported files with Prettier.
+- `format:check` verifies formatting without changing files.
+- `verify` runs lint, formatting checks, tests, simulator scenarios, Apps Script
+  materializer tests, and the Homey build.
+
 ## Documentation
 
 - [Installation](docs/Installation.md)

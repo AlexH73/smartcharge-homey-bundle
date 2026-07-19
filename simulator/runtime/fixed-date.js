@@ -18,9 +18,7 @@ function createFixedDate(nowValue) {
 
   function FixedDate(...args) {
     if (new.target) {
-      return args.length > 0
-        ? new RealDate(...args)
-        : new RealDate(fixedTime);
+      return args.length > 0 ? new RealDate(...args) : new RealDate(fixedTime);
     }
 
     return args.length > 0

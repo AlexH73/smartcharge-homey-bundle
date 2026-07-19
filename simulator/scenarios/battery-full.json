@@ -31,9 +31,7 @@
           "shouldChargeNow": false,
           "reason": "Battery is already full"
         },
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "tibberCallsDelta": 1
       }
@@ -41,9 +39,7 @@
   ],
   "expect": {
     "plugOn": false,
-    "eventTypes": [
-      "smartcharge_decision"
-    ],
+    "eventTypes": ["smartcharge_decision"],
     "tibberCalls": 1
   }
 }

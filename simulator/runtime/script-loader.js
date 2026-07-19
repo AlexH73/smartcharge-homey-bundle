@@ -27,8 +27,13 @@ class ScriptLoader {
       throw new Error(`Unknown flow: ${flow}`);
     }
 
-    const entryCode = fs.readFileSync(path.join(this.rootDir, entryPath), 'utf8');
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    const entryCode = fs.readFileSync(
+      path.join(this.rootDir, entryPath),
+      'utf8',
+    );
+    const AsyncFunction = Object.getPrototypeOf(
+      async function () {},
+    ).constructor;
     const fn = new AsyncFunction(
       'Homey',
       'fetch',

@@ -9,8 +9,8 @@ async function getDeviceByNamePart(namePart) {
   const normalizedNamePart = normalizeName(namePart);
   const deviceList = Object.values(devices);
 
-  const exactMatches = deviceList.filter((device) =>
-    normalizeName(device.name) === normalizedNamePart,
+  const exactMatches = deviceList.filter(
+    (device) => normalizeName(device.name) === normalizedNamePart,
   );
 
   if (exactMatches.length === 1) {

@@ -35,10 +35,17 @@
         },
         "plugOn": false,
         "plugCommandCount": 0,
-        "logic": { "SmartChargeManualMode": true, "SmartChargeShouldCharge": true },
+        "logic": {
+          "SmartChargeManualMode": true,
+          "SmartChargeShouldCharge": true
+        },
         "tibberCallsDelta": 0
       }
     }
   ],
-  "expect": { "eventTypes": ["manual_override_enabled"], "plugCommandCount": 0, "tibberCalls": 0 }
+  "expect": {
+    "eventTypes": ["manual_override_enabled"],
+    "plugCommandCount": 0,
+    "tibberCalls": 0
+  }
 }

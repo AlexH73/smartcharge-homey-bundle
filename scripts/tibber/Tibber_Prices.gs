@@ -1,6 +1,6 @@
 const TIBBER_API_URL = 'https://api.tibber.com/v1-beta/gql';
 const TIBBER_SHEET_NAME = 'Tibber_Prices';
-const SPREADSHEET_ID = 'SPREADSHEET_ID'
+const SPREADSHEET_ID = 'SPREADSHEET_ID';
 
 /*
  * Вариант A — временно вставить токен сюда:
@@ -13,7 +13,6 @@ const TIBBER_TOKEN = 'ВСТАВЬ_СЮДА_СВОЙ_TOKEN';
  *
  * TIBBER_ACCESS_TOKEN = твой токен
  */
-
 
 /**
  * Загружает цены Tibber за сегодня и завтра
@@ -62,27 +61,23 @@ function updateTibberPrices() {
     method: 'post',
     contentType: 'application/json',
     headers: {
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     },
     payload: JSON.stringify({ query }),
-    muteHttpExceptions: true
+    muteHttpExceptions: true,
   });
 
   const responseCode = response.getResponseCode();
   const responseBody = response.getContentText();
 
   if (responseCode !== 200) {
-    throw new Error(
-      `Tibber HTTP error ${responseCode}: ${responseBody}`
-    );
+    throw new Error(`Tibber HTTP error ${responseCode}: ${responseBody}`);
   }
 
   const result = JSON.parse(responseBody);
 
   if (result.errors && result.errors.length > 0) {
-    throw new Error(
-      `Tibber GraphQL error: ${JSON.stringify(result.errors)}`
-    );
+    throw new Error(`Tibber GraphQL error: ${JSON.stringify(result.errors)}`);
   }
 
   const homes = result?.data?.viewer?.homes;
@@ -95,9 +90,7 @@ function updateTibberPrices() {
   const priceInfo = home?.currentSubscription?.priceInfo;
 
   if (!priceInfo) {
-    throw new Error(
-      'Für das Tibber Home wurden keine Preisdaten gefunden.'
-    );
+    throw new Error('Für das Tibber Home wurden keine Preisdaten gefunden.');
   }
 
   const prices = [];
@@ -106,20 +99,15 @@ function updateTibberPrices() {
   addPrices(prices, priceInfo.tomorrow, 'tomorrow');
 
   if (prices.length === 0) {
-    throw new Error(
-      'Tibber hat keine Preise für heute oder morgen geliefert.'
-    );
+    throw new Error('Tibber hat keine Preise für heute oder morgen geliefert.');
   }
 
   prices.sort((a, b) => a.startsAt - b.startsAt);
 
   writeTibberPrices(home, priceInfo.current, prices);
 
-  console.log(
-    `${prices.length} Tibber price entries written successfully.`
-  );
+  console.log(`${prices.length} Tibber price entries written successfully.`);
 }
-
 
 /**
  * Liest den Token entweder aus der Konstante
@@ -128,27 +116,23 @@ function updateTibberPrices() {
 function getTibberToken() {
   const hardcodedToken = TIBBER_TOKEN.trim();
 
-  if (
-    hardcodedToken &&
-    hardcodedToken !== 'ВСТАВЬ_СЮДА_СВОЙ_TOKEN'
-  ) {
+  if (hardcodedToken && hardcodedToken !== 'ВСТАВЬ_СЮДА_СВОЙ_TOKEN') {
     return hardcodedToken;
   }
 
-  const propertyToken = PropertiesService
-    .getScriptProperties()
-    .getProperty('TIBBER_ACCESS_TOKEN');
+  const propertyToken = PropertiesService.getScriptProperties().getProperty(
+    'TIBBER_ACCESS_TOKEN',
+  );
 
   if (!propertyToken) {
     throw new Error(
       'Tibber Token fehlt. Füge ihn in TIBBER_TOKEN ein ' +
-      'oder erstelle die Script Property TIBBER_ACCESS_TOKEN.'
+        'oder erstelle die Script Property TIBBER_ACCESS_TOKEN.',
     );
   }
 
   return propertyToken.trim();
 }
-
 
 /**
  * Fügt Today- oder Tomorrow-Preise zur gemeinsamen Liste hinzu.
@@ -158,18 +142,17 @@ function addPrices(target, source, dayType) {
     return;
   }
 
-  source.forEach(item => {
+  source.forEach((item) => {
     target.push({
       startsAt: new Date(item.startsAt),
       dayType,
       total: toNumberOrBlank(item.total),
       energy: toNumberOrBlank(item.energy),
       tax: toNumberOrBlank(item.tax),
-      level: item.level || ''
+      level: item.level || '',
     });
   });
 }
-
 
 /**
  * Schreibt die Preise in Google Sheets.
@@ -195,7 +178,7 @@ function writeTibberPrices(home, currentPrice, prices) {
     'isCurrentInterval',
     'homeId',
     'homeName',
-    'updatedAt'
+    'updatedAt',
   ];
 
   const now = new Date();
@@ -204,7 +187,7 @@ function writeTibberPrices(home, currentPrice, prices) {
     ? new Date(currentPrice.startsAt)
     : null;
 
-  const rows = prices.map(price => {
+  const rows = prices.map((price) => {
     const isCurrentInterval =
       currentStartsAt !== null &&
       price.startsAt.getTime() === currentStartsAt.getTime();
@@ -221,23 +204,18 @@ function writeTibberPrices(home, currentPrice, prices) {
       Boolean(isCurrentInterval),
       home.id || '',
       home.appNickname || '',
-      now
+      now,
     ];
   });
 
   sheet.clearContents();
 
-  sheet
-    .getRange(1, 1, 1, headers.length)
-    .setValues([headers]);
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
 
-  sheet
-    .getRange(2, 1, rows.length, headers.length)
-    .setValues(rows);
+  sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
 
   formatTibberSheet(sheet, rows.length);
 }
-
 
 /**
  * Kleine Hilfsfunktion für null/undefined Werte.
@@ -257,25 +235,15 @@ function formatTibberSheet(sheet, rowCount) {
     .setFontColor('#FFFFFF');
 
   if (rowCount > 0) {
-    sheet
-      .getRange(2, 1, rowCount, 1)
-      .setNumberFormat('dd.MM.yyyy HH:mm');
+    sheet.getRange(2, 1, rowCount, 1).setNumberFormat('dd.MM.yyyy HH:mm');
 
-    sheet
-      .getRange(2, 2, rowCount, 1)
-      .setNumberFormat('dd.MM.yyyy');
+    sheet.getRange(2, 2, rowCount, 1).setNumberFormat('dd.MM.yyyy');
 
-    sheet
-      .getRange(2, 3, rowCount, 1)
-      .setNumberFormat('HH:mm');
+    sheet.getRange(2, 3, rowCount, 1).setNumberFormat('HH:mm');
 
-    sheet
-      .getRange(2, 5, rowCount, 3)
-      .setNumberFormat('0.0000');
+    sheet.getRange(2, 5, rowCount, 3).setNumberFormat('0.0000');
 
-    sheet
-      .getRange(2, 12, rowCount, 1)
-      .setNumberFormat('dd.MM.yyyy HH:mm:ss');
+    sheet.getRange(2, 12, rowCount, 1).setNumberFormat('dd.MM.yyyy HH:mm:ss');
   }
 
   sheet.autoResizeColumns(1, sheet.getLastColumn());
@@ -287,14 +255,11 @@ function createTibberTrigger() {
   // Удаляем старые триггеры этой функции,
   // чтобы случайно не создать несколько одинаковых.
   ScriptApp.getProjectTriggers()
-    .filter(trigger => trigger.getHandlerFunction() === functionName)
-    .forEach(trigger => ScriptApp.deleteTrigger(trigger));
+    .filter((trigger) => trigger.getHandlerFunction() === functionName)
+    .forEach((trigger) => ScriptApp.deleteTrigger(trigger));
 
   // Обновление каждый час
-  ScriptApp.newTrigger(functionName)
-    .timeBased()
-    .everyHours(1)
-    .create();
+  ScriptApp.newTrigger(functionName).timeBased().everyHours(1).create();
 
   console.log('Tibber auto-update trigger created: every hour.');
 }

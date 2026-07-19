@@ -281,9 +281,7 @@ const SmartChargeLogger = (() => {
       estimatedBaselineCostEur: normalizeValue(
         logEvent.estimatedBaselineCostEur,
       ),
-      allocatedChargeMinutes: normalizeValue(
-        logEvent.allocatedChargeMinutes,
-      ),
+      allocatedChargeMinutes: normalizeValue(logEvent.allocatedChargeMinutes),
       baselineAllocatedMinutes: normalizeValue(
         logEvent.baselineAllocatedMinutes,
       ),

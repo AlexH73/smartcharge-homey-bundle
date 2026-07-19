@@ -2,7 +2,7 @@
  * Calculates an unrounded charging cost for one tariff interval.
  */
 function calculateIntervalCostEur(priceEurKwh, chargingPowerKw, minutes) {
-  return priceEurKwh * chargingPowerKw * minutes / 60;
+  return (priceEurKwh * chargingPowerKw * minutes) / 60;
 }
 
 /**
@@ -43,12 +43,12 @@ function allocateChargingMinutes(slots, options) {
       break;
     }
 
-    const usableStart = allocationStart && allocationStart > slotStart
-      ? allocationStart
-      : slotStart;
-    const usableEnd = targetDeparture && targetDeparture < slotEnd
-      ? targetDeparture
-      : slotEnd;
+    const usableStart =
+      allocationStart && allocationStart > slotStart
+        ? allocationStart
+        : slotStart;
+    const usableEnd =
+      targetDeparture && targetDeparture < slotEnd ? targetDeparture : slotEnd;
     const usableMinutes = Math.max(
       0,
       (usableEnd.getTime() - usableStart.getTime()) / 60000,
@@ -108,14 +108,8 @@ function getPlanSlots(plan) {
  * Compares the selected SmartCharge plan with charging immediately from now.
  */
 function estimatePlanCosts(options) {
-  const {
-    plan,
-    prices,
-    now,
-    targetDeparture,
-    chargeMinutes,
-    chargingPowerKw,
-  } = options;
+  const { plan, prices, now, targetDeparture, chargeMinutes, chargingPowerKw } =
+    options;
 
   const selected = allocateChargingMinutes(getPlanSlots(plan), {
     chargeMinutes,
@@ -139,7 +133,7 @@ function estimatePlanCosts(options) {
       : null;
   const estimatedSavingsPct =
     estimatedSavingsEur !== null && baseline.costEur > 0
-      ? estimatedSavingsEur / baseline.costEur * 100
+      ? (estimatedSavingsEur / baseline.costEur) * 100
       : estimatedSavingsEur === 0
         ? 0
         : null;

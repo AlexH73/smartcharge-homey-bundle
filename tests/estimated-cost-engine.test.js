@@ -21,11 +21,8 @@ vm.runInNewContext(
   sandbox,
 );
 
-const {
-  calculateIntervalCostEur,
-  allocateChargingMinutes,
-  estimatePlanCosts,
-} = sandbox.module.exports;
+const { calculateIntervalCostEur, allocateChargingMinutes, estimatePlanCosts } =
+  sandbox.module.exports;
 
 function slot(iso, price) {
   return { startTime: new Date(iso), price };
@@ -77,10 +74,7 @@ close(calculateIntervalCostEur(0.2, 2.6, 30), 0.26);
 
 {
   const result = allocateChargingMinutes(
-    [
-      slot('2026-07-19T14:00:00Z', 0.4),
-      slot('2026-07-19T15:00:00Z', 0.2),
-    ],
+    [slot('2026-07-19T14:00:00Z', 0.4), slot('2026-07-19T15:00:00Z', 0.2)],
     {
       chargeMinutes: 55,
       chargingPowerKw: 2.6,
@@ -92,7 +86,7 @@ close(calculateIntervalCostEur(0.2, 2.6, 30), 0.26);
     Array.from(result.allocations, (item) => item.allocatedMinutes),
     [25, 30],
   );
-  close(result.costEur, 0.4 * 2.6 * 25 / 60 + 0.2 * 2.6 * 30 / 60);
+  close(result.costEur, (0.4 * 2.6 * 25) / 60 + (0.2 * 2.6 * 30) / 60);
 }
 
 {
@@ -109,10 +103,10 @@ close(calculateIntervalCostEur(0.2, 2.6, 30), 0.26);
     chargeMinutes: 55,
     chargingPowerKw: 2.6,
   });
-  close(result.estimatedSelectedCostEur, 0.1 * 2.6 * 55 / 60);
+  close(result.estimatedSelectedCostEur, (0.1 * 2.6 * 55) / 60);
   close(
     result.estimatedBaselineCostEur,
-    0.4 * 2.6 * 25 / 60 + 0.2 * 2.6 * 30 / 60,
+    (0.4 * 2.6 * 25) / 60 + (0.2 * 2.6 * 30) / 60,
   );
   close(
     result.estimatedSavingsEur,
@@ -120,7 +114,7 @@ close(calculateIntervalCostEur(0.2, 2.6, 30), 0.26);
   );
   close(
     result.estimatedSavingsPct,
-    result.estimatedSavingsEur / result.estimatedBaselineCostEur * 100,
+    (result.estimatedSavingsEur / result.estimatedBaselineCostEur) * 100,
   );
 }
 
@@ -144,15 +138,12 @@ close(calculateIntervalCostEur(0.2, 2.6, 30), 0.26);
     slot('2026-07-19T17:00:00Z', 0.2),
     slot('2026-07-19T19:00:00Z', 0.3),
   ];
-  const result = allocateChargingMinutes(
-    selected,
-    {
-      chargeMinutes: 150,
-      chargingPowerKw: 2.6,
-      allocationStart: new Date('2026-07-19T14:00:00Z'),
-      targetDeparture: new Date('2026-07-19T21:00:00Z'),
-    },
-  );
+  const result = allocateChargingMinutes(selected, {
+    chargeMinutes: 150,
+    chargingPowerKw: 2.6,
+    allocationStart: new Date('2026-07-19T14:00:00Z'),
+    targetDeparture: new Date('2026-07-19T21:00:00Z'),
+  });
   assert.deepEqual(
     Array.from(result.allocations, (item) => item.allocatedMinutes),
     [60, 60, 30],
@@ -196,10 +187,7 @@ close(calculateIntervalCostEur(0.2, 2.6, 30), 0.26);
   assert.equal(result.baselineAllocatedMinutes, 25);
   assert.equal(result.estimatedBaselineCostEur, null);
   assert.equal(result.estimatedSavingsEur, null);
-  assert.equal(
-    result.baselineIncompleteReason,
-    'NON_CONSECUTIVE_PRICE_SLOTS',
-  );
+  assert.equal(result.baselineIncompleteReason, 'NON_CONSECUTIVE_PRICE_SLOTS');
 }
 
 console.log('Estimated cost engine tests passed');

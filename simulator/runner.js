@@ -12,7 +12,8 @@ const LOG_DIR = path.join(__dirname, 'logs');
 const DYNAMIC_ENGINE_VERSION = '__ENGINE_VERSION__';
 
 function loadScenarios() {
-  return fs.readdirSync(SCENARIO_DIR)
+  return fs
+    .readdirSync(SCENARIO_DIR)
     .filter((file) => file.endsWith('.json'))
     .sort()
     .map((file) =>
@@ -80,7 +81,9 @@ async function runScenario({ scenario, scriptLoader, logWriter }) {
     name: scenario.name,
     description: scenario.description,
     steps: stepResults,
-    events: logWriter.events.filter((event) => event.scenario === scenario.name),
+    events: logWriter.events.filter(
+      (event) => event.scenario === scenario.name,
+    ),
     finalLogic: runtime.homeyMock.getLogicSnapshot(),
     finalDevices: runtime.homeyMock.getDeviceSnapshot(),
     tibberCalls: runtime.tibberCalls,
@@ -243,7 +246,11 @@ function assertFinalState(scenario, runtime) {
       .filter((event) => event.scenario === scenario.name)
       .map((event) => event.eventType);
 
-    assert.deepEqual(eventTypes, expected.eventTypes, `${scenario.name} events`);
+    assert.deepEqual(
+      eventTypes,
+      expected.eventTypes,
+      `${scenario.name} events`,
+    );
   }
 
   if (expected.tibberCalls !== undefined) {
@@ -284,7 +291,10 @@ function assertExpectedLogFixture(scenario, runtime) {
 }
 
 function toGoogleSheetsPayload(event) {
-  const { receivedAt, scenario, flow, ...payload } = event;
+  const payload = { ...event };
+  delete payload.receivedAt;
+  delete payload.scenario;
+  delete payload.flow;
   return payload;
 }
 
@@ -342,7 +352,9 @@ function printScenarioResult(result) {
     (event) => `${event.flow}:${event.eventType}`,
   );
   console.log(`  Tibber calls: ${result.tibberCalls}`);
-  console.log(`  Log events  : ${events.length > 0 ? events.join(', ') : 'none'}`);
+  console.log(
+    `  Log events  : ${events.length > 0 ? events.join(', ') : 'none'}`,
+  );
 }
 
 function printExpectedFailureResult(result) {
@@ -360,12 +372,12 @@ function summarizeStep(step) {
   }
 
   const reason = step.result.reason ? `; reason=${step.result.reason}` : '';
-  const charge = step.result.shouldChargeNow !== undefined
-    ? `; shouldChargeNow=${step.result.shouldChargeNow}`
-    : '';
-  const events = step.eventTypes.length > 0
-    ? step.eventTypes.join('|')
-    : 'none';
+  const charge =
+    step.result.shouldChargeNow !== undefined
+      ? `; shouldChargeNow=${step.result.shouldChargeNow}`
+      : '';
+  const events =
+    step.eventTypes.length > 0 ? step.eventTypes.join('|') : 'none';
 
   return (
     `${step.flow} @ ${step.now}; events=${events}; ` +

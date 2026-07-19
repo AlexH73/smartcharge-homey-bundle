@@ -161,14 +161,8 @@ function buildChargeWindows(mergedSlots = []) {
  * @param {Date} targetDeparture
  * @returns {Array}
  */
-function collectAvailableSlots(
-  prices = [],
-  now,
-  targetDeparture,
-) {
+function collectAvailableSlots(prices = [], now, targetDeparture) {
   return prices.filter(
-    (slot) =>
-      isSlotAvailable(slot, now) &&
-      slot.startTime < targetDeparture,
+    (slot) => isSlotAvailable(slot, now) && slot.startTime < targetDeparture,
   );
 }

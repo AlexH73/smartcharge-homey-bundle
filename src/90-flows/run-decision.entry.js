@@ -421,13 +421,11 @@ function formatEstimatedCostOutput(costEstimate, chargingPowerKw) {
     estimatedSavingsEur: roundNullable(costEstimate?.estimatedSavingsEur, 4),
     estimatedSavingsPct: roundNullable(costEstimate?.estimatedSavingsPct, 2),
     allocatedChargeMinutes: costEstimate?.allocatedChargeMinutes ?? null,
-    baselineAllocatedMinutes:
-      costEstimate?.baselineAllocatedMinutes ?? null,
+    baselineAllocatedMinutes: costEstimate?.baselineAllocatedMinutes ?? null,
     chargingPowerKw,
     baselineAllocationComplete:
       costEstimate?.baselineAllocationComplete ?? null,
-    baselineIncompleteReason:
-      costEstimate?.baselineIncompleteReason ?? null,
+    baselineIncompleteReason: costEstimate?.baselineIncompleteReason ?? null,
   };
 }
 

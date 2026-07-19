@@ -37,9 +37,7 @@
           "shouldChargeNow": false
         },
         "reasonIncludes": "Waiting for selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "plugCommandCount": 0,
         "tibberCallsDelta": 1
@@ -56,9 +54,7 @@
           "shouldChargeNow": false
         },
         "reasonIncludes": "Waiting for selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "plugCommandCount": 0,
         "tibberCallsDelta": 1
@@ -87,10 +83,7 @@
   "expect": {
     "plugOn": false,
     "plugCommandCount": 0,
-    "eventTypes": [
-      "smartcharge_decision",
-      "smartcharge_decision"
-    ],
+    "eventTypes": ["smartcharge_decision", "smartcharge_decision"],
     "tibberCalls": 2
   }
 }

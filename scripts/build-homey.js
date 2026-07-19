@@ -79,9 +79,19 @@ function readBuildState() {
 
 function writeBuildInfo() {
   const state = readBuildState();
-  if (!reuseVersion) {
-    state.build += 1;
+  const now = new Date();
+
+  if (reuseVersion) {
+    const version = `${state.major}.${state.minor}.${state.patch}`;
+
+    return {
+      version,
+      fullVersion: `${version}+build.${state.build}`,
+      builtAt: now,
+    };
   }
+
+  state.build += 1;
 
   if (releaseVersion) {
     const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(releaseVersion);
@@ -93,11 +103,10 @@ function writeBuildInfo() {
     state.major = Number(match[1]);
     state.minor = Number(match[2]);
     state.patch = Number(match[3]);
-  } else if (!reuseVersion) {
+  } else {
     state.patch += 1;
   }
 
-  const now = new Date();
   const version = `${state.major}.${state.minor}.${state.patch}`;
   const fullVersion = `${version}+build.${state.build}`;
 

@@ -394,7 +394,6 @@ function runInitialPlanSnapshotRegression() {
     allocatedChargeMinutes: 90,
     baselineAllocatedMinutes: 90,
     chargingPowerKw: 2.6,
-    baselineAllocationComplete: true,
   });
 
   assert.equal(session.plannerMode, 'multi-window');
@@ -411,18 +410,21 @@ function runInitialPlanSnapshotRegression() {
 }
 
 function runZeroInitialSavingsRegression() {
-  let session = applyEvent({}, {
-    eventType: 'smartcharge_decision',
-    sessionId: '2026-07-07 18:00:00',
-    windowCount: 1,
-    selectedTotalPrice: 0.3801,
-    baselineTotalPrice: 0.3801,
-    estimatedSelectedCostEur: 0.75,
-    estimatedBaselineCostEur: 0.75,
-    estimatedSavingsEur: 0,
-    estimatedSavingsPct: 0,
-    baselineAllocationComplete: true,
-  });
+  let session = applyEvent(
+    {},
+    {
+      eventType: 'smartcharge_decision',
+      sessionId: '2026-07-07 18:00:00',
+      windowCount: 1,
+      selectedTotalPrice: 0.3801,
+      baselineTotalPrice: 0.3801,
+      estimatedSelectedCostEur: 0.75,
+      estimatedBaselineCostEur: 0.75,
+      estimatedSavingsEur: 0,
+      estimatedSavingsPct: 0,
+      baselineAllocationComplete: true,
+    },
+  );
 
   assert.equal(session.initialEstimatedSavingsEur, 0);
   assert.equal(session.initialEstimatedSavingsPct, 0);
@@ -447,12 +449,15 @@ function runZeroInitialSavingsRegression() {
 }
 
 function runIncompletePlanRegression() {
-  let session = applyEvent({}, {
-    eventType: 'smartcharge_decision',
-    sessionId: '2026-07-07 18:00:00',
-    plannerMode: 'continuous',
-    windowCount: 1,
-  });
+  let session = applyEvent(
+    {},
+    {
+      eventType: 'smartcharge_decision',
+      sessionId: '2026-07-07 18:00:00',
+      plannerMode: 'continuous',
+      windowCount: 1,
+    },
+  );
 
   assert.equal(session.plannerMode, 'continuous');
   assert.equal(session.windowCount, 1);
@@ -603,11 +608,14 @@ class HeaderSheet {
 
   getRange(row, column, rowCount = 1, columnCount = 1) {
     return {
-      getValues: () => Array.from({ length: rowCount }, (_, rowOffset) =>
-        Array.from({ length: columnCount }, (_, columnOffset) =>
-          this.rows[row - 1 + rowOffset]?.[column - 1 + columnOffset] ?? '',
+      getValues: () =>
+        Array.from({ length: rowCount }, (_row, rowOffset) =>
+          Array.from(
+            { length: columnCount },
+            (_column, columnOffset) =>
+              this.rows[row - 1 + rowOffset]?.[column - 1 + columnOffset] ?? '',
+          ),
         ),
-      ),
       setValue: (value) => {
         this.rows[row - 1][column - 1] = value;
       },

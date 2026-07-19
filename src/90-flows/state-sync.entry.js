@@ -48,9 +48,7 @@ async function main() {
         CONFIG.mercedesDeviceNameIncludes,
       );
 
-      battery = numberOrNull(
-        getCapabilityValue(mercedes, 'measure_battery'),
-      );
+      battery = numberOrNull(getCapabilityValue(mercedes, 'measure_battery'));
 
       if (battery === null) {
         reason = 'State sync skipped plug on: battery is unavailable';
@@ -66,8 +64,7 @@ async function main() {
   }
 
   const plugOnAfter =
-    action === 'switched_on' ||
-    (action === 'none' && plugOnBefore);
+    action === 'switched_on' || (action === 'none' && plugOnBefore);
 
   log('SmartCharge state synchronized');
   log(`Script version   : ${BUILD_INFO.fullVersion}`);
@@ -102,18 +99,12 @@ function isActiveSessionValue(value) {
   const normalized = String(value).trim().toLowerCase();
 
   return (
-    normalized !== '' &&
-    normalized !== 'null' &&
-    normalized !== 'undefined'
+    normalized !== '' && normalized !== 'null' && normalized !== 'undefined'
   );
 }
 
 function numberOrNull(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    String(value).trim() === ''
-  ) {
+  if (value === null || value === undefined || String(value).trim() === '') {
     return null;
   }
 

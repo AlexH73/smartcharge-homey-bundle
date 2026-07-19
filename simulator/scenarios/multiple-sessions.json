@@ -27,9 +27,7 @@
           "started": true,
           "loggerWritten": true
         },
-        "events": [
-          "session_start"
-        ]
+        "events": ["session_start"]
       }
     },
     {
@@ -40,9 +38,7 @@
         "result": {
           "shouldChargeNow": false
         },
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "plugCommandCount": 0,
         "tibberCallsDelta": 1
@@ -57,9 +53,7 @@
           "shouldChargeNow": true
         },
         "reasonIncludes": "inside selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": true,
         "plugCommandCount": 1,
         "tibberCallsDelta": 1
@@ -84,9 +78,7 @@
           "eventType": "smartcharge_on",
           "loggerWritten": true
         },
-        "events": [
-          "smartcharge_on"
-        ],
+        "events": ["smartcharge_on"],
         "plugOn": true,
         "plugCommandCount": 1
       }
@@ -110,9 +102,7 @@
           "eventType": "smartcharge_off",
           "loggerWritten": true
         },
-        "events": [
-          "smartcharge_off"
-        ],
+        "events": ["smartcharge_off"],
         "plugOn": false,
         "plugCommandCount": 1
       }
@@ -125,9 +115,7 @@
           "reset": true,
           "loggerWritten": true
         },
-        "events": [
-          "session_reset"
-        ],
+        "events": ["session_reset"],
         "plugOn": false,
         "logic": {
           "ChargeConnectedAt": "null"
@@ -157,9 +145,7 @@
           "started": true,
           "loggerWritten": true
         },
-        "events": [
-          "session_start"
-        ],
+        "events": ["session_start"],
         "plugOn": false
       }
     },
@@ -173,9 +159,7 @@
           "plannedStart": "2026-07-08 21:00:00",
           "plannedEnd": "2026-07-08 23:00:00"
         },
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "plugCommandCount": 1,
         "tibberCallsDelta": 1
@@ -190,9 +174,7 @@
           "shouldChargeNow": true
         },
         "reasonIncludes": "inside selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": true,
         "plugCommandCount": 2,
         "tibberCallsDelta": 1

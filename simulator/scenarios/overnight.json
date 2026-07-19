@@ -27,9 +27,7 @@
           "started": true,
           "loggerWritten": true
         },
-        "events": [
-          "session_start"
-        ],
+        "events": ["session_start"],
         "logic": {
           "SmartChargeShouldCharge": false,
           "SmartChargeReason": "Session started"
@@ -44,9 +42,7 @@
           "shouldChargeNow": false
         },
         "reasonIncludes": "Waiting for selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "tibberCallsDelta": 1
       }
@@ -59,9 +55,7 @@
           "shouldChargeNow": true
         },
         "reasonIncludes": "inside selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "eventPayload": {
           "plannedStart": "2026-07-08 02:00:00",
           "plannedEnd": "2026-07-08 04:00:00",
@@ -91,9 +85,7 @@
           "eventType": "smartcharge_on",
           "loggerWritten": true
         },
-        "events": [
-          "smartcharge_on"
-        ],
+        "events": ["smartcharge_on"],
         "plugOn": true
       }
     }

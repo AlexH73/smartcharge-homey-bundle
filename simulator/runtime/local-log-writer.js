@@ -164,7 +164,8 @@ function csvEscape(value) {
     return '';
   }
 
-  const text = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  const text =
+    typeof value === 'object' ? JSON.stringify(value) : String(value);
 
   if (/[",\r\n]/.test(text)) {
     return `"${text.replaceAll('"', '""')}"`;

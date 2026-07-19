@@ -9,9 +9,8 @@
  */
 
 const SMARTCHARGE_CONFIG = {
-  SPREADSHEET_ID: PropertiesService
-    .getScriptProperties()
-    .getProperty('SPREADSHEET_ID'),
+  SPREADSHEET_ID:
+    PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID'),
 
   EVENTS_SHEET_NAME: 'Events',
   SESSIONS_SHEET_NAME: 'Sessions',
@@ -136,11 +135,7 @@ const SESSION_HEADERS = [
   'initialEstimatedBaselineCostEur',
 ];
 
-const TERMINAL_SESSION_STATUSES = [
-  'completed',
-  'expired',
-  'manual_reset',
-];
+const TERMINAL_SESSION_STATUSES = ['completed', 'expired', 'manual_reset'];
 
 const EVENT_FIELD_BY_HEADER = {
   schemaVersion: 'schemaVersion',
@@ -241,9 +236,10 @@ function doPost(e) {
 
   formatEventSheet(eventsSheet);
 
-  const data = e && e.postData && e.postData.contents
-    ? JSON.parse(e.postData.contents)
-    : { eventType: 'manual_test', reason: 'doPost called without postData' };
+  const data =
+    e && e.postData && e.postData.contents
+      ? JSON.parse(e.postData.contents)
+      : { eventType: 'manual_test', reason: 'doPost called without postData' };
 
   eventsSheet.appendRow(buildEventRow(eventsSheet, data));
   upsertSessionFromEvent(ss, data);
@@ -257,7 +253,7 @@ function openSmartChargeSpreadsheet() {
   if (!spreadsheetId) {
     throw new Error(
       'Missing SPREADSHEET_ID script property. ' +
-      'Open Apps Script Project Settings and add SPREADSHEET_ID.',
+        'Open Apps Script Project Settings and add SPREADSHEET_ID.',
     );
   }
 
@@ -297,17 +293,15 @@ function migrateSessionHeaders(sheet) {
 
     if (existingColumnIndex < 0 || canonicalColumnIndex >= 0) return;
 
-    sheet
-      .getRange(1, existingColumnIndex + 1)
-      .setValue(canonicalHeader);
+    sheet.getRange(1, existingColumnIndex + 1).setValue(canonicalHeader);
   });
 }
 
 function appendMissingHeaders(sheet, headers) {
   const existingHeaders = getHeaderValues(sheet);
 
-  const missingHeaders = headers.filter((header) =>
-    !existingHeaders.includes(header),
+  const missingHeaders = headers.filter(
+    (header) => !existingHeaders.includes(header),
   );
 
   if (missingHeaders.length === 0) return;
@@ -400,9 +394,7 @@ function findSessionRowById(sheet, sessionId) {
 }
 
 function readSessionValues(sheet, headers, rowIndex) {
-  const values = sheet
-    .getRange(rowIndex, 1, 1, headers.length)
-    .getValues()[0];
+  const values = sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
 
   return headers.reduce((session, header, index) => {
     if (header) {
@@ -596,10 +588,7 @@ function getSessionStatus(event, currentSession, update) {
 
   if (currentStatus === 'completed') return 'completed';
 
-  if (
-    currentStatus === 'expired' ||
-    currentStatus === 'manual_reset'
-  ) {
+  if (currentStatus === 'expired' || currentStatus === 'manual_reset') {
     return currentStatus;
   }
 
@@ -645,7 +634,9 @@ function hasValue(value) {
 }
 
 function normalizeStatus(status) {
-  return String(status || '').trim().toLowerCase();
+  return String(status || '')
+    .trim()
+    .toLowerCase();
 }
 
 function isTerminalSession(session) {
@@ -693,12 +684,12 @@ function isCompletionEvent(event, currentSession) {
 
 function isBatteryAtTarget(battery, targetBattery) {
   const batteryValue = numberOrNull(battery);
-  const targetValue = hasValue(targetBattery) ? numberOrNull(targetBattery) : 100;
+  const targetValue = hasValue(targetBattery)
+    ? numberOrNull(targetBattery)
+    : 100;
 
   return (
-    batteryValue !== null &&
-    targetValue !== null &&
-    batteryValue >= targetValue
+    batteryValue !== null && targetValue !== null && batteryValue >= targetValue
   );
 }
 
@@ -739,9 +730,7 @@ function formatSessionSheet(sheet) {
   const sessionIdCol = headers.indexOf('sessionId') + 1;
 
   if (sessionIdCol > 0) {
-    sheet
-      .getRange(1, sessionIdCol, sheet.getMaxRows(), 1)
-      .setNumberFormat('@');
+    sheet.getRange(1, sessionIdCol, sheet.getMaxRows(), 1).setNumberFormat('@');
   }
 
   const createdAtCol = headers.indexOf('createdAt') + 1;

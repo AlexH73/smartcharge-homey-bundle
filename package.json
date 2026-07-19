@@ -8,6 +8,11 @@
     "test": "tests"
   },
   "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "verify": "npm run lint && npm run format:check && npm test && npm run build:homey -- --reuse-version",
     "test": "node tests/estimated-cost-engine.test.js && node tests/apps-script-session-materializer.test.js && npm run simulate:all",
     "test:cost": "node tests/estimated-cost-engine.test.js",
     "simulate": "node simulator/runner.js",
@@ -58,6 +63,11 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5"
   }
 }
