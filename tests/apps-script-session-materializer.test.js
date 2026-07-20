@@ -27,7 +27,7 @@ function loadSessionHelpers() {
 
   vm.createContext(context);
   vm.runInContext(
-    `${source}\nthis.__test = { buildSessionWrite, ensureSheet, migrateSessionHeaders, SESSION_HEADERS };\n`,
+    `${source}\nthis.__test = { buildSessionWrite, ensureSheet, migrateSessionHeaders, readSessionValues, upsertSessionFromEvent, SESSION_HEADERS };\n`,
     context,
     { filename: SCRIPT_PATH },
   );
@@ -39,6 +39,8 @@ const {
   buildSessionWrite,
   ensureSheet,
   migrateSessionHeaders,
+  readSessionValues,
+  upsertSessionFromEvent,
   SESSION_HEADERS,
 } = loadSessionHelpers();
 
@@ -198,6 +200,98 @@ function runManualResetRegression() {
   assert.equal(session.endBatteryPct, undefined);
   assert.equal(session.batteryDeltaPct, undefined);
   assert.equal(session.resetAt, '2026-07-07T19:00:00Z');
+}
+
+function runCompletedSessionSheetRegression() {
+  const sheet = new HeaderSheet([
+    [...SESSION_HEADERS, ' status '],
+  ]);
+  const spreadsheet = new MockSpreadsheet(sheet);
+  const sessionId = '2026-07-19 18:00:00';
+
+  [
+    {
+      eventType: 'session_start',
+      sessionId,
+      connectedAt: sessionId,
+      loggedAt: '2026-07-19T18:00:00Z',
+      battery: '89',
+    },
+    {
+      eventType: 'smartcharge_decision',
+      sessionId,
+      loggedAt: '2026-07-19T18:05:00Z',
+      battery: '89',
+      targetBattery: '100',
+      missingBatteryPercent: '11',
+      shouldChargeNow: true,
+      reasonCode: 'CURRENT_SLOT',
+    },
+    {
+      eventType: 'smartcharge_on',
+      sessionId,
+      loggedAt: '2026-07-19T18:06:00Z',
+      battery: '89',
+    },
+    {
+      eventType: 'smartcharge_off',
+      sessionId,
+      loggedAt: '2026-07-19T19:00:00Z',
+      battery: '100',
+    },
+    {
+      eventType: 'session_reset',
+      sessionId,
+      loggedAt: '2026-07-19T19:01:00Z',
+      battery: '100',
+    },
+  ].forEach((event) => upsertSessionFromEvent(spreadsheet, event));
+
+  const headers = sheet.rows[0].map((header) => String(header || '').trim());
+  const session = readSessionValues(sheet, headers, 2);
+
+  assert.equal(session.status, 'completed');
+  assert.equal(session.endBatteryPct, '100');
+  assert.equal(session.batteryDeltaPct, 11);
+  assert.equal(session.chargeStoppedAt, '2026-07-19T19:00:00Z');
+  assert.equal(session.resetAt, '2026-07-19T19:01:00Z');
+  assert.equal(session.lastEventType, 'session_reset');
+}
+
+function runManualResetSheetRegression() {
+  const sheet = new HeaderSheet([SESSION_HEADERS]);
+  const spreadsheet = new MockSpreadsheet(sheet);
+  const sessionId = '2026-07-19 20:00:00';
+
+  upsertSessionFromEvent(spreadsheet, {
+    eventType: 'session_start',
+    sessionId,
+    connectedAt: sessionId,
+    loggedAt: '2026-07-19T20:00:00Z',
+    battery: '89',
+  });
+  upsertSessionFromEvent(spreadsheet, {
+    eventType: 'smartcharge_decision',
+    sessionId,
+    loggedAt: '2026-07-19T20:01:00Z',
+    battery: '89',
+    targetBattery: '100',
+    missingBatteryPercent: '11',
+    shouldChargeNow: false,
+  });
+  upsertSessionFromEvent(spreadsheet, {
+    eventType: 'session_reset',
+    sessionId,
+    loggedAt: '2026-07-19T20:02:00Z',
+    battery: '89',
+  });
+
+  const headers = sheet.rows[0].map((header) => String(header || '').trim());
+  const session = readSessionValues(sheet, headers, 2);
+
+  assert.equal(session.status, 'manual_reset');
+  assert.equal(session.resetAt, '2026-07-19T20:02:00Z');
+  assert.equal(session.lastEventType, 'session_reset');
 }
 
 function runImmutablePlannerModeRegression() {
@@ -606,6 +700,10 @@ class HeaderSheet {
 
   setFrozenRows() {}
 
+  getMaxRows() {
+    return Math.max(this.rows.length, 1000);
+  }
+
   getRange(row, column, rowCount = 1, columnCount = 1) {
     return {
       getValues: () =>
@@ -614,6 +712,16 @@ class HeaderSheet {
             { length: columnCount },
             (_column, columnOffset) =>
               this.rows[row - 1 + rowOffset]?.[column - 1 + columnOffset] ?? '',
+          ),
+        ),
+      getDisplayValues: () =>
+        Array.from({ length: rowCount }, (_row, rowOffset) =>
+          Array.from({ length: columnCount }, (_column, columnOffset) =>
+            String(
+              this.rows[row - 1 + rowOffset]?.[
+                column - 1 + columnOffset
+              ] ?? '',
+            ),
           ),
         ),
       setValue: (value) => {
@@ -630,13 +738,30 @@ class HeaderSheet {
           });
         });
       },
+      setNumberFormat: () => {},
     };
+  }
+}
+
+class MockSpreadsheet {
+  constructor(sessionsSheet) {
+    this.sessionsSheet = sessionsSheet;
+  }
+
+  getSheetByName(sheetName) {
+    return sheetName === 'Sessions' ? this.sessionsSheet : null;
+  }
+
+  insertSheet() {
+    throw new Error('Existing Sessions sheet should be reused');
   }
 }
 
 runExpiredSessionRegression();
 runCompletedSessionRegression();
 runManualResetRegression();
+runCompletedSessionSheetRegression();
+runManualResetSheetRegression();
 runImmutablePlannerModeRegression();
 runContinuousPlannerModeRegression();
 runPlannerModeInitializationRegression();

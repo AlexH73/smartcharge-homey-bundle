@@ -397,7 +397,11 @@ function readSessionValues(sheet, headers, rowIndex) {
   const values = sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
 
   return headers.reduce((session, header, index) => {
-    if (header) {
+    if (
+      header &&
+      (!Object.prototype.hasOwnProperty.call(session, header) ||
+        !hasValue(session[header]))
+    ) {
       session[header] = values[index];
     }
 
@@ -419,7 +423,7 @@ function buildSessionWrite(event, currentSession, now) {
   const update = buildSessionUpdate(event, currentSession || {});
 
   return {
-    status: getSessionStatus(event, currentSession || {}, update),
+    status: getSessionStatus(event, currentSession || {}),
     updatedAt: now,
     ...update,
   };
@@ -583,7 +587,7 @@ function addInitialPlanValue(update, currentSession, fieldName, value) {
   }
 }
 
-function getSessionStatus(event, currentSession, update) {
+function getSessionStatus(event, currentSession) {
   const currentStatus = normalizeStatus(currentSession.status);
 
   if (currentStatus === 'completed') return 'completed';
@@ -609,7 +613,6 @@ function getSessionStatus(event, currentSession, update) {
       return 'stopped';
 
     case 'session_reset':
-      if (isCompletionUpdate(update, currentSession)) return 'completed';
       return 'manual_reset';
 
     case 'session_expired':
@@ -649,18 +652,6 @@ function canUpdateFinalBattery(currentSession) {
   return !(
     hasValue(currentSession.chargeStoppedAt) &&
     hasValue(currentSession.endBatteryPct)
-  );
-}
-
-function isCompletionUpdate(update, currentSession) {
-  const status = normalizeStatus(currentSession.status);
-
-  if (status === 'completed') return true;
-  if (!hasValue(update.endBatteryPct)) return false;
-
-  return isBatteryAtTarget(
-    update.endBatteryPct,
-    currentSession.targetBatteryPct,
   );
 }
 
