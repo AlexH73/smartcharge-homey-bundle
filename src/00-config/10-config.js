@@ -27,6 +27,22 @@ const CONFIG = {
   smartChargeReasonVariableName: 'SmartChargeReason',
   smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',
   smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
+  smartChargeManualModeVariableName: 'SmartChargeManualMode',
+  runtimeModeVariableName: 'SmartChargeRuntimeMode',
+  runtimeDisconnectObservedAtVariableName: 'SmartChargeDisconnectObservedAt',
+  runtimeConnectionEvidenceAtVariableName: 'SmartChargeConnectionEvidenceAt',
+  runtimeControllerDefaultMode: 'shadow',
+
+  chargingPowerThresholdW: 500,
+  idlePowerThresholdW: 50,
+  disconnectConfirmationMinutes: 15,
+  telemetryStaleMinutes: 30,
+  vehicleStatusCapabilityNames: [
+    'charging_status',
+    'charge_status',
+    'ladestatus',
+  ],
+  preconditioningCapabilityNames: ['preconditioning', 'preconditioning_active'],
 
   workdayDepartureHour: 7,
   workdayDepartureMinute: 30,

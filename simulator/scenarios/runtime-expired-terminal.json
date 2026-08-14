@@ -1,0 +1,61 @@
+{
+  "name": "runtime-expired-terminal",
+  "description": "Active runtime expires an overdue session once and cannot re-energize or repeat terminal telemetry.",
+  "now": "2026-07-08T10:00:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 08:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeConnectionEvidenceAt": "2026-07-08T09:55:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Charge"
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "would_expire_session",
+          "desiredPlugState": false,
+          "action": "switched_off",
+          "sessionActive": false
+        },
+        "events": ["smartcharge_off", "session_expired"],
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeSessionStatus": "expired",
+          "SmartChargeConnectionEvidenceAt": "null",
+          "SmartChargeDisconnectObservedAt": "null"
+        },
+        "plugOn": false,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "events": [],
+        "logic": { "ChargeConnectedAt": "null" },
+        "plugOn": false,
+        "plugCommandCount": 1
+      }
+    }
+  ],
+  "expect": {
+    "eventTypes": ["smartcharge_off", "session_expired"],
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeSessionStatus": "expired"
+    },
+    "plugOn": false,
+    "plugCommandCount": 1
+  }
+}

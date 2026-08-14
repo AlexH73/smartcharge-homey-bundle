@@ -1,6 +1,6 @@
 /**
  * Tibber Price Fetcher for Google Sheets
- * 
+ *
  * This script fetches electricity prices from Tibber API
  * and writes them into a Google Spreadsheet.
  */
@@ -143,12 +143,14 @@ function getTibberToken() {
     return hardcodedToken;
   }
 
-  const propertyToken = PropertiesService.getScriptProperties().getProperty(PROPERTY_TOKEN);
+  const propertyToken =
+    PropertiesService.getScriptProperties().getProperty(PROPERTY_TOKEN);
 
   if (!propertyToken) {
     throw new Error(
       'Tibber token missing. Add it to TIBBER_TOKEN constant or create Script Property "' +
-      PROPERTY_TOKEN + '".'
+        PROPERTY_TOKEN +
+        '".',
     );
   }
 
@@ -159,12 +161,15 @@ function getTibberToken() {
  * Retrieves the spreadsheet ID from Script Properties.
  */
 function getSpreadsheetId() {
-  const id = PropertiesService.getScriptProperties().getProperty(PROPERTY_SPREADSHEET_ID);
+  const id = PropertiesService.getScriptProperties().getProperty(
+    PROPERTY_SPREADSHEET_ID,
+  );
 
   if (!id) {
     throw new Error(
       'Spreadsheet ID not found in Script Properties. Add a property with key "' +
-      PROPERTY_SPREADSHEET_ID + '" and the spreadsheet ID as value.'
+        PROPERTY_SPREADSHEET_ID +
+        '" and the spreadsheet ID as value.',
     );
   }
 
@@ -291,10 +296,7 @@ function createTibberTrigger() {
     .forEach((trigger) => ScriptApp.deleteTrigger(trigger));
 
   // Create new hourly trigger
-  ScriptApp.newTrigger(functionName)
-    .timeBased()
-    .everyHours(1)
-    .create();
+  ScriptApp.newTrigger(functionName).timeBased().everyHours(1).create();
 
   console.log('Tibber auto-update trigger created: every hour.');
 }

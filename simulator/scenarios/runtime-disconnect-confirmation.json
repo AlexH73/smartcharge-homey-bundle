@@ -1,0 +1,70 @@
+{
+  "name": "runtime-disconnect-confirmation",
+  "description": "Persisted suspected disconnect blocks power and closes the session only after confirmation timeout.",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeShouldCharge": true,
+      "SmartChargeManualMode": true
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Unplugged"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": { "onoff": false, "measure_power": 0 }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:00:00+02:00",
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "suspected_disconnect",
+          "desiredPlugState": false,
+          "action": "none",
+          "sessionActive": true
+        },
+        "logic": {
+          "SmartChargeDisconnectObservedAt": "2026-07-07T16:00:00.000Z"
+        },
+        "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:10:00+02:00",
+      "expect": {
+        "result": { "desiredPlugState": false, "sessionActive": true },
+        "events": [],
+        "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:16:00+02:00",
+      "expect": {
+        "result": { "sessionActive": false },
+        "events": ["charger_disconnected"],
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeSessionStatus": "disconnected",
+          "SmartChargeDisconnectObservedAt": "null"
+        },
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "ChargeConnectedAt": "null" },
+    "eventTypes": ["charger_disconnected"],
+    "plugOn": false,
+    "plugCommandCount": 0
+  }
+}

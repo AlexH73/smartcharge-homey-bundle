@@ -54,6 +54,21 @@ const sharedBundleGlobals = {
   tryUpdateVariableByName: 'readonly',
   updateVariableByName: 'readonly',
   estimatePlanCosts: 'readonly',
+  TELEMETRY_HEALTH: 'readonly',
+  TELEMETRY_FRESHNESS: 'readonly',
+  RUNTIME_STATES: 'readonly',
+  canCreateSession: 'readonly',
+  deriveDesiredPlugState: 'readonly',
+  deriveRuntimeState: 'readonly',
+  evaluateCompletionEvidence: 'readonly',
+  evaluateTelemetryHealth: 'readonly',
+  evaluateTelemetryFreshness: 'readonly',
+  evaluateDisconnectEvidence: 'readonly',
+  hasTrustworthyConnectionEvidence: 'readonly',
+  isSuspectedDisconnect: 'readonly',
+  isVehicleConnectedStatus: 'readonly',
+  runRuntimeController: 'readonly',
+  runCanonicalDecision: 'readonly',
 };
 
 const googleAppsScriptGlobals = {

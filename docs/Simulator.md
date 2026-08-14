@@ -34,6 +34,16 @@ npm run simulate:multi-window-price-update
 npm run simulate -- same-day-reconnect
 ```
 
+Print a step-by-step review of normalized inputs, controller decisions,
+actuator commands, events, and changed Logic variables:
+
+```bash
+npm run simulate -- runtime-session-creation --trace
+npm run simulate:runtime-review
+```
+
+`--verbose` is accepted as an alias for `--trace`.
+
 List scenarios:
 
 ```bash

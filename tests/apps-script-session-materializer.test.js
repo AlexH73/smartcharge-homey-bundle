@@ -203,9 +203,7 @@ function runManualResetRegression() {
 }
 
 function runCompletedSessionSheetRegression() {
-  const sheet = new HeaderSheet([
-    [...SESSION_HEADERS, ' status '],
-  ]);
+  const sheet = new HeaderSheet([[...SESSION_HEADERS, ' status ']]);
   const spreadsheet = new MockSpreadsheet(sheet);
   const sessionId = '2026-07-19 18:00:00';
 
@@ -718,9 +716,7 @@ class HeaderSheet {
         Array.from({ length: rowCount }, (_row, rowOffset) =>
           Array.from({ length: columnCount }, (_column, columnOffset) =>
             String(
-              this.rows[row - 1 + rowOffset]?.[
-                column - 1 + columnOffset
-              ] ?? '',
+              this.rows[row - 1 + rowOffset]?.[column - 1 + columnOffset] ?? '',
             ),
           ),
         ),

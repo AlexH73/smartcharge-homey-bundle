@@ -1,0 +1,58 @@
+{
+  "name": "runtime-session-creation",
+  "description": "Fallback creates a session only from a trustworthy connected signal and duplicate runs are idempotent.",
+  "now": "2026-07-06T18:00:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeShouldCharge": true,
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": { "capabilitiesObj": { "charging_status": "Charge" } },
+      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "runtimeState": "IDLE",
+          "sessionActive": false,
+          "action": "switched_off"
+        },
+        "events": [],
+        "logic": { "ChargeConnectedAt": "null" },
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "fixture": "normal-day",
+      "set": {
+        "logic": {
+          "SmartChargeConnectionEvidenceAt": "2026-07-06T17:55:00+02:00"
+        },
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "charging_status": "Charge" } }
+        }
+      },
+      "expect": {
+        "result": { "sessionActive": true },
+        "events": ["session_start", "smartcharge_decision"],
+        "logic": { "SmartChargeConnectionEvidenceAt": "null" },
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "fixture": "normal-day",
+      "expect": { "events": [], "plugCommandCount": 1 }
+    }
+  ],
+  "expect": {
+    "eventTypes": ["session_start", "smartcharge_decision"],
+    "plugCommandCount": 1
+  }
+}
