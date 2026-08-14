@@ -1,0 +1,382 @@
+let runtimeControllerRunning = false;
+
+function readCapabilityDiagnostic(device, names) {
+  for (const name of names) {
+    if (
+      !Object.prototype.hasOwnProperty.call(device.capabilitiesObj || {}, name)
+    )
+      continue;
+    const capability = device.capabilitiesObj[name];
+    return {
+      name,
+      value: getCapabilityValue(device, name),
+      observedAt:
+        capability && typeof capability === 'object'
+          ? capability.lastUpdated || capability.updatedAt || null
+          : null,
+    };
+  }
+  return { name: null, value: null, observedAt: null };
+}
+
+function runtimeNumberOrNull(value) {
+  if (value === null || value === undefined || String(value).trim() === '')
+    return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function runtimeBoolean(value) {
+  return value === true || String(value).trim().toLowerCase() === 'true';
+}
+
+function runtimeActiveSession(value) {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  return (
+    normalized !== '' && normalized !== 'null' && normalized !== 'undefined'
+  );
+}
+
+function runtimeDateOrNull(value) {
+  if (!runtimeActiveSession(value)) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+async function collectRuntimeSnapshot() {
+  const now = new Date();
+  const mercedes = await getDeviceByNamePart(CONFIG.mercedesDeviceNameIncludes);
+  const plug = await getDeviceByNamePart(CONFIG.plugDeviceNameIncludes);
+  const chargeConnectedAt = await getVariableValue(
+    CONFIG.chargeConnectedAtVariableName,
+  );
+  const connectionEvidenceAt = await getVariableValue(
+    CONFIG.runtimeConnectionEvidenceAtVariableName,
+  );
+  const disconnectObservedRaw = await getVariableValue(
+    CONFIG.runtimeDisconnectObservedAtVariableName,
+  );
+  const status = readCapabilityDiagnostic(
+    mercedes,
+    CONFIG.vehicleStatusCapabilityNames,
+  );
+  const preconditioning = readCapabilityDiagnostic(
+    mercedes,
+    CONFIG.preconditioningCapabilityNames,
+  );
+  const evidenceObservedAt = status.observedAt || connectionEvidenceAt;
+  const snapshot = {
+    now,
+    mercedes,
+    plug,
+    sessionId: runtimeActiveSession(chargeConnectedAt)
+      ? chargeConnectedAt
+      : null,
+    chargeConnectedAt: runtimeActiveSession(chargeConnectedAt)
+      ? chargeConnectedAt
+      : null,
+    sessionActive: runtimeActiveSession(chargeConnectedAt),
+    batteryPct: runtimeNumberOrNull(
+      getCapabilityValue(mercedes, 'measure_battery'),
+    ),
+    targetBatteryPct: CONFIG.batteryFullPercentage,
+    vehicleStatus: status.value,
+    vehicleStatusCapability: status.name,
+    vehicleStatusObservedAt: evidenceObservedAt,
+    connectionEvidenceSource: status.observedAt
+      ? 'capability_timestamp'
+      : runtimeActiveSession(connectionEvidenceAt)
+        ? 'logic_variable'
+        : null,
+    vehicleConnectedSignal: isVehicleConnectedStatus(status.value),
+    manualOverride: runtimeBoolean(
+      await getVariableValue(CONFIG.smartChargeManualModeVariableName),
+    ),
+    preconditioningActive: runtimeBoolean(preconditioning.value),
+    preconditioningCapability: preconditioning.name,
+    preconditioningRawValue: preconditioning.value,
+    plannerShouldCharge: runtimeBoolean(
+      await getVariableValue(CONFIG.smartChargeShouldChargeVariableName),
+    ),
+    plannerDecision: null,
+    plugOn: getCapabilityValue(plug, 'onoff') === true,
+    plugPowerW:
+      runtimeNumberOrNull(getCapabilityValue(plug, 'measure_power')) ?? 0,
+    disconnectObservedAt: runtimeDateOrNull(disconnectObservedRaw),
+  };
+  snapshot.vehicleTelemetryFreshness = evaluateTelemetryFreshness(
+    evidenceObservedAt,
+    now,
+  );
+  snapshot.vehicleTelemetryHealth = evaluateTelemetryHealth(snapshot);
+  snapshot.suspectedDisconnect = isSuspectedDisconnect(snapshot);
+  snapshot.confirmedDisconnect = evaluateDisconnectEvidence(snapshot);
+  return snapshot;
+}
+
+async function reconcileDisconnectObservation(snapshot, activeMode) {
+  const recovered =
+    hasTrustworthyConnectionEvidence(snapshot) ||
+    snapshot.plugPowerW >= CONFIG.chargingPowerThresholdW;
+  if (recovered && snapshot.disconnectObservedAt) {
+    if (activeMode)
+      await tryUpdateVariableByName(
+        CONFIG.runtimeDisconnectObservedAtVariableName,
+        'null',
+      );
+    return {
+      ...snapshot,
+      disconnectObservedAt: null,
+      suspectedDisconnect: false,
+      confirmedDisconnect: false,
+    };
+  }
+  if (!snapshot.suspectedDisconnect || snapshot.disconnectObservedAt)
+    return snapshot;
+  if (activeMode) {
+    await tryUpdateVariableByName(
+      CONFIG.runtimeDisconnectObservedAtVariableName,
+      snapshot.now.toISOString(),
+    );
+  }
+  return { ...snapshot, disconnectObservedAt: snapshot.now };
+}
+
+async function createRuntimeSession(snapshot) {
+  const current = await getVariableValue(CONFIG.chargeConnectedAtVariableName);
+  if (runtimeActiveSession(current))
+    return {
+      ...snapshot,
+      sessionActive: true,
+      sessionId: current,
+      chargeConnectedAt: current,
+    };
+  const sessionId = formatLocal(snapshot.now);
+  await tryUpdateVariableByName(
+    CONFIG.chargeConnectedAtVariableName,
+    sessionId,
+  );
+  await tryUpdateVariableByName(
+    CONFIG.smartChargeSessionStatusVariableName,
+    'active',
+  );
+  await tryUpdateVariableByName(
+    CONFIG.smartChargeShouldChargeVariableName,
+    false,
+  );
+  if (snapshot.connectionEvidenceSource === 'logic_variable') {
+    await tryUpdateVariableByName(
+      CONFIG.runtimeConnectionEvidenceAtVariableName,
+      'null',
+    );
+  }
+  await SmartChargeLogger.logLifecycleEvent({
+    eventType: SmartChargeLogger.EVENT_TYPES.SESSION_START,
+    reason: 'Runtime confirmed fresh vehicle connection',
+    source: 'smartcharge-runtime-controller',
+  });
+  return {
+    ...snapshot,
+    sessionActive: true,
+    sessionId,
+    chargeConnectedAt: sessionId,
+    plannerShouldCharge: false,
+  };
+}
+
+async function resetRuntimeSession(
+  snapshot,
+  eventType,
+  reason,
+  status,
+  emitLifecycle = true,
+) {
+  await tryUpdateVariableByName(
+    CONFIG.smartChargeSessionStatusVariableName,
+    status,
+  );
+  if (emitLifecycle) {
+    await SmartChargeLogger.logLifecycleEvent({
+      eventType,
+      reason,
+      source: 'smartcharge-runtime-controller',
+      shouldChargeNow: false,
+    });
+  }
+  await tryUpdateVariableByName(CONFIG.chargeConnectedAtVariableName, 'null');
+  await tryUpdateVariableByName(
+    CONFIG.smartChargeShouldChargeVariableName,
+    false,
+  );
+  await tryUpdateVariableByName(
+    CONFIG.smartChargePlannedStartVariableName,
+    'null',
+  );
+  await tryUpdateVariableByName(
+    CONFIG.smartChargePlannedEndVariableName,
+    'null',
+  );
+  await tryUpdateVariableByName(
+    CONFIG.runtimeDisconnectObservedAtVariableName,
+    'null',
+  );
+  await tryUpdateVariableByName(
+    CONFIG.runtimeConnectionEvidenceAtVariableName,
+    'null',
+  );
+  return true;
+}
+
+async function applyRuntimeActions(snapshot, desiredPlugOn, activeMode) {
+  if (desiredPlugOn === snapshot.plugOn) return 'none';
+  if (!activeMode)
+    return desiredPlugOn ? 'would_switch_on' : 'would_switch_off';
+  if (desiredPlugOn) {
+    await setDeviceOn(snapshot.plug);
+    if (snapshot.sessionActive) {
+      await SmartChargeLogger.logLifecycleEvent({
+        eventType: SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ON,
+        reason: 'Runtime reconciled plug to desired ON state',
+        source: 'smartcharge-runtime-controller',
+        shouldChargeNow: snapshot.plannerShouldCharge,
+      });
+    }
+    return 'switched_on';
+  }
+  await setDeviceOff(snapshot.plug);
+  if (snapshot.sessionActive) {
+    await SmartChargeLogger.logLifecycleEvent({
+      eventType: SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_OFF,
+      reason: 'Runtime reconciled plug to desired OFF state',
+      source: 'smartcharge-runtime-controller',
+      shouldChargeNow: snapshot.plannerShouldCharge,
+    });
+  }
+  return 'switched_off';
+}
+
+function proposedLifecycleAction(snapshot) {
+  if (evaluateCompletionEvidence(snapshot)) return 'would_complete_session';
+  if (snapshot.expiredSession) return 'would_expire_session';
+  if (snapshot.confirmedDisconnect) return 'would_confirm_disconnect';
+  if (snapshot.suspectedDisconnect) return 'suspected_disconnect';
+  if (canCreateSession(snapshot)) return 'would_create_session';
+  if (snapshot.vehicleTelemetryHealth === TELEMETRY_HEALTH.CONTRADICTED)
+    return 'telemetry_contradiction';
+  return 'none';
+}
+
+async function runRuntimeController() {
+  if (runtimeControllerRunning)
+    return { skipped: true, reason: 'Runtime controller already running' };
+  runtimeControllerRunning = true;
+  try {
+    let snapshot = await collectRuntimeSnapshot();
+    const configuredMode = String(
+      (await getVariableValue(CONFIG.runtimeModeVariableName)) ||
+        CONFIG.runtimeControllerDefaultMode,
+    ).toLowerCase();
+    const activeMode = configuredMode === 'active';
+    let lifecycleProposal = proposedLifecycleAction(snapshot);
+    if (activeMode && canCreateSession(snapshot))
+      snapshot = await createRuntimeSession(snapshot);
+    snapshot = await reconcileDisconnectObservation(snapshot, activeMode);
+
+    if (
+      snapshot.sessionActive &&
+      snapshot.batteryPct !== null &&
+      !snapshot.suspectedDisconnect &&
+      !snapshot.confirmedDisconnect &&
+      !evaluateCompletionEvidence(snapshot)
+    ) {
+      snapshot.plannerDecision = await runCanonicalDecision({
+        mutateDecisionState: activeMode,
+        controlPlug: false,
+        emitTelemetry: activeMode,
+        emitTerminalTelemetry: false,
+      });
+      snapshot.plannerShouldCharge = snapshot.plannerDecision.shouldChargeNow;
+      snapshot.expiredSession =
+        snapshot.plannerDecision.terminalState === 'expired';
+    } else if (snapshot.batteryPct === null) {
+      snapshot.plannerDecision = {
+        skipped: true,
+        reason: 'Battery telemetry unavailable; preserving previous decision',
+        shouldChargeNow: snapshot.plannerShouldCharge,
+      };
+    }
+    lifecycleProposal = proposedLifecycleAction(snapshot);
+    const desired = deriveDesiredPlugState(snapshot);
+    const action = await applyRuntimeActions(
+      snapshot,
+      desired.desiredPlugOn,
+      activeMode,
+    );
+    let lifecycleApplied = false;
+    if (activeMode && evaluateCompletionEvidence(snapshot)) {
+      lifecycleApplied = await resetRuntimeSession(
+        snapshot,
+        SmartChargeLogger.EVENT_TYPES.BATTERY_FULL,
+        'Target battery reached',
+        'completed',
+      );
+    } else if (activeMode && snapshot.expiredSession) {
+      lifecycleApplied = await resetRuntimeSession(
+        snapshot,
+        SmartChargeLogger.EVENT_TYPES.SESSION_EXPIRED,
+        'Session expired: target departure is in the past',
+        'expired',
+        true,
+      );
+    } else if (activeMode && snapshot.confirmedDisconnect) {
+      lifecycleApplied = await resetRuntimeSession(
+        snapshot,
+        SmartChargeLogger.EVENT_TYPES.CHARGER_DISCONNECTED,
+        'Disconnect confirmed after observation period',
+        'disconnected',
+      );
+    }
+    const result = {
+      mode: activeMode ? 'active' : 'shadow',
+      runtimeState: deriveRuntimeState(snapshot, desired.desiredPlugOn),
+      sessionId: snapshot.sessionId,
+      sessionActive: lifecycleApplied ? false : snapshot.sessionActive,
+      desiredPlugState: desired.desiredPlugOn,
+      actualPlugState:
+        action === 'switched_on'
+          ? true
+          : action === 'switched_off'
+            ? false
+            : snapshot.plugOn,
+      vehicleTelemetryHealth: snapshot.vehicleTelemetryHealth,
+      vehicleTelemetryFreshness: snapshot.vehicleTelemetryFreshness,
+      vehicleStatusCapability: snapshot.vehicleStatusCapability,
+      vehicleStatusRawValue: snapshot.vehicleStatus,
+      preconditioningCapability: snapshot.preconditioningCapability,
+      preconditioningRawValue: snapshot.preconditioningRawValue,
+      runtimeDecisionReason: desired.reason,
+      proposedLifecycleAction: lifecycleProposal,
+      action,
+      plannerShouldCharge: snapshot.plannerShouldCharge,
+      manualOverride: snapshot.manualOverride,
+    };
+    log(`Runtime mode      : ${result.mode}`);
+    log(
+      `Vehicle status   : ${result.vehicleStatusCapability}=${result.vehicleStatusRawValue}`,
+    );
+    log(
+      `Preconditioning  : ${result.preconditioningCapability}=${result.preconditioningRawValue}`,
+    );
+    log(
+      `Telemetry        : ${result.vehicleTelemetryHealth}/${result.vehicleTelemetryFreshness}`,
+    );
+    log(
+      `Proposal         : ${result.proposedLifecycleAction}; ${result.action}`,
+    );
+    return result;
+  } finally {
+    runtimeControllerRunning = false;
+  }
+}

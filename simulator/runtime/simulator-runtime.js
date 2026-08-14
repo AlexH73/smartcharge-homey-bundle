@@ -35,6 +35,8 @@ class SimulatorRuntime {
   async runStep(step) {
     this.applyStepState(step);
 
+    const logicBefore = this.homeyMock.getLogicSnapshot();
+    const devicesBefore = this.homeyMock.getDeviceSnapshot();
     const beforeEventCount = this.logWriter.events.length;
     const beforeTibberCalls = this.tibberCalls;
     let result = null;
@@ -64,6 +66,8 @@ class SimulatorRuntime {
       eventTypes: events.map((event) => event.eventType),
       tibberCallsDelta: this.tibberCalls - beforeTibberCalls,
       tibberCallsTotal: this.tibberCalls,
+      logicBefore,
+      devicesBefore,
       logic: this.homeyMock.getLogicSnapshot(),
       devices: this.homeyMock.getDeviceSnapshot(),
     };

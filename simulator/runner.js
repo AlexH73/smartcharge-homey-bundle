@@ -24,12 +24,18 @@ function loadScenarios() {
 function parseArgs(argv) {
   const args = {
     list: false,
+    trace: false,
     scenarioNames: [],
   };
 
   for (const arg of argv) {
     if (arg === '--list') {
       args.list = true;
+      continue;
+    }
+
+    if (arg === '--trace' || arg === '--verbose') {
+      args.trace = true;
       continue;
     }
 
@@ -330,22 +336,23 @@ function printScenarioList(scenarios) {
   }
 }
 
-function printScenarioOutcome(outcome) {
+function printScenarioOutcome(outcome, options = {}) {
   if (outcome.status === 'xfail') {
     printExpectedFailureResult(outcome);
     return;
   }
 
-  printScenarioResult(outcome.result);
+  printScenarioResult(outcome.result, options);
 }
 
-function printScenarioResult(result) {
+function printScenarioResult(result, options = {}) {
   console.log(`PASS ${result.name}`);
   console.log(`  ${result.description}`);
 
   for (const step of result.steps) {
     const summary = summarizeStep(step);
     console.log(`  - ${summary}`);
+    if (options.trace) printStepTrace(step);
   }
 
   const events = result.events.map(
@@ -355,6 +362,97 @@ function printScenarioResult(result) {
   console.log(
     `  Log events  : ${events.length > 0 ? events.join(', ') : 'none'}`,
   );
+}
+
+function printStepTrace(step) {
+  const beforePlug = step.devicesBefore.plug;
+  const beforeVehicle = step.devicesBefore.mercedes;
+  const afterPlug = step.devices.plug;
+  const result = step.result || {};
+  const changedLogic = diffValues(step.logicBefore, step.logic);
+  const newCommands = afterPlug.commands.slice(beforePlug.commands.length);
+
+  console.log('    INPUT');
+  console.log(
+    `      sessionId: ${formatTraceValue(step.logicBefore.ChargeConnectedAt)}`,
+  );
+  console.log(
+    `      vehicleStatus: ${formatTraceValue(readFirstCapability(beforeVehicle, ['charging_status', 'charge_status', 'ladestatus']))}`,
+  );
+  console.log(
+    `      batteryPct: ${formatTraceValue(readCapability(beforeVehicle, 'measure_battery'))}`,
+  );
+  console.log(
+    `      plug: on=${formatTraceValue(readCapability(beforePlug, 'onoff'))}, powerW=${formatTraceValue(readCapability(beforePlug, 'measure_power'))}`,
+  );
+  console.log('    DECISION');
+  console.log(
+    `      telemetry: ${formatTraceValue(result.vehicleTelemetryHealth)}/${formatTraceValue(result.vehicleTelemetryFreshness)}`,
+  );
+  console.log(`      runtimeState: ${formatTraceValue(result.runtimeState)}`);
+  console.log(
+    `      plannerShouldCharge: ${formatTraceValue(result.plannerShouldCharge)}`,
+  );
+  console.log(
+    `      desiredPlugState: ${formatTraceValue(result.desiredPlugState)}`,
+  );
+  console.log(
+    `      lifecycleAction: ${formatTraceValue(result.proposedLifecycleAction)}`,
+  );
+  console.log(
+    `      reason: ${formatTraceValue(result.runtimeDecisionReason)}`,
+  );
+  console.log('    OUTPUT');
+  console.log(`      action: ${formatTraceValue(result.action)}`);
+  console.log(
+    `      actualPlugState: ${formatTraceValue(result.actualPlugState)}`,
+  );
+  console.log(
+    `      plugCommands: ${newCommands.length ? newCommands.map((command) => `${command.capability}=${command.value}`).join(', ') : 'none'}`,
+  );
+  console.log(
+    `      events: ${step.eventTypes.length ? step.eventTypes.join(', ') : 'none'}`,
+  );
+  console.log(
+    `      logicChanges: ${
+      Object.keys(changedLogic).length
+        ? Object.entries(changedLogic)
+            .map(
+              ([key, value]) =>
+                `${key}: ${formatTraceValue(value.before)} -> ${formatTraceValue(value.after)}`,
+            )
+            .join('; ')
+        : 'none'
+    }`,
+  );
+  if (step.error) console.log(`      error: ${step.error.message}`);
+}
+
+function readCapability(device, name) {
+  return device?.capabilitiesObj?.[name]?.value ?? null;
+}
+
+function readFirstCapability(device, names) {
+  for (const name of names) {
+    const value = readCapability(device, name);
+    if (value !== null && value !== undefined && value !== '')
+      return `${name}=${value}`;
+  }
+  return null;
+}
+
+function diffValues(before, after) {
+  const result = {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (!Object.is(before[key], after[key]))
+      result[key] = { before: before[key], after: after[key] };
+  }
+  return result;
+}
+
+function formatTraceValue(value) {
+  if (value === null || value === undefined || value === '') return 'null';
+  return String(value);
 }
 
 function printExpectedFailureResult(result) {
@@ -416,7 +514,7 @@ async function main() {
     });
 
     results.push(result);
-    printScenarioOutcome(result);
+    printScenarioOutcome(result, { trace: args.trace });
   }
 
   const expectedFailures = results.filter(

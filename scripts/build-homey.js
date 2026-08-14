@@ -15,6 +15,10 @@ const SRC_DIR = path.resolve('src');
 const DIST_DIR = path.resolve('dist');
 
 const TARGETS = {
+  'runtime-controller': {
+    entry: 'src/90-flows/runtime-controller.entry.js',
+    out: 'SMARTCHARGE - Runtime Controller.js',
+  },
   'run-decision': {
     entry: 'src/90-flows/run-decision.entry.js',
     out: 'SMARTCHARGE - Run Decision.js',
@@ -51,6 +55,7 @@ const TARGETS = {
 
 const BUILD_ALL_TARGET = 'all';
 const DEFAULT_BUILD_ORDER = [
+  'runtime-controller',
   'run-decision',
   'reset-session',
   'start-session',

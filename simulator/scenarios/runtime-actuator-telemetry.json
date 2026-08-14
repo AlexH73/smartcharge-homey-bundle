@@ -1,0 +1,61 @@
+{
+  "name": "runtime-actuator-telemetry",
+  "description": "Successful active-mode plug transitions emit exactly one matching lifecycle event.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeManualMode": true
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Charge",
+          "preconditioning": false
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": { "action": "switched_on", "desiredPlugState": true },
+        "events": ["smartcharge_decision", "smartcharge_on"],
+        "plugOn": true,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": { "action": "none", "desiredPlugState": true },
+        "events": ["smartcharge_decision"],
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "set": { "logic": { "SmartChargeManualMode": false } },
+      "expect": {
+        "result": { "action": "switched_off", "desiredPlugState": false },
+        "events": ["smartcharge_off"],
+        "plugOn": false,
+        "plugCommandCount": 2
+      }
+    }
+  ],
+  "expect": {
+    "eventTypes": [
+      "smartcharge_decision",
+      "smartcharge_on",
+      "smartcharge_decision",
+      "smartcharge_off"
+    ],
+    "plugOn": false,
+    "plugCommandCount": 2
+  }
+}
