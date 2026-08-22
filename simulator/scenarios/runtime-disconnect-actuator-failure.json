@@ -1,0 +1,46 @@
+{
+  "name": "runtime-disconnect-actuator-failure",
+  "description": "A failed confirmed-disconnect OFF command aborts terminal telemetry and session cleanup.",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeShouldCharge": true,
+      "SmartChargeDisconnectObservedAt": "2026-07-07T15:44:00.000Z"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Unplugged"
+        }
+      },
+      "plug": {
+        "failSetCapabilityValue": true,
+        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:00:00+02:00",
+      "expect": {
+        "errorIncludes": "setCapabilityValue failed",
+        "events": [],
+        "plugOn": true,
+        "plugCommandCount": 0,
+        "logic": {
+          "ChargeConnectedAt": "2026-07-07 17:00:00",
+          "SmartChargeDisconnectObservedAt": "2026-07-07T15:44:00.000Z"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 17:00:00" },
+    "eventTypes": [],
+    "plugOn": true,
+    "plugCommandCount": 0
+  }
+}

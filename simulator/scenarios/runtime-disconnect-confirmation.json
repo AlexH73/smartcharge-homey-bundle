@@ -1,12 +1,13 @@
 {
   "name": "runtime-disconnect-confirmation",
-  "description": "Persisted suspected disconnect blocks power and closes the session only after confirmation timeout.",
+  "description": "A confirmed disconnect switches an energized plug off before closing the session and remains idempotent.",
   "initial": {
     "logic": {
       "ChargeConnectedAt": "2026-07-07 17:00:00",
       "SmartChargeRuntimeMode": "active",
       "SmartChargeShouldCharge": true,
-      "SmartChargeManualMode": true
+      "SmartChargeManualMode": true,
+      "SmartChargeDisconnectObservedAt": "2026-07-07T15:44:00.000Z"
     },
     "devices": {
       "mercedes": {
@@ -16,7 +17,7 @@
         }
       },
       "plug": {
-        "capabilitiesObj": { "onoff": false, "measure_power": 0 }
+        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
       }
     }
   },
@@ -26,45 +27,41 @@
       "now": "2026-07-07T18:00:00+02:00",
       "expect": {
         "result": {
-          "proposedLifecycleAction": "suspected_disconnect",
+          "proposedLifecycleAction": "would_confirm_disconnect",
           "desiredPlugState": false,
-          "action": "none",
-          "sessionActive": true
+          "actualPlugState": false,
+          "action": "switched_off",
+          "sessionActive": false
         },
-        "logic": {
-          "SmartChargeDisconnectObservedAt": "2026-07-07T16:00:00.000Z"
-        },
-        "plugCommandCount": 0
-      }
-    },
-    {
-      "flow": "runtime-controller",
-      "now": "2026-07-07T18:10:00+02:00",
-      "expect": {
-        "result": { "desiredPlugState": false, "sessionActive": true },
-        "events": [],
-        "plugCommandCount": 0
-      }
-    },
-    {
-      "flow": "runtime-controller",
-      "now": "2026-07-07T18:16:00+02:00",
-      "expect": {
-        "result": { "sessionActive": false },
-        "events": ["charger_disconnected"],
         "logic": {
           "ChargeConnectedAt": "null",
           "SmartChargeSessionStatus": "disconnected",
           "SmartChargeDisconnectObservedAt": "null"
         },
-        "plugCommandCount": 0
+        "events": ["smartcharge_off", "charger_disconnected"],
+        "plugOn": false,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:01:00+02:00",
+      "expect": {
+        "result": {
+          "desiredPlugState": false,
+          "actualPlugState": false,
+          "action": "none",
+          "sessionActive": false
+        },
+        "events": [],
+        "plugCommandCount": 1
       }
     }
   ],
   "expect": {
     "logic": { "ChargeConnectedAt": "null" },
-    "eventTypes": ["charger_disconnected"],
+    "eventTypes": ["smartcharge_off", "charger_disconnected"],
     "plugOn": false,
-    "plugCommandCount": 0
+    "plugCommandCount": 1
   }
 }

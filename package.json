@@ -1,6 +1,6 @@
 {
   "name": "smartcharge-homey-bundle",
-  "version": "0.5.0",
+  "version": "0.6.1",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -17,7 +17,7 @@
     "test:cost": "node tests/estimated-cost-engine.test.js",
     "simulate": "node simulator/runner.js",
     "simulate:all": "node simulator/runner.js all",
-    "simulate:runtime-review": "node simulator/runner.js runtime-connection-evidence-shadow runtime-connection-evidence-active runtime-connection-evidence-write-failure runtime-connection-evidence-runtime-failure runtime-mercedes-charge-break runtime-mercedes-stale-charge-break runtime-mercedes-active-charging runtime-mercedes-power-w runtime-mercedes-preconditioning runtime-session-creation runtime-shadow-mode runtime-reconciliation runtime-disconnect-confirmation runtime-disconnect-cancelled runtime-expired-terminal runtime-actuator-telemetry runtime-battery-unavailable runtime-planner-failure runtime-actuator-failure --trace",
+    "simulate:runtime-review": "node simulator/runner.js runtime-connection-evidence-shadow runtime-connection-evidence-active runtime-connection-evidence-write-failure runtime-connection-evidence-runtime-failure runtime-mercedes-charge-break runtime-mercedes-stale-charge-break runtime-mercedes-active-charging runtime-mercedes-power-w runtime-mercedes-preconditioning runtime-session-creation runtime-shadow-mode runtime-reconciliation runtime-suspected-disconnect-plug-off runtime-disconnect-confirmation runtime-disconnect-confirmation-plug-off runtime-disconnect-actuator-failure runtime-disconnect-cancelled runtime-expired-terminal runtime-actuator-telemetry runtime-battery-unavailable runtime-planner-failure runtime-actuator-failure --trace",
     "simulate:overnight": "node simulator/runner.js overnight",
     "simulate:battery-full": "node simulator/runner.js battery-full",
     "simulate:no-active-session": "node simulator/runner.js no-active-session",

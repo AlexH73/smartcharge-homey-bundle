@@ -68,11 +68,15 @@ unavailability also preserves an existing Session conservatively.
 ## Disconnect confirmation
 
 `Unplugged`/`Disconnected` with idle power starts a suspected disconnect. Active
-mode persists the first observation in `SmartChargeDisconnectObservedAt`. The
-Session is preserved and the plug remains off before the configured timeout.
-After `disconnectConfirmationMinutes`, active mode emits
+mode persists the first observation in `SmartChargeDisconnectObservedAt` and
+immediately reconciles the plug to OFF in the same execution. The Session is
+preserved before the configured timeout. After `disconnectConfirmationMinutes`,
+the disconnect becomes confirmed; active mode emits
 `charger_disconnected` and clears the Session through the runtime lifecycle
-reset path. Charging power or trustworthy connected evidence cancels the
+reset path, but only after the desired OFF state has been physically
+reconciled. A failed OFF command aborts the execution before actuator telemetry,
+the terminal event, and Session cleanup, preserving the Session for a safe
+retry. Charging power or trustworthy connected evidence cancels the
 pending observation. This observation-before-action order prevents the
 controller from creating its own zero-power evidence.
 
