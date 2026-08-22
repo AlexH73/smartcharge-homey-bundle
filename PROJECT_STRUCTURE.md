@@ -88,6 +88,7 @@ SmartCharge event logging.
 Executable HomeyScript entrypoints.
 
 - `start-session.entry.js`
+- `connection-evidence.entry.js`
 - `run-decision.entry.js`
 - `log-on.entry.js`
 - `log-off.entry.js`

@@ -1,22 +1,36 @@
 let runtimeControllerRunning = false;
 
 function readCapabilityDiagnostic(device, names) {
+  let firstPresent = null;
   for (const name of names) {
     if (
       !Object.prototype.hasOwnProperty.call(device.capabilitiesObj || {}, name)
     )
       continue;
     const capability = device.capabilitiesObj[name];
-    return {
+    const diagnostic = {
       name,
       value: getCapabilityValue(device, name),
+      units:
+        capability && typeof capability === 'object'
+          ? capability.units || capability.unit || null
+          : null,
       observedAt:
         capability && typeof capability === 'object'
           ? capability.lastUpdated || capability.updatedAt || null
           : null,
     };
+    firstPresent ||= diagnostic;
+    if (
+      diagnostic.value !== null &&
+      diagnostic.value !== undefined &&
+      diagnostic.value !== ''
+    )
+      return diagnostic;
   }
-  return { name: null, value: null, observedAt: null };
+  return (
+    firstPresent || { name: null, value: null, units: null, observedAt: null }
+  );
 }
 
 function runtimeNumberOrNull(value) {
@@ -28,6 +42,18 @@ function runtimeNumberOrNull(value) {
 
 function runtimeBoolean(value) {
   return value === true || String(value).trim().toLowerCase() === 'true';
+}
+
+function normalizeVehicleChargingPowerToWatts(value, units) {
+  const numericValue = runtimeNumberOrNull(value);
+  if (numericValue === null) return null;
+  if (numericValue === 0) return 0;
+  const normalizedUnits = String(units ?? '')
+    .trim()
+    .toLowerCase();
+  if (normalizedUnits === 'w') return numericValue;
+  if (normalizedUnits === 'kw') return numericValue * 1000;
+  return null;
 }
 
 function runtimeActiveSession(value) {
@@ -43,6 +69,21 @@ function runtimeDateOrNull(value) {
   if (!runtimeActiveSession(value)) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function selectConnectionEvidence(statusObservedAt, logicEvidenceAt) {
+  const statusDate = runtimeDateOrNull(statusObservedAt);
+  const logicDate = runtimeDateOrNull(logicEvidenceAt);
+  if (
+    logicDate &&
+    (!statusDate || logicDate.getTime() >= statusDate.getTime())
+  ) {
+    return { observedAt: logicEvidenceAt, source: 'logic_variable' };
+  }
+  if (statusDate) {
+    return { observedAt: statusObservedAt, source: 'capability_timestamp' };
+  }
+  return { observedAt: null, source: null };
 }
 
 async function collectRuntimeSnapshot() {
@@ -66,7 +107,19 @@ async function collectRuntimeSnapshot() {
     mercedes,
     CONFIG.preconditioningCapabilityNames,
   );
-  const evidenceObservedAt = status.observedAt || connectionEvidenceAt;
+  const charging = readCapabilityDiagnostic(
+    mercedes,
+    CONFIG.vehicleChargingCapabilityNames,
+  );
+  const chargingPower = readCapabilityDiagnostic(
+    mercedes,
+    CONFIG.vehicleChargingPowerCapabilityNames,
+  );
+  const connectionEvidence = selectConnectionEvidence(
+    status.observedAt,
+    connectionEvidenceAt,
+  );
+  const evidenceObservedAt = connectionEvidence.observedAt;
   const snapshot = {
     now,
     mercedes,
@@ -85,18 +138,32 @@ async function collectRuntimeSnapshot() {
     vehicleStatus: status.value,
     vehicleStatusCapability: status.name,
     vehicleStatusObservedAt: evidenceObservedAt,
-    connectionEvidenceSource: status.observedAt
-      ? 'capability_timestamp'
-      : runtimeActiveSession(connectionEvidenceAt)
-        ? 'logic_variable'
-        : null,
+    vehicleStatusCapabilityLastUpdated: status.observedAt,
+    connectionEvidenceSource: connectionEvidence.source,
     vehicleConnectedSignal: isVehicleConnectedStatus(status.value),
+    vehicleCharging: runtimeBoolean(charging.value),
+    vehicleChargingCapability: charging.name,
+    vehicleChargingRawValue: charging.value,
+    vehicleChargingObservedAt: charging.observedAt,
+    vehicleChargingFreshness: evaluateTelemetryFreshness(
+      charging.observedAt,
+      now,
+    ),
+    vehicleChargingPowerW: normalizeVehicleChargingPowerToWatts(
+      chargingPower.value,
+      chargingPower.units,
+    ),
+    vehicleChargingPowerCapability: chargingPower.name,
+    vehicleChargingPowerRawValue: chargingPower.value,
+    vehicleChargingPowerUnits: chargingPower.units,
+    vehicleChargingPowerObservedAt: chargingPower.observedAt,
     manualOverride: runtimeBoolean(
       await getVariableValue(CONFIG.smartChargeManualModeVariableName),
     ),
     preconditioningActive: runtimeBoolean(preconditioning.value),
     preconditioningCapability: preconditioning.name,
     preconditioningRawValue: preconditioning.value,
+    preconditioningObservedAt: preconditioning.observedAt,
     plannerShouldCharge: runtimeBoolean(
       await getVariableValue(CONFIG.smartChargeShouldChargeVariableName),
     ),
@@ -119,6 +186,8 @@ async function collectRuntimeSnapshot() {
 async function reconcileDisconnectObservation(snapshot, activeMode) {
   const recovered =
     hasTrustworthyConnectionEvidence(snapshot) ||
+    snapshot.vehicleCharging ||
+    snapshot.vehicleChargingPowerW >= CONFIG.chargingPowerThresholdW ||
     snapshot.plugPowerW >= CONFIG.chargingPowerThresholdW;
   if (recovered && snapshot.disconnectObservedAt) {
     if (activeMode)
@@ -354,8 +423,18 @@ async function runRuntimeController() {
       vehicleTelemetryFreshness: snapshot.vehicleTelemetryFreshness,
       vehicleStatusCapability: snapshot.vehicleStatusCapability,
       vehicleStatusRawValue: snapshot.vehicleStatus,
+      vehicleStatusLastUpdated: snapshot.vehicleStatusCapabilityLastUpdated,
+      vehicleChargingCapability: snapshot.vehicleChargingCapability,
+      vehicleChargingRawValue: snapshot.vehicleChargingRawValue,
+      vehicleChargingLastUpdated: snapshot.vehicleChargingObservedAt,
+      vehicleChargingPowerCapability: snapshot.vehicleChargingPowerCapability,
+      vehicleChargingPowerRawValue: snapshot.vehicleChargingPowerRawValue,
+      vehicleChargingPowerUnits: snapshot.vehicleChargingPowerUnits,
+      vehicleChargingPowerW: snapshot.vehicleChargingPowerW,
+      vehicleChargingPowerLastUpdated: snapshot.vehicleChargingPowerObservedAt,
       preconditioningCapability: snapshot.preconditioningCapability,
       preconditioningRawValue: snapshot.preconditioningRawValue,
+      preconditioningLastUpdated: snapshot.preconditioningObservedAt,
       runtimeDecisionReason: desired.reason,
       proposedLifecycleAction: lifecycleProposal,
       action,
@@ -365,6 +444,14 @@ async function runRuntimeController() {
     log(`Runtime mode      : ${result.mode}`);
     log(
       `Vehicle status   : ${result.vehicleStatusCapability}=${result.vehicleStatusRawValue}`,
+    );
+    log(`Status updated   : ${result.vehicleStatusLastUpdated}`);
+    log(
+      `Charging         : ${result.vehicleChargingCapability}=${result.vehicleChargingRawValue}`,
+    );
+    log(`Charging updated : ${result.vehicleChargingLastUpdated}`);
+    log(
+      `Charge power     : ${result.vehicleChargingPowerCapability}=${result.vehicleChargingPowerRawValue} ${result.vehicleChargingPowerUnits || '(units unavailable)'}; normalized=${result.vehicleChargingPowerW} W; updated=${result.vehicleChargingPowerLastUpdated}`,
     );
     log(
       `Preconditioning  : ${result.preconditioningCapability}=${result.preconditioningRawValue}`,

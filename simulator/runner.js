@@ -377,7 +377,16 @@ function printStepTrace(step) {
     `      sessionId: ${formatTraceValue(step.logicBefore.ChargeConnectedAt)}`,
   );
   console.log(
-    `      vehicleStatus: ${formatTraceValue(readFirstCapability(beforeVehicle, ['charging_status', 'charge_status', 'ladestatus']))}`,
+    `      vehicleStatus: ${formatTraceValue(readFirstCapability(beforeVehicle, ['text_charging_status', 'charging_status', 'charge_status', 'ladestatus']))}`,
+  );
+  console.log(
+    `      charging: ${formatTraceValue(readFirstCapability(beforeVehicle, ['onoff_charging']))}`,
+  );
+  console.log(
+    `      vehicleChargePower: ${formatTraceValue(readCapabilityDiagnostic(beforeVehicle, 'measure_charge_power'))}`,
+  );
+  console.log(
+    `      preconditioning: ${formatTraceValue(readFirstCapability(beforeVehicle, ['onoff_precond', 'preconditioning', 'preconditioning_active']))}`,
   );
   console.log(
     `      batteryPct: ${formatTraceValue(readCapability(beforeVehicle, 'measure_battery'))}`,
@@ -388,6 +397,9 @@ function printStepTrace(step) {
   console.log('    DECISION');
   console.log(
     `      telemetry: ${formatTraceValue(result.vehicleTelemetryHealth)}/${formatTraceValue(result.vehicleTelemetryFreshness)}`,
+  );
+  console.log(
+    `      vehicleChargingPowerW: ${formatTraceValue(result.vehicleChargingPowerW)}`,
   );
   console.log(`      runtimeState: ${formatTraceValue(result.runtimeState)}`);
   console.log(
@@ -430,6 +442,13 @@ function printStepTrace(step) {
 
 function readCapability(device, name) {
   return device?.capabilitiesObj?.[name]?.value ?? null;
+}
+
+function readCapabilityDiagnostic(device, name) {
+  const capability = device?.capabilitiesObj?.[name];
+  if (!capability) return null;
+  const units = capability.units || capability.unit || null;
+  return `${name}=${capability.value}${units ? ` ${units}` : ''}`;
 }
 
 function readFirstCapability(device, names) {

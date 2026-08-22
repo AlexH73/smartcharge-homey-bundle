@@ -38,11 +38,18 @@ const CONFIG = {
   disconnectConfirmationMinutes: 15,
   telemetryStaleMinutes: 30,
   vehicleStatusCapabilityNames: [
+    'text_charging_status',
     'charging_status',
     'charge_status',
     'ladestatus',
   ],
-  preconditioningCapabilityNames: ['preconditioning', 'preconditioning_active'],
+  vehicleChargingCapabilityNames: ['onoff_charging'],
+  vehicleChargingPowerCapabilityNames: ['measure_charge_power'],
+  preconditioningCapabilityNames: [
+    'onoff_precond',
+    'preconditioning',
+    'preconditioning_active',
+  ],
 
   workdayDepartureHour: 7,
   workdayDepartureMinute: 30,

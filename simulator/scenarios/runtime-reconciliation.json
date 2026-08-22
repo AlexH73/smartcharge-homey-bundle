@@ -15,7 +15,7 @@
       "mercedes": {
         "capabilitiesObj": {
           "measure_battery": 70,
-          "charging_status": "Unplugged"
+          "text_charging_status": "Unplugged"
         }
       },
       "plug": {
@@ -47,7 +47,9 @@
       "fixture": "normal-day",
       "set": {
         "devices": {
-          "mercedes": { "capabilitiesObj": { "charging_status": "Charge" } },
+          "mercedes": {
+            "capabilitiesObj": { "text_charging_status": "Charge" }
+          },
           "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
         }
       },
@@ -64,7 +66,7 @@
       "set": {
         "logic": { "SmartChargeShouldCharge": false },
         "devices": {
-          "mercedes": { "capabilitiesObj": { "preconditioning": true } }
+          "mercedes": { "capabilitiesObj": { "onoff_precond": true } }
         }
       },
       "expect": {
@@ -79,7 +81,7 @@
       "set": {
         "logic": { "SmartChargeManualMode": true },
         "devices": {
-          "mercedes": { "capabilitiesObj": { "preconditioning": false } }
+          "mercedes": { "capabilitiesObj": { "onoff_precond": false } }
         }
       },
       "expect": {

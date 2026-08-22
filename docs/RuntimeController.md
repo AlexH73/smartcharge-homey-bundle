@@ -36,9 +36,30 @@ periodic run cannot create a Session.
 clears it immediately after it creates a Session and during every terminal
 cleanup. Shadow mode only evaluates it and never consumes it.
 
+`SMARTCHARGE - Connection Evidence.js` is the dedicated entry point for a
+trustworthy Mercedes charger-connected event. It first writes the current UTC
+ISO timestamp to `SmartChargeConnectionEvidenceAt` through the shared Homey
+Logic adapter, then calls the same canonical Runtime Controller pipeline. If
+the write fails, Runtime Controller is not called. If Runtime Controller fails,
+the entry point does not clear the successfully recorded evidence.
+
 The capability names are configurable fallbacks, not claims about the real
 Mercedes device. Shadow diagnostics report the capability actually found and
 its raw value for vehicle status and preconditioning.
+
+The verified Mercedes mapping is `text_charging_status`, `onoff_charging`,
+`measure_battery`, `measure_charge_power`, and `onoff_precond`. `Charge break`
+is normalized as connected but not actively charging. It can create a Session
+only with fresh event evidence or a fresh provider timestamp. A fresh
+`onoff_charging=true` or meaningful `measure_charge_power` is strong charging
+and connection evidence. `onoff_connector` and `text_connector_status` are
+ignored because they are always null on the observed vehicle.
+
+`measure_charge_power` is normalized to watts from capability metadata: `W`
+is unchanged and `kW` is multiplied by 1000. A non-zero value with missing or
+unsupported units remains visible as raw diagnostics but is not used as
+charging or connection evidence. Raw zero remains safely equivalent to `0 W`
+even when units metadata is unavailable.
 
 An existing Session is local authority. `Unplugged` combined with charging
 power is contradictory provider telemetry and preserves the Session. Provider
@@ -78,6 +99,22 @@ lock in the current architecture, so separate instances are not strictly
 serialized; state reconciliation and idempotent actuator checks limit effects.
 
 ## Rollout
+
+The recommended Homey topology is intentionally trigger-only:
+
+1. Event-driven Flow:
+   - **WHEN:** Mercedes-Benz -> `Ladegerät wurde angeschlossen`
+   - **THEN:** HomeyScript -> `SMARTCHARGE - Connection Evidence`
+2. Fallback/reconciliation Flow:
+   - **WHEN:** Every 15 minutes
+   - **THEN:** HomeyScript -> `SMARTCHARGE - Runtime Controller`
+
+The event Flow contains no lifecycle, planner, or power-control decisions. The
+15-minute Flow reconciles retained state but does not generate connection
+evidence. Runtime Controller remains the sole business-logic owner for both
+paths. In shadow mode, the event entry is allowed to record the external
+observation, while the subsequent Runtime execution remains side-effect-free
+and leaves that evidence available for inspection.
 
 1. Keep legacy Advanced Flows active and deploy the Runtime Controller in
 `shadow` mode, triggered every 15 minutes and optionally by fast events.

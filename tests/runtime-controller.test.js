@@ -36,6 +36,24 @@ assert.equal(
   })`),
   true,
 );
+assert.equal(call(`isVehicleConnectedStatus('Charge break')`), true);
+assert.equal(call(`isVehicleConnectedStatus('Charging ends')`), false);
+assert.equal(
+  call(`hasTrustworthyConnectionEvidence({
+    vehicleTelemetryHealth: 'HEALTHY', vehicleTelemetryFreshness: 'STALE',
+    vehicleStatus: 'Charging ends', vehicleCharging: true,
+    vehicleChargingFreshness: 'FRESH', vehicleChargingPowerW: 0
+  })`),
+  true,
+);
+assert.equal(
+  call(`hasTrustworthyConnectionEvidence({
+    vehicleTelemetryHealth: 'HEALTHY', vehicleTelemetryFreshness: 'STALE',
+    vehicleStatus: 'Charge break', vehicleCharging: false,
+    vehicleChargingFreshness: 'UNKNOWN', vehicleChargingPowerW: 2600
+  })`),
+  true,
+);
 assert.equal(
   call(`deriveDesiredPlugState({
     sessionActive: true, batteryPct: 50, targetBatteryPct: 100,

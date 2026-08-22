@@ -15,6 +15,10 @@ const SRC_DIR = path.resolve('src');
 const DIST_DIR = path.resolve('dist');
 
 const TARGETS = {
+  'connection-evidence': {
+    entry: 'src/90-flows/connection-evidence.entry.js',
+    out: 'SMARTCHARGE - Connection Evidence.js',
+  },
   'runtime-controller': {
     entry: 'src/90-flows/runtime-controller.entry.js',
     out: 'SMARTCHARGE - Runtime Controller.js',
@@ -55,6 +59,7 @@ const TARGETS = {
 
 const BUILD_ALL_TARGET = 'all';
 const DEFAULT_BUILD_ORDER = [
+  'connection-evidence',
   'runtime-controller',
   'run-decision',
   'reset-session',

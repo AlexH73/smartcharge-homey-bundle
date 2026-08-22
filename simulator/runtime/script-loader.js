@@ -3,6 +3,7 @@ const path = require('path');
 const { createFixedDate } = require('./fixed-date');
 
 const FLOW_ENTRIES = Object.freeze({
+  'connection-evidence': 'src/90-flows/connection-evidence.entry.js',
   'runtime-controller': 'src/90-flows/runtime-controller.entry.js',
   'start-session': 'src/90-flows/start-session.entry.js',
   'run-decision': 'src/90-flows/run-decision.entry.js',

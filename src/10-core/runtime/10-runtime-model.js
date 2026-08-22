@@ -27,9 +27,14 @@ function normalizeVehicleStatus(value) {
 }
 
 function isVehicleConnectedStatus(status) {
-  return ['charge', 'charging', 'connected', 'plugged', 'plugged_in'].includes(
-    normalizeVehicleStatus(status),
-  );
+  return [
+    'charge',
+    'charging',
+    'charge break',
+    'connected',
+    'plugged',
+    'plugged_in',
+  ].includes(normalizeVehicleStatus(status));
 }
 
 function isVehicleUnpluggedStatus(status) {
@@ -48,11 +53,18 @@ function evaluateTelemetryFreshness(observedAt, now, config = CONFIG) {
 }
 
 function evaluateTelemetryHealth(snapshot, config = CONFIG) {
-  if (!snapshot.vehicleStatus) return TELEMETRY_HEALTH.UNAVAILABLE;
+  if (
+    !snapshot.vehicleStatus &&
+    !snapshot.vehicleCharging &&
+    snapshot.vehicleChargingPowerW < config.chargingPowerThresholdW
+  )
+    return TELEMETRY_HEALTH.UNAVAILABLE;
   if (
     snapshot.sessionActive &&
     isVehicleUnpluggedStatus(snapshot.vehicleStatus) &&
-    snapshot.plugPowerW >= config.chargingPowerThresholdW
+    (snapshot.plugPowerW >= config.chargingPowerThresholdW ||
+      snapshot.vehicleChargingPowerW >= config.chargingPowerThresholdW ||
+      snapshot.vehicleCharging)
   ) {
     return TELEMETRY_HEALTH.CONTRADICTED;
   }
@@ -62,8 +74,11 @@ function evaluateTelemetryHealth(snapshot, config = CONFIG) {
 function hasTrustworthyConnectionEvidence(snapshot) {
   return (
     snapshot.vehicleTelemetryHealth === TELEMETRY_HEALTH.HEALTHY &&
-    snapshot.vehicleTelemetryFreshness === TELEMETRY_FRESHNESS.FRESH &&
-    isVehicleConnectedStatus(snapshot.vehicleStatus)
+    ((snapshot.vehicleTelemetryFreshness === TELEMETRY_FRESHNESS.FRESH &&
+      isVehicleConnectedStatus(snapshot.vehicleStatus)) ||
+      (snapshot.vehicleCharging &&
+        snapshot.vehicleChargingFreshness === TELEMETRY_FRESHNESS.FRESH) ||
+      snapshot.vehicleChargingPowerW >= CONFIG.chargingPowerThresholdW)
   );
 }
 
@@ -83,6 +98,8 @@ function isSuspectedDisconnect(snapshot, config = CONFIG) {
   return (
     snapshot.sessionActive &&
     isVehicleUnpluggedStatus(snapshot.vehicleStatus) &&
+    !snapshot.vehicleCharging &&
+    snapshot.vehicleChargingPowerW <= config.idlePowerThresholdW &&
     snapshot.plugPowerW <= config.idlePowerThresholdW
   );
 }
@@ -135,7 +152,11 @@ function deriveRuntimeState(snapshot, desiredPlugOn) {
     snapshot.suspectedDisconnect
   )
     return RUNTIME_STATES.DEGRADED;
-  if (snapshot.plugOn && snapshot.plugPowerW >= CONFIG.chargingPowerThresholdW)
+  if (
+    snapshot.vehicleCharging ||
+    snapshot.vehicleChargingPowerW >= CONFIG.chargingPowerThresholdW ||
+    (snapshot.plugOn && snapshot.plugPowerW >= CONFIG.chargingPowerThresholdW)
+  )
     return RUNTIME_STATES.CHARGING;
   if (snapshot.plugOn) return RUNTIME_STATES.PAUSED;
   return desiredPlugOn ? RUNTIME_STATES.ACTIVE : RUNTIME_STATES.WAITING;

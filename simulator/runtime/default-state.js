@@ -32,11 +32,24 @@ const DEFAULT_DEVICES = Object.freeze({
       measure_battery: {
         value: 70,
       },
-      charging_status: {
+      text_charging_status: {
         value: null,
       },
-      preconditioning: {
+      onoff_charging: {
         value: false,
+      },
+      measure_charge_power: {
+        value: 0,
+        units: 'kW',
+      },
+      onoff_precond: {
+        value: false,
+      },
+      onoff_connector: {
+        value: null,
+      },
+      text_connector_status: {
+        value: null,
       },
     },
   },

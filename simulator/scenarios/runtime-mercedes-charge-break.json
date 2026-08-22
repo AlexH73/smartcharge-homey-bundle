@@ -1,0 +1,56 @@
+{
+  "name": "runtime-mercedes-charge-break",
+  "description": "Fresh event evidence plus real Mercedes Charge break creates exactly one session and consumes the evidence.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeConnectionEvidenceAt": "2026-07-07T18:00:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 84,
+          "text_charging_status": {
+            "value": "Charge break",
+            "lastUpdated": "2026-07-07T16:00:00+02:00"
+          },
+          "onoff_charging": false,
+          "measure_charge_power": 0,
+          "onoff_precond": false,
+          "onoff_connector": null,
+          "text_connector_status": null
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "sessionActive": true,
+          "vehicleStatusCapability": "text_charging_status",
+          "vehicleStatusRawValue": "Charge break",
+          "vehicleChargingCapability": "onoff_charging",
+          "preconditioningCapability": "onoff_precond"
+        },
+        "events": ["session_start", "smartcharge_decision"],
+        "logic": { "SmartChargeConnectionEvidenceAt": "null" },
+        "tibberCallsDelta": 1,
+        "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "expect": { "events": [], "plugCommandCount": 0 }
+    }
+  ],
+  "expect": {
+    "eventTypes": ["session_start", "smartcharge_decision"],
+    "plugOn": false,
+    "plugCommandCount": 0
+  }
+}

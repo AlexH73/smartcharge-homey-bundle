@@ -1,0 +1,47 @@
+{
+  "name": "runtime-mercedes-power-w",
+  "description": "Mercedes charging power already reported in watts remains unchanged and provides strong connection evidence.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 84,
+          "text_charging_status": "Charging ends",
+          "onoff_charging": false,
+          "measure_charge_power": {
+            "value": 2600,
+            "units": "W",
+            "lastUpdated": "2026-07-07T18:00:00+02:00"
+          }
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "sessionActive": true,
+          "vehicleChargingPowerCapability": "measure_charge_power",
+          "vehicleChargingPowerRawValue": 2600,
+          "vehicleChargingPowerUnits": "W",
+          "vehicleChargingPowerW": 2600,
+          "vehicleChargingPowerLastUpdated": "2026-07-07T18:00:00+02:00"
+        },
+        "events": ["session_start", "smartcharge_decision"],
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "eventTypes": ["session_start", "smartcharge_decision"],
+    "plugCommandCount": 0
+  }
+}

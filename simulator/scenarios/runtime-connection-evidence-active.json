@@ -1,0 +1,54 @@
+{
+  "name": "runtime-connection-evidence-active",
+  "description": "The active Mercedes connected event creates one Session, consumes evidence once, and remains lifecycle-idempotent.",
+  "now": "2026-08-21T00:32:15.123Z",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeConnectionEvidenceAt": "null",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 84,
+          "text_charging_status": "Charge break",
+          "onoff_charging": false,
+          "measure_charge_power": { "value": 0, "units": "kW" }
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "connection-evidence",
+      "expect": {
+        "result": {
+          "mode": "active",
+          "sessionActive": true
+        },
+        "logic": { "SmartChargeConnectionEvidenceAt": "null" },
+        "events": ["session_start", "smartcharge_decision"],
+        "tibberCallsDelta": 1,
+        "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "connection-evidence",
+      "expect": {
+        "result": { "mode": "active", "sessionActive": true },
+        "logic": {
+          "SmartChargeConnectionEvidenceAt": "2026-08-21T00:32:15.123Z"
+        },
+        "events": [],
+        "tibberCallsDelta": 1,
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": {
+    "eventTypes": ["session_start", "smartcharge_decision"],
+    "plugCommandCount": 0
+  }
+}

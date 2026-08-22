@@ -1,0 +1,36 @@
+{
+  "name": "runtime-connection-evidence-runtime-failure",
+  "description": "Evidence remains available when Runtime Controller fails after the event write succeeds.",
+  "now": "2026-08-21T00:32:15.123Z",
+  "initial": {
+    "failGetDevices": true,
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeConnectionEvidenceAt": "null",
+      "SmartChargeRuntimeMode": "active"
+    }
+  },
+  "steps": [
+    {
+      "flow": "connection-evidence",
+      "expect": {
+        "errorIncludes": "getDevices failed",
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeConnectionEvidenceAt": "2026-08-21T00:32:15.123Z"
+        },
+        "events": [],
+        "tibberCallsDelta": 0,
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeConnectionEvidenceAt": "2026-08-21T00:32:15.123Z"
+    },
+    "eventTypes": [],
+    "plugCommandCount": 0
+  }
+}
