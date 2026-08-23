@@ -371,8 +371,12 @@ function printStepTrace(step) {
   const result = step.result || {};
   const changedLogic = diffValues(step.logicBefore, step.logic);
   const newCommands = afterPlug.commands.slice(beforePlug.commands.length);
+  const plannerEvent = step.events.find(
+    (event) => event.eventType === 'smartcharge_decision',
+  );
 
   console.log('    INPUT');
+  console.log(`      now: ${formatTraceValue(step.now)}`);
   console.log(
     `      sessionId: ${formatTraceValue(step.logicBefore.ChargeConnectedAt)}`,
   );
@@ -390,6 +394,9 @@ function printStepTrace(step) {
   );
   console.log(
     `      batteryPct: ${formatTraceValue(readCapability(beforeVehicle, 'measure_battery'))}`,
+  );
+  console.log(
+    `      disconnectObservedAt: ${formatTraceValue(step.logicBefore.SmartChargeDisconnectObservedAt)}`,
   );
   console.log(
     `      plug: on=${formatTraceValue(readCapability(beforePlug, 'onoff'))}, powerW=${formatTraceValue(readCapability(beforePlug, 'measure_power'))}`,
@@ -418,6 +425,30 @@ function printStepTrace(step) {
   console.log(`      action: ${formatTraceValue(result.action)}`);
   console.log(
     `      actualPlugState: ${formatTraceValue(result.actualPlugState)}`,
+  );
+  console.log(
+    `      sessionId: ${formatTraceValue(step.logic.ChargeConnectedAt)}`,
+  );
+  console.log(
+    `      chargeMinutes: ${formatTraceValue(plannerEvent?.chargeMinutes ?? step.logic.ChargeMinutes)}`,
+  );
+  console.log(
+    `      chargeSlots: ${formatTraceValue(plannerEvent?.chargeSlots ?? step.logic.ChargeSlots)}`,
+  );
+  console.log(
+    `      plannedStart: ${formatTraceValue(plannerEvent?.plannedStart ?? step.logic.SmartChargePlannedStart)}`,
+  );
+  console.log(
+    `      plannedEnd: ${formatTraceValue(plannerEvent?.plannedEnd ?? step.logic.SmartChargePlannedEnd)}`,
+  );
+  console.log(
+    `      chargeWindows: ${formatTraceValue(plannerEvent?.chargeWindowsJson)}`,
+  );
+  console.log(
+    `      disconnectObservedAt: ${formatTraceValue(step.logic.SmartChargeDisconnectObservedAt)}`,
+  );
+  console.log(
+    `      SmartChargeShouldCharge: ${formatTraceValue(step.logic.SmartChargeShouldCharge)}`,
   );
   console.log(
     `      plugCommands: ${newCommands.length ? newCommands.map((command) => `${command.capability}=${command.value}`).join(', ') : 'none'}`,

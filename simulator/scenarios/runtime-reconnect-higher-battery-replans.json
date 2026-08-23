@@ -1,0 +1,108 @@
+{
+  "name": "runtime-reconnect-higher-battery-replans",
+  "description": "A reconnect with higher battery SOC preserves the session but replaces the old longer plan with a shorter plan.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "priceAnchor": "2026-07-07T18:05:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 40,
+          "text_charging_status": {
+            "value": "Charge",
+            "lastUpdated": "2026-07-07T16:05:00.000Z"
+          }
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "eventPayload": {
+          "battery": 40,
+          "chargeMinutes": 140,
+          "chargeSlots": 3,
+          "plannedEnd": "2026-07-08 05:00:00"
+        },
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:10:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "text_charging_status": {
+                "value": "Unplugged",
+                "lastUpdated": "2026-07-07T16:10:00.000Z"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "suspected_disconnect",
+          "sessionActive": true
+        },
+        "logic": {
+          "SmartChargeDisconnectObservedAt": "2026-07-07T16:10:00.000Z"
+        },
+        "tibberCallsDelta": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:20:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": 70,
+              "text_charging_status": {
+                "value": "Charge",
+                "lastUpdated": "2026-07-07T16:20:00.000Z"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "sessionId": "2026-07-07 18:00:00",
+          "plannerShouldCharge": false
+        },
+        "eventPayload": {
+          "battery": 70,
+          "chargeMinutes": 80,
+          "chargeSlots": 2,
+          "plannedStart": "2026-07-08 02:00:00",
+          "plannedEnd": "2026-07-08 04:00:00",
+          "shouldChargeNow": false
+        },
+        "logic": {
+          "ChargeConnectedAt": "2026-07-07 18:00:00",
+          "SmartChargeDisconnectObservedAt": "null",
+          "ChargeMinutes": 80,
+          "ChargeSlots": 2
+        },
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "ChargeMinutes": 80, "ChargeSlots": 2 },
+    "tibberCalls": 2
+  }
+}
