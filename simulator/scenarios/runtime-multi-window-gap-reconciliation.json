@@ -1,0 +1,87 @@
+{
+  "name": "runtime-multi-window-gap-reconciliation",
+  "description": "Active runtime keeps an existing ON plug in window one, switches it OFF once in the gap, and switches it ON in window two.",
+  "now": "2026-07-07T20:15:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "multi-window-separated",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "ChargeFactor": 2,
+      "ChargeReserve": 20
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 20,
+          "text_charging_status": "Charge"
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 2600 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T20:15:00+02:00",
+      "expect": {
+        "result": {
+          "plannerShouldCharge": true,
+          "desiredPlugState": true,
+          "action": "none"
+        },
+        "eventPayload": { "plannerMode": "multi-window", "windowCount": 3 },
+        "plugOn": true,
+        "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T21:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 50 } }
+        }
+      },
+      "expect": {
+        "result": {
+          "plannerShouldCharge": false,
+          "desiredPlugState": false,
+          "action": "switched_off"
+        },
+        "events": ["smartcharge_decision", "smartcharge_off"],
+        "eventPayload": { "plannerMode": "multi-window", "windowCount": 2 },
+        "plugOn": false,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T23:15:00+02:00",
+      "expect": {
+        "result": {
+          "plannerShouldCharge": true,
+          "desiredPlugState": true,
+          "action": "switched_on"
+        },
+        "events": ["smartcharge_decision", "smartcharge_on"],
+        "eventPayload": { "plannerMode": "multi-window", "windowCount": 2 },
+        "plugOn": true,
+        "plugCommandCount": 2
+      }
+    }
+  ],
+  "expect": {
+    "eventTypes": [
+      "smartcharge_decision",
+      "smartcharge_decision",
+      "smartcharge_off",
+      "smartcharge_decision",
+      "smartcharge_on"
+    ],
+    "plugOn": true,
+    "plugCommandCount": 2,
+    "tibberCalls": 3
+  }
+}

@@ -41,12 +41,42 @@
         "plugCommandCount": 0,
         "tibberCallsDelta": 1
       }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T21:15:00+02:00",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true
+        },
+        "eventPayload": { "plannerMode": "continuous", "windowCount": 1 },
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T22:15:00+02:00",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true
+        },
+        "eventPayload": { "plannerMode": "continuous", "windowCount": 1 },
+        "plugOn": true,
+        "plugCommandCount": 2,
+        "tibberCallsDelta": 1
+      }
     }
   ],
   "expect": {
-    "plugOn": false,
-    "plugCommandCount": 0,
-    "eventTypes": ["smartcharge_decision"],
-    "tibberCalls": 1
+    "plugOn": true,
+    "plugCommandCount": 2,
+    "eventTypes": [
+      "smartcharge_decision",
+      "smartcharge_decision",
+      "smartcharge_decision"
+    ],
+    "tibberCalls": 3
   }
 }
