@@ -66,6 +66,7 @@ function allocateChargingMinutes(slots, options) {
     );
 
     allocations.push({
+      slotStartTime: slot.startTime,
       startTime: usableStart,
       endTime: addMinutes(usableStart, allocatedMinutes),
       priceEurKwh: slot.price,

@@ -13,7 +13,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "verify": "npm run lint && npm run format:check && npm test && npm run build:homey -- --reuse-version",
-    "test": "node tests/estimated-cost-engine.test.js && node tests/apps-script-session-materializer.test.js && node tests/runtime-controller.test.js && npm run simulate:all",
+    "test": "node tests/estimated-cost-engine.test.js && node tests/plan-stability-primitives.test.js && node tests/apps-script-session-materializer.test.js && node tests/runtime-controller.test.js && npm run simulate:all",
     "test:cost": "node tests/estimated-cost-engine.test.js",
     "simulate": "node simulator/runner.js",
     "simulate:all": "node simulator/runner.js all",
