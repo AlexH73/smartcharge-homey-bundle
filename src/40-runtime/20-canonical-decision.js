@@ -13,6 +13,7 @@ async function runCanonicalDecision(options = {}) {
   const emitTerminalTelemetry =
     options.emitTerminalTelemetry !== false && emitTelemetry;
   const now = new Date();
+  const stabilityShadow = options.stabilityShadow || null;
 
   const tibberAccessToken = await getVariableValue(
     CONFIG.tibberAccessTokenVariableName,
@@ -71,6 +72,7 @@ async function runCanonicalDecision(options = {}) {
       shouldChargeNow: false,
       reason,
       terminalState: null,
+      ...createCanonicalStabilityBypass(stabilityShadow, 'NO_ACTIVE_SESSION'),
     };
   }
 
@@ -157,6 +159,7 @@ async function runCanonicalDecision(options = {}) {
       shouldChargeNow: false,
       reason,
       terminalState: 'expired',
+      ...createCanonicalStabilityBypass(stabilityShadow, 'TERMINAL_LIFECYCLE'),
     };
   }
 
@@ -227,6 +230,20 @@ async function runCanonicalDecision(options = {}) {
   const shouldChargeNow =
     insidePlan || safetyStartRequired || planStartsTooLate;
 
+  const sessionId = formatLocal(connectedAt);
+  const stabilityResult = evaluateCanonicalStabilityShadow({
+    shadowInput: stabilityShadow,
+    candidatePlan: plan,
+    prices,
+    sessionId,
+    now,
+    remainingChargeMinutes: chargeMinutes,
+    targetDeparture,
+    chargingPowerKw: CONFIG.chargingPowerKw,
+    safetyRequiresCandidate: safetyStartRequired || planStartsTooLate,
+    productionShouldChargeNow: shouldChargeNow,
+  });
+
   let reason = 'No charging plan found';
 
   if (chargeMinutes <= 0 || chargeSlots <= 0) {
@@ -270,7 +287,6 @@ async function runCanonicalDecision(options = {}) {
     reason: 'Logger skipped',
   };
 
-  const sessionId = formatLocal(connectedAt);
   const plugOn = plug.capabilitiesObj.onoff?.value ?? null;
   const plugPower = plug.capabilitiesObj.measure_power?.value ?? null;
 
@@ -429,6 +445,7 @@ async function runCanonicalDecision(options = {}) {
         }))
       : null,
     ...estimatedCostOutput,
+    ...(stabilityResult || {}),
   };
 }
 

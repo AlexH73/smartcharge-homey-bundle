@@ -7,6 +7,7 @@ const homeyScriptGlobals = {
   args: 'readonly',
   fetch: 'readonly',
   log: 'readonly',
+  stabilityShadow: 'readonly',
 };
 
 const sharedBundleGlobals = {
@@ -61,6 +62,10 @@ const sharedBundleGlobals = {
   compareProjectedStrategies: 'readonly',
   calculateReplacementEconomics: 'readonly',
   decidePlanStability: 'readonly',
+  evaluatePlanStability: 'readonly',
+  createAcceptedStrategyAnchor: 'readonly',
+  evaluateCanonicalStabilityShadow: 'readonly',
+  createCanonicalStabilityBypass: 'readonly',
   estimatePlanCosts: 'readonly',
   TELEMETRY_HEALTH: 'readonly',
   TELEMETRY_FRESHNESS: 'readonly',

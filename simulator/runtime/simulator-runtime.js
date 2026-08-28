@@ -1,5 +1,9 @@
 const { HomeyMock } = require('./homey-mock');
 const { createTibberFetch } = require('./tibber-mock');
+const {
+  applyStabilityShadowResult,
+  createStabilityShadowInput,
+} = require('./stability-shadow');
 
 class SimulatorRuntime {
   constructor({ scenario, scriptLoader, logWriter }) {
@@ -13,6 +17,7 @@ class SimulatorRuntime {
     this.priceAnchor = scenario.priceAnchor || scenario.now;
     this.scriptLogs = [];
     this.tibberCalls = 0;
+    this.stabilityShadowAnchor = null;
 
     const tibberFetch = createTibberFetch({
       getFixtureName: () => this.currentFixture,
@@ -49,10 +54,14 @@ class SimulatorRuntime {
         fetch: this.fetch,
         log: this.log.bind(this),
         now: this.currentNow,
+        stabilityShadow: createStabilityShadowInput(this, step),
       });
+      applyStabilityShadowResult(this, result);
     } catch (caughtError) {
       error = caughtError;
     }
+
+    if (error) applyStabilityShadowResult(this, null);
 
     const events = this.logWriter.events.slice(beforeEventCount);
 

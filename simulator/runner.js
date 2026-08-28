@@ -421,6 +421,17 @@ function printStepTrace(step) {
   console.log(
     `      reason: ${formatTraceValue(result.runtimeDecisionReason)}`,
   );
+  if (result.stabilityMode === 'shadow') {
+    console.log(
+      `      stability: ${result.stabilityDecision}/${result.stabilityReasonCode}; revision=${formatTraceValue(result.acceptedStrategyRevision)}`,
+    );
+    console.log(
+      `      stabilityEconomics: current=${formatTraceValue(result.currentStrategyRemainingCostEur)}, candidate=${formatTraceValue(result.candidateRemainingCostEur)}, savings=${formatTraceValue(result.replacementSavingsEur)} (${formatTraceValue(result.replacementSavingsPct)}%)`,
+    );
+    console.log(
+      `      stabilityTransition: ${result.transition}; disruptive=${result.disruptiveTransition}; candidate=${result.candidateShouldCharge}; shadowEffective=${result.shadowEffectiveShouldCharge}`,
+    );
+  }
   console.log('    OUTPUT');
   console.log(`      action: ${formatTraceValue(result.action)}`);
   console.log(

@@ -22,7 +22,7 @@ class ScriptLoader {
     this.sharedCode = this.collectSharedCode();
   }
 
-  async executeFlow({ flow, homey, fetch, log, now }) {
+  async executeFlow({ flow, homey, fetch, log, now, stabilityShadow }) {
     const entryPath = FLOW_ENTRIES[flow];
 
     if (!entryPath) {
@@ -41,10 +41,11 @@ class ScriptLoader {
       'fetch',
       'log',
       'Date',
+      'stabilityShadow',
       `${this.sharedCode}\n\n${entryCode}`,
     );
 
-    return fn(homey, fetch, log, createFixedDate(now));
+    return fn(homey, fetch, log, createFixedDate(now), stabilityShadow);
   }
 
   collectSharedCode() {
