@@ -86,6 +86,7 @@ const sharedBundleGlobals = {
   evaluateTelemetryHealth: 'readonly',
   evaluateTelemetryFreshness: 'readonly',
   evaluateDisconnectEvidence: 'readonly',
+  runtimeActiveSession: 'readonly',
   hasTrustworthyConnectionEvidence: 'readonly',
   isSuspectedDisconnect: 'readonly',
   isVehicleConnectedStatus: 'readonly',

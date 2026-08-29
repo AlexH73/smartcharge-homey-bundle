@@ -13,6 +13,7 @@ const FLOW_ENTRIES = Object.freeze({
   'log-off': 'src/90-flows/log-off.entry.js',
   'manual-on': 'src/90-flows/manual-on.entry.js',
   'manual-off': 'src/90-flows/manual-off.entry.js',
+  'stability-debug': 'src/90-flows/stability-debug.entry.js',
 });
 
 class ScriptLoader {

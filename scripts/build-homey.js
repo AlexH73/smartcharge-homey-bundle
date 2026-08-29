@@ -55,6 +55,10 @@ const TARGETS = {
     entry: 'src/90-flows/manual-off.entry.js',
     out: 'SMARTCHARGE - Manual Override Off.js',
   },
+  'stability-debug': {
+    entry: 'src/90-flows/stability-debug.entry.js',
+    out: 'SMARTCHARGE - Stability Debug.js',
+  },
 };
 
 const BUILD_ALL_TARGET = 'all';
@@ -69,6 +73,7 @@ const DEFAULT_BUILD_ORDER = [
   'state-sync',
   'manual-on',
   'manual-off',
+  'stability-debug',
 ];
 
 if (target !== BUILD_ALL_TARGET && !TARGETS[target]) {
