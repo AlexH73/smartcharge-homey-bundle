@@ -71,7 +71,7 @@ const CONFIG = {
   telemetrySchemaVersion: 2,
 
   // Experimental observation only. Never affects canonical/actuator decisions.
-  planStabilityLiveShadowEnabled: false,
+  planStabilityLiveShadowEnabled: true,
   planStabilityShadowExperimentPolicy: {
     thresholdMode: 'ALL',
     waiting: {
