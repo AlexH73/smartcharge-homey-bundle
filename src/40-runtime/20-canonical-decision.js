@@ -14,6 +14,9 @@ async function runCanonicalDecision(options = {}) {
     options.emitTerminalTelemetry !== false && emitTelemetry;
   const now = new Date();
   const stabilityShadow = options.stabilityShadow || null;
+  const liveStabilityEnabled = isPlanStabilityLiveShadowEnabled(
+    options.liveStabilityShadowEnabled,
+  );
 
   const tibberAccessToken = await getVariableValue(
     CONFIG.tibberAccessTokenVariableName,
@@ -73,6 +76,15 @@ async function runCanonicalDecision(options = {}) {
       reason,
       terminalState: null,
       ...createCanonicalStabilityBypass(stabilityShadow, 'NO_ACTIVE_SESSION'),
+      ...(liveStabilityEnabled
+        ? {
+            stabilityMode: 'shadow',
+            stabilityDecision: 'BYPASS',
+            stabilityReasonCode: 'NO_ACTIVE_SESSION',
+            persistenceStatus: 'PRESERVED',
+            stabilityError: null,
+          }
+        : {}),
     };
   }
 
@@ -160,6 +172,15 @@ async function runCanonicalDecision(options = {}) {
       reason,
       terminalState: 'expired',
       ...createCanonicalStabilityBypass(stabilityShadow, 'TERMINAL_LIFECYCLE'),
+      ...(liveStabilityEnabled
+        ? {
+            stabilityMode: 'shadow',
+            stabilityDecision: 'BYPASS',
+            stabilityReasonCode: 'TERMINAL_LIFECYCLE',
+            persistenceStatus: 'PRESERVED',
+            stabilityError: null,
+          }
+        : {}),
     };
   }
 
@@ -231,18 +252,95 @@ async function runCanonicalDecision(options = {}) {
     insidePlan || safetyStartRequired || planStartsTooLate;
 
   const sessionId = formatLocal(connectedAt);
-  const stabilityResult = evaluateCanonicalStabilityShadow({
-    shadowInput: stabilityShadow,
-    candidatePlan: plan,
-    prices,
-    sessionId,
-    now,
-    remainingChargeMinutes: chargeMinutes,
-    targetDeparture,
-    chargingPowerKw: CONFIG.chargingPowerKw,
-    safetyRequiresCandidate: safetyStartRequired || planStartsTooLate,
-    productionShouldChargeNow: shouldChargeNow,
-  });
+  let stabilityResult = null;
+  let persistencePreparation = null;
+  let effectiveStabilityShadow = stabilityShadow;
+
+  try {
+    if (!effectiveStabilityShadow && liveStabilityEnabled) {
+      let liveStabilityContext = options.stabilityContext || null;
+      if (!liveStabilityContext) {
+        let manualOverrideActive = false;
+        try {
+          const manualValue = await getVariableValue(
+            CONFIG.smartChargeManualModeVariableName,
+          );
+          manualOverrideActive =
+            manualValue === true ||
+            String(manualValue).trim().toLowerCase() === 'true';
+        } catch (error) {
+          log(`Plan stability context warning: ${error.message}`);
+        }
+        liveStabilityContext = {
+          stabilityAllowed: true,
+          activelyCharging: plug.capabilitiesObj.onoff?.value === true,
+          manualOverrideActive,
+        };
+      }
+      persistencePreparation = await preparePersistentStabilityShadow({
+        sessionId,
+        enabledOverride: true,
+        context: liveStabilityContext,
+      });
+      if (!persistencePreparation.evaluable) {
+        stabilityResult = createCanonicalStabilityError(
+          persistencePreparation.persistenceError,
+          persistencePreparation.persistenceStatus,
+        );
+      } else {
+        effectiveStabilityShadow = persistencePreparation.shadowInput;
+      }
+    }
+
+    if (effectiveStabilityShadow) {
+      if (
+        typeof stabilityShadowFailure !== 'undefined' &&
+        stabilityShadowFailure === 'evaluator'
+      ) {
+        throw new Error('Injected stability evaluator failure');
+      }
+      stabilityResult = evaluateCanonicalStabilityShadow({
+        shadowInput: effectiveStabilityShadow,
+        candidatePlan: plan,
+        prices,
+        sessionId,
+        now,
+        remainingChargeMinutes: chargeMinutes,
+        targetDeparture,
+        chargingPowerKw: CONFIG.chargingPowerKw,
+        safetyRequiresCandidate: safetyStartRequired || planStartsTooLate,
+        productionShouldChargeNow: shouldChargeNow,
+      });
+    }
+
+    if (persistencePreparation?.evaluable && stabilityResult) {
+      stabilityResult.persistenceReadStatus =
+        persistencePreparation.persistenceStatus;
+      stabilityResult.persistenceReadError =
+        persistencePreparation.persistenceError;
+      const persistenceResult = await finalizePersistentStabilityShadow(
+        persistencePreparation,
+        stabilityResult,
+      );
+      stabilityResult.persistenceStatus = persistenceResult.status;
+      stabilityResult.persistenceError = persistenceResult.error;
+      if (
+        persistenceResult.status === 'WRITTEN' &&
+        stabilityResult.stabilityCandidateAnchor
+      ) {
+        stabilityResult.acceptedStrategyRevision =
+          stabilityResult.stabilityCandidateAnchor.revision;
+      }
+    }
+  } catch (error) {
+    stabilityResult = createCanonicalStabilityError(error, 'EVALUATION_FAILED');
+  }
+
+  if (liveStabilityEnabled && stabilityResult) {
+    log(
+      `Plan stability   : ${stabilityResult.stabilityDecision || 'ERROR'}/${stabilityResult.stabilityReasonCode || stabilityResult.stabilityError || 'UNKNOWN'}; revision=${stabilityResult.acceptedStrategyRevision ?? 'null'}; persistence=${stabilityResult.persistenceStatus || 'none'}`,
+    );
+  }
 
   let reason = 'No charging plan found';
 

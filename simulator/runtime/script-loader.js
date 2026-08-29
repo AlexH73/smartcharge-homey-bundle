@@ -22,7 +22,16 @@ class ScriptLoader {
     this.sharedCode = this.collectSharedCode();
   }
 
-  async executeFlow({ flow, homey, fetch, log, now, stabilityShadow }) {
+  async executeFlow({
+    flow,
+    homey,
+    fetch,
+    log,
+    now,
+    stabilityShadow,
+    liveStabilityShadowEnabled,
+    stabilityShadowFailure,
+  }) {
     const entryPath = FLOW_ENTRIES[flow];
 
     if (!entryPath) {
@@ -42,10 +51,20 @@ class ScriptLoader {
       'log',
       'Date',
       'stabilityShadow',
+      'liveStabilityShadowEnabled',
+      'stabilityShadowFailure',
       `${this.sharedCode}\n\n${entryCode}`,
     );
 
-    return fn(homey, fetch, log, createFixedDate(now), stabilityShadow);
+    return fn(
+      homey,
+      fetch,
+      log,
+      createFixedDate(now),
+      stabilityShadow,
+      liveStabilityShadowEnabled,
+      stabilityShadowFailure,
+    );
   }
 
   collectSharedCode() {

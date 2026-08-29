@@ -98,3 +98,26 @@ function createCanonicalStabilityBypass(shadowInput, reasonCode) {
     stabilityCandidateAnchor: null,
   };
 }
+
+function createCanonicalStabilityError(error, persistenceStatus = null) {
+  return {
+    stabilityMode: 'shadow',
+    stabilityDecision: null,
+    stabilityReasonCode: null,
+    stabilityError: error?.message || String(error),
+    acceptedStrategyRevision: null,
+    strategyEquivalent: false,
+    continuationFeasible: false,
+    candidateFeasible: false,
+    currentStrategyRemainingCostEur: null,
+    candidateRemainingCostEur: null,
+    replacementSavingsEur: null,
+    replacementSavingsPct: null,
+    transition: null,
+    disruptiveTransition: false,
+    candidateShouldCharge: null,
+    shadowEffectiveShouldCharge: null,
+    persistenceStatus,
+    stabilityCandidateAnchor: null,
+  };
+}

@@ -49,6 +49,14 @@ async function main() {
     false,
   );
   await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
+  if (isPlanStabilityLiveShadowEnabled()) {
+    const stabilityCleanup = await clearAcceptedStrategyAnchor();
+    if (!stabilityCleanup.success) {
+      log(
+        `Plan stability cleanup failed: ${stabilityCleanup.error || stabilityCleanup.status}`,
+      );
+    }
+  }
 
   log('SmartCharge session reset');
   log(`Script version   : ${BUILD_INFO.fullVersion}`);

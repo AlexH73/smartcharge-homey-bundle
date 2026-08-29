@@ -203,6 +203,25 @@ function assertStepExpect(expected, stepResult, label) {
     assertObjectContains(stepResult.logic, expected.logic, `${label} logic`);
   }
 
+  if (expected.logicUpdateCounts) {
+    assertObjectContains(
+      stepResult.logicUpdateCounts,
+      expected.logicUpdateCounts,
+      `${label} logic update counts`,
+    );
+  }
+
+  if (expected.logicJson) {
+    for (const [name, expectedValue] of Object.entries(expected.logicJson)) {
+      const rawValue = stepResult.logic[name];
+      assertObjectContains(
+        JSON.parse(rawValue),
+        expectedValue,
+        `${label} logic JSON ${name}`,
+      );
+    }
+  }
+
   if (expected.tibberCallsDelta !== undefined) {
     assert.equal(
       stepResult.tibberCallsDelta,

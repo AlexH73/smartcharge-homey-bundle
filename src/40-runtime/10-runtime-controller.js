@@ -295,6 +295,14 @@ async function resetRuntimeSession(
     CONFIG.runtimeConnectionEvidenceAtVariableName,
     'null',
   );
+  if (isPlanStabilityLiveShadowEnabled()) {
+    const stabilityCleanup = await clearAcceptedStrategyAnchor();
+    if (!stabilityCleanup.success) {
+      log(
+        `Plan stability cleanup failed: ${stabilityCleanup.error || stabilityCleanup.status}`,
+      );
+    }
+  }
   return true;
 }
 
@@ -365,6 +373,14 @@ async function runRuntimeController() {
         controlPlug: false,
         emitTelemetry: activeMode,
         emitTerminalTelemetry: false,
+        stabilityContext: {
+          stabilityAllowed: true,
+          activelyCharging: snapshot.plugOn,
+          manualOverrideActive: snapshot.manualOverride,
+          disconnectSafetyActive:
+            snapshot.suspectedDisconnect || snapshot.confirmedDisconnect,
+          lifecycleBypassActive: false,
+        },
       });
       snapshot.plannerShouldCharge = snapshot.plannerDecision.shouldChargeNow;
       snapshot.expiredSession =
@@ -440,6 +456,36 @@ async function runRuntimeController() {
       action,
       plannerShouldCharge: snapshot.plannerShouldCharge,
       manualOverride: snapshot.manualOverride,
+      ...(snapshot.plannerDecision?.stabilityMode === 'shadow'
+        ? {
+            stabilityMode: snapshot.plannerDecision.stabilityMode,
+            stabilityDecision: snapshot.plannerDecision.stabilityDecision,
+            stabilityReasonCode: snapshot.plannerDecision.stabilityReasonCode,
+            stabilityError: snapshot.plannerDecision.stabilityError || null,
+            acceptedStrategyRevision:
+              snapshot.plannerDecision.acceptedStrategyRevision,
+            strategyEquivalent: snapshot.plannerDecision.strategyEquivalent,
+            continuationFeasible: snapshot.plannerDecision.continuationFeasible,
+            candidateFeasible: snapshot.plannerDecision.candidateFeasible,
+            currentStrategyRemainingCostEur:
+              snapshot.plannerDecision.currentStrategyRemainingCostEur,
+            candidateRemainingCostEur:
+              snapshot.plannerDecision.candidateRemainingCostEur,
+            replacementSavingsEur:
+              snapshot.plannerDecision.replacementSavingsEur,
+            replacementSavingsPct:
+              snapshot.plannerDecision.replacementSavingsPct,
+            transition: snapshot.plannerDecision.transition,
+            disruptiveTransition: snapshot.plannerDecision.disruptiveTransition,
+            candidateShouldCharge:
+              snapshot.plannerDecision.candidateShouldCharge,
+            shadowEffectiveShouldCharge:
+              snapshot.plannerDecision.shadowEffectiveShouldCharge,
+            persistenceStatus:
+              snapshot.plannerDecision.persistenceStatus || null,
+            persistenceError: snapshot.plannerDecision.persistenceError || null,
+          }
+        : {}),
     };
     log(`Runtime mode      : ${result.mode}`);
     log(

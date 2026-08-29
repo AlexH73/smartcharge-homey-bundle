@@ -1,0 +1,72 @@
+{
+  "name": "stability-live-corrupt-state",
+  "description": "Invalid, old-schema, incomplete, timestamp-invalid, and stale-session anchors fail open and are replaced only after a valid candidate exists.",
+  "liveStabilityShadow": true,
+  "now": "2026-07-07T18:00:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "shadow-waiting-current",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeAcceptedStrategy": "{broken"
+    },
+    "devices": { "mercedes": { "capabilitiesObj": { "measure_battery": 90 } } }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "shouldChargeNow": false,
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1,
+          "persistenceReadStatus": "INVALID_JSON",
+          "persistenceStatus": "WRITTEN"
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "set": {
+        "logic": { "SmartChargeAcceptedStrategy": "{\"schemaVersion\":99}" }
+      },
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1,
+          "persistenceReadStatus": "INVALID_ANCHOR"
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "set": {
+        "logic": {
+          "SmartChargeAcceptedStrategy": "{\"schemaVersion\":1,\"sessionId\":\"old-session\",\"plannerVersion\":\"planner-v2\",\"acceptedAt\":\"2026-07-07T16:00:00.000Z\",\"revision\":7,\"targetDeparture\":\"2026-07-08T05:30:00.000Z\",\"selectedSlotStarts\":[\"2026-07-07T18:00:00.000Z\"]}"
+        }
+      },
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1,
+          "persistenceReadStatus": "SESSION_MISMATCH"
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "set": {
+        "logic": {
+          "SmartChargeAcceptedStrategy": "{\"schemaVersion\":1,\"sessionId\":\"2026-07-07 18:00:00\",\"plannerVersion\":\"planner-v2\",\"acceptedAt\":\"bad-time\",\"revision\":1,\"targetDeparture\":\"2026-07-08T05:30:00.000Z\",\"selectedSlotStarts\":[\"2026-07-07T18:00:00.000Z\"]}"
+        }
+      },
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "persistenceReadStatus": "INVALID_ANCHOR"
+        }
+      }
+    }
+  ],
+  "expect": { "tibberCalls": 4 }
+}

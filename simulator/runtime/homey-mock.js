@@ -68,9 +68,14 @@ class HomeyMock {
     }
 
     this.logicVariables = toLogicVariableEntries(logicValues);
+    for (const name of initialState.missingLogicVariables || []) {
+      delete this.logicVariables[name];
+    }
     this.failLogicUpdateVariableNames = new Set(
       initialState.failLogicUpdateVariableNames || [],
     );
+    this.logicUpdateCounts = {};
+    this.failLogicGetVariables = Boolean(initialState.failLogicGetVariables);
     this.failGetDevices = Boolean(initialState.failGetDevices);
     this.devices = Object.fromEntries(
       Object.entries(devices).map(([key, device]) => [
@@ -81,7 +86,12 @@ class HomeyMock {
 
     this.api = {
       logic: {
-        getVariables: async () => this.logicVariables,
+        getVariables: async () => {
+          if (this.failLogicGetVariables) {
+            throw new Error('getVariables failed');
+          }
+          return this.logicVariables;
+        },
         updateVariable: async ({ id, variable }) => {
           if (!this.logicVariables[id]) {
             throw new Error(`Logic variable not found: ${id}`);
@@ -91,6 +101,7 @@ class HomeyMock {
           }
 
           this.logicVariables[id].value = variable.value;
+          this.logicUpdateCounts[id] = (this.logicUpdateCounts[id] || 0) + 1;
         },
       },
       devices: {
@@ -148,6 +159,15 @@ class HomeyMock {
       Object.values(this.logicVariables).map((variable) => [
         variable.name,
         variable.value,
+      ]),
+    );
+  }
+
+  getLogicUpdateCounts() {
+    return Object.fromEntries(
+      Object.keys(this.logicVariables).map((name) => [
+        name,
+        this.logicUpdateCounts[name] || 0,
       ]),
     );
   }

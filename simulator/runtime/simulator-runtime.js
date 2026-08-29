@@ -55,6 +55,8 @@ class SimulatorRuntime {
         log: this.log.bind(this),
         now: this.currentNow,
         stabilityShadow: createStabilityShadowInput(this, step),
+        liveStabilityShadowEnabled: this.scenario.liveStabilityShadow === true,
+        stabilityShadowFailure: step.stabilityShadowFailure || null,
       });
       applyStabilityShadowResult(this, result);
     } catch (caughtError) {
@@ -78,6 +80,7 @@ class SimulatorRuntime {
       logicBefore,
       devicesBefore,
       logic: this.homeyMock.getLogicSnapshot(),
+      logicUpdateCounts: this.homeyMock.getLogicUpdateCounts(),
       devices: this.homeyMock.getDeviceSnapshot(),
     };
   }
@@ -95,6 +98,17 @@ class SimulatorRuntime {
       for (const [deviceKey, patch] of Object.entries(step.set.devices)) {
         this.homeyMock.setDeviceState(deviceKey, patch);
       }
+    }
+
+    if (step.set?.failLogicUpdateVariableNames) {
+      this.homeyMock.failLogicUpdateVariableNames = new Set(
+        step.set.failLogicUpdateVariableNames,
+      );
+    }
+    if (step.set?.failLogicGetVariables !== undefined) {
+      this.homeyMock.failLogicGetVariables = Boolean(
+        step.set.failLogicGetVariables,
+      );
     }
   }
 

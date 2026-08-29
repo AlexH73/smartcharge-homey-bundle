@@ -44,6 +44,7 @@ Create these variables in Homey Logic before running the scripts.
 | `SmartChargeReason` | Text | empty string | Written by SmartCharge. |
 | `SmartChargeTargetDeparture` | Text | `null` | Written by SmartCharge. |
 | `SmartChargeSessionStatus` | Text | empty string | Optional status variable for flows or dashboards. |
+| `SmartChargeAcceptedStrategy` | Text | `null` | Required only for the disabled-by-default Plan Stability live-shadow experiment. Create it manually; it stores the accepted strategy identity, not SOC, prices, costs, or decisions. |
 
 ## Install Dependencies
 

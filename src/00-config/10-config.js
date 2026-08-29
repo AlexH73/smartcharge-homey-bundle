@@ -28,6 +28,7 @@ const CONFIG = {
   smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',
   smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
   smartChargeManualModeVariableName: 'SmartChargeManualMode',
+  acceptedStrategyVariableName: 'SmartChargeAcceptedStrategy',
   runtimeModeVariableName: 'SmartChargeRuntimeMode',
   runtimeDisconnectObservedAtVariableName: 'SmartChargeDisconnectObservedAt',
   runtimeConnectionEvidenceAtVariableName: 'SmartChargeConnectionEvidenceAt',
@@ -68,6 +69,20 @@ const CONFIG = {
   chargingPowerKw: 2.6,
   plannerVersion: 'planner-v2',
   telemetrySchemaVersion: 2,
+
+  // Experimental observation only. Never affects canonical/actuator decisions.
+  planStabilityLiveShadowEnabled: false,
+  planStabilityShadowExperimentPolicy: {
+    thresholdMode: 'ALL',
+    waiting: {
+      minReplacementSavingsEur: 0.05,
+      minReplacementSavingsPct: 5,
+    },
+    charging: {
+      minReplacementSavingsEur: 0.5,
+      minReplacementSavingsPct: 20,
+    },
+  },
 
   tibberApiUrl: 'https://api.tibber.com/v1-beta/gql',
 };
