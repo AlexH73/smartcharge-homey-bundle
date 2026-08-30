@@ -1,0 +1,129 @@
+{
+  "name": "runtime-reconciliation",
+  "description": "Runtime reconciles stale telemetry, unexpected plug state, preconditioning, manual override, completion, and fallback idempotently.",
+  "now": "2026-07-06T18:00:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeShouldCharge": true,
+      "SmartChargeManualMode": true,
+      "SmartChargeRuntimeMode": "active",
+      "ChargeFactor": 2,
+      "ChargeReserve": 20
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "text_charging_status": "Unplugged"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 2600
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-08T02:05:00+02:00",
+      "fixture": "cheap-night",
+      "expect": {
+        "result": {
+          "runtimeState": "DEGRADED",
+          "vehicleTelemetryHealth": "CONTRADICTED",
+          "desiredPlugState": true,
+          "action": "none"
+        },
+        "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "fixture": "normal-day",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": { "text_charging_status": "Charge" }
+          },
+          "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+        }
+      },
+      "expect": {
+        "result": { "action": "switched_on", "desiredPlugState": true },
+        "plugOn": true,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "fixture": "normal-day",
+      "set": {
+        "logic": { "SmartChargeShouldCharge": false },
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "onoff_precond": true } }
+        }
+      },
+      "expect": {
+        "result": { "action": "none", "desiredPlugState": true },
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "fixture": "normal-day",
+      "set": {
+        "logic": { "SmartChargeManualMode": true },
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "onoff_precond": false } }
+        }
+      },
+      "expect": {
+        "result": { "manualOverride": true, "desiredPlugState": true }
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "fixture": "normal-day",
+      "set": {
+        "logic": { "SmartChargeManualMode": false },
+        "devices": { "plug": { "capabilitiesObj": { "onoff": true } } }
+      },
+      "expect": {
+        "result": { "manualOverride": false, "action": "switched_off" },
+        "plugOn": false,
+        "plugCommandCount": 2
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "fixture": "normal-day",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 100 } }
+        }
+      },
+      "expect": {
+        "result": { "runtimeState": "COMPLETED", "sessionActive": false },
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeSessionStatus": "completed"
+        },
+        "events": ["battery_full"]
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "SmartChargeSessionStatus": "completed" },
+    "plugOn": false,
+    "plugCommandCount": 2
+  }
+}

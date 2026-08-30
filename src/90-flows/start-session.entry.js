@@ -23,10 +23,22 @@ async function main() {
   const connectedAt = formatLocal(now);
   const reason = 'Session started';
 
-  await tryUpdateVariableByName(CONFIG.chargeConnectedAtVariableName, connectedAt);
-  await tryUpdateVariableByName(CONFIG.smartChargePlannedStartVariableName, 'null');
-  await tryUpdateVariableByName(CONFIG.smartChargePlannedEndVariableName, 'null');
-  await tryUpdateVariableByName(CONFIG.smartChargeShouldChargeVariableName, false);
+  await tryUpdateVariableByName(
+    CONFIG.chargeConnectedAtVariableName,
+    connectedAt,
+  );
+  await tryUpdateVariableByName(
+    CONFIG.smartChargePlannedStartVariableName,
+    'null',
+  );
+  await tryUpdateVariableByName(
+    CONFIG.smartChargePlannedEndVariableName,
+    'null',
+  );
+  await tryUpdateVariableByName(
+    CONFIG.smartChargeShouldChargeVariableName,
+    false,
+  );
   await tryUpdateVariableByName(CONFIG.smartChargeReasonVariableName, reason);
 
   let logResult = null;

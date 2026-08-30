@@ -1,0 +1,44 @@
+{
+  "name": "stability-live-disconnect-actuator-failure",
+  "description": "A failed confirmed-disconnect OFF command preserves both Session state and its persisted accepted strategy.",
+  "liveStabilityShadow": true,
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeDisconnectObservedAt": "2026-07-07T15:44:00.000Z",
+      "SmartChargeAcceptedStrategy": "{\"schemaVersion\":1,\"sessionId\":\"2026-07-07 17:00:00\",\"plannerVersion\":\"planner-v2\",\"acceptedAt\":\"2026-07-07T15:05:00.000Z\",\"revision\":1,\"targetDeparture\":\"2026-07-08T05:30:00.000Z\",\"selectedSlotStarts\":[\"2026-07-08T00:00:00.000Z\"]}"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Unplugged"
+        }
+      },
+      "plug": {
+        "failSetCapabilityValue": true,
+        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:00:00+02:00",
+      "expect": {
+        "errorIncludes": "setCapabilityValue failed",
+        "events": [],
+        "plugOn": true,
+        "logic": { "ChargeConnectedAt": "2026-07-07 17:00:00" },
+        "logicJson": {
+          "SmartChargeAcceptedStrategy": {
+            "sessionId": "2026-07-07 17:00:00",
+            "revision": 1
+          }
+        },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 0 }
+      }
+    }
+  ]
+}

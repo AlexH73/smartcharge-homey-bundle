@@ -1,0 +1,121 @@
+{
+  "name": "runtime-reconnect-during-old-window-replans",
+  "description": "A reconnect during the old active plan window replans from current time and current battery SOC.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "priceAnchor": "2026-07-07T18:05:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 60,
+          "text_charging_status": {
+            "value": "Charge",
+            "lastUpdated": "2026-07-07T16:05:00.000Z"
+          }
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "eventPayload": {
+          "battery": 60,
+          "chargeMinutes": 100,
+          "chargeSlots": 2,
+          "plannedStart": "2026-07-08 02:00:00",
+          "plannedEnd": "2026-07-08 04:00:00",
+          "shouldChargeNow": false
+        },
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-08T02:20:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "text_charging_status": {
+                "value": "Unplugged",
+                "lastUpdated": "2026-07-08T00:20:00.000Z"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "suspected_disconnect",
+          "desiredPlugState": false
+        },
+        "logic": {
+          "SmartChargeDisconnectObservedAt": "2026-07-08T00:20:00.000Z"
+        },
+        "tibberCallsDelta": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-08T02:30:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": 42,
+              "text_charging_status": {
+                "value": "Charge",
+                "lastUpdated": "2026-07-08T00:30:00.000Z"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "sessionId": "2026-07-07 18:00:00",
+          "plannerShouldCharge": true,
+          "desiredPlugState": true,
+          "action": "switched_on"
+        },
+        "events": ["smartcharge_decision", "smartcharge_on"],
+        "eventPayload": {
+          "battery": 42,
+          "chargeMinutes": 140,
+          "chargeSlots": 3,
+          "plannedStart": "2026-07-08 02:00:00",
+          "plannedEnd": "2026-07-08 05:00:00",
+          "shouldChargeNow": true
+        },
+        "logic": {
+          "SmartChargeDisconnectObservedAt": "null",
+          "ChargeMinutes": 140,
+          "ChargeSlots": 3,
+          "SmartChargeShouldCharge": true
+        },
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "logic": {
+      "ChargeMinutes": 140,
+      "ChargeSlots": 3,
+      "SmartChargeShouldCharge": true
+    },
+    "plugOn": true,
+    "plugCommandCount": 1,
+    "tibberCalls": 2
+  }
+}

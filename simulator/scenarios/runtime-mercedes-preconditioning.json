@@ -1,0 +1,41 @@
+{
+  "name": "runtime-mercedes-preconditioning",
+  "description": "Real Mercedes onoff_precond keeps an already-on plug available without changing planner semantics.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeShouldCharge": false
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 84,
+          "text_charging_status": "Charge break",
+          "onoff_charging": false,
+          "measure_charge_power": 0,
+          "onoff_precond": true
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "preconditioningCapability": "onoff_precond",
+          "preconditioningRawValue": true,
+          "plannerShouldCharge": false,
+          "desiredPlugState": true,
+          "action": "none"
+        },
+        "plugOn": true,
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": { "plugOn": true, "plugCommandCount": 0 }
+}

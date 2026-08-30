@@ -1,0 +1,50 @@
+{
+  "name": "stability-live-failure-isolation",
+  "description": "Missing persistence, write failure, and evaluator failure remain diagnostic-only and retry without changing production decisions.",
+  "liveStabilityShadow": true,
+  "now": "2026-07-07T18:00:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "shadow-current-horizon",
+  "initial": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
+    "failLogicUpdateVariableNames": ["SmartChargeAcceptedStrategy"],
+    "devices": { "mercedes": { "capabilitiesObj": { "measure_battery": 80 } } }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true,
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "persistenceStatus": "WRITE_FAILED"
+        },
+        "logic": { "SmartChargeAcceptedStrategy": "null" }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "set": { "failLogicUpdateVariableNames": [] },
+      "expect": {
+        "result": {
+          "shouldChargeNow": true,
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1,
+          "persistenceStatus": "WRITTEN"
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "stabilityShadowFailure": "evaluator",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true,
+          "stabilityDecision": null,
+          "persistenceStatus": "EVALUATION_FAILED"
+        },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 }
+      }
+    }
+  ]
+}

@@ -27,6 +27,30 @@ const CONFIG = {
   smartChargeReasonVariableName: 'SmartChargeReason',
   smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',
   smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
+  smartChargeManualModeVariableName: 'SmartChargeManualMode',
+  acceptedStrategyVariableName: 'SmartChargeAcceptedStrategy',
+  runtimeModeVariableName: 'SmartChargeRuntimeMode',
+  runtimeDisconnectObservedAtVariableName: 'SmartChargeDisconnectObservedAt',
+  runtimeConnectionEvidenceAtVariableName: 'SmartChargeConnectionEvidenceAt',
+  runtimeControllerDefaultMode: 'shadow',
+
+  chargingPowerThresholdW: 500,
+  idlePowerThresholdW: 50,
+  disconnectConfirmationMinutes: 15,
+  telemetryStaleMinutes: 30,
+  vehicleStatusCapabilityNames: [
+    'text_charging_status',
+    'charging_status',
+    'charge_status',
+    'ladestatus',
+  ],
+  vehicleChargingCapabilityNames: ['onoff_charging'],
+  vehicleChargingPowerCapabilityNames: ['measure_charge_power'],
+  preconditioningCapabilityNames: [
+    'onoff_precond',
+    'preconditioning',
+    'preconditioning_active',
+  ],
 
   workdayDepartureHour: 7,
   workdayDepartureMinute: 30,
@@ -41,6 +65,24 @@ const CONFIG = {
 
   batteryFullPercentage: 100,
   priceSlotMinutes: 60,
+  // Nominal charging power used only for estimated energy costs.
+  chargingPowerKw: 2.6,
+  plannerVersion: 'planner-v2',
+  telemetrySchemaVersion: 2,
+
+  // Experimental observation only. Never affects canonical/actuator decisions.
+  planStabilityLiveShadowEnabled: true,
+  planStabilityShadowExperimentPolicy: {
+    thresholdMode: 'ALL',
+    waiting: {
+      minReplacementSavingsEur: 0.05,
+      minReplacementSavingsPct: 5,
+    },
+    charging: {
+      minReplacementSavingsEur: 0.5,
+      minReplacementSavingsPct: 20,
+    },
+  },
 
   tibberApiUrl: 'https://api.tibber.com/v1-beta/gql',
 };

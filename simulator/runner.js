@@ -12,7 +12,8 @@ const LOG_DIR = path.join(__dirname, 'logs');
 const DYNAMIC_ENGINE_VERSION = '__ENGINE_VERSION__';
 
 function loadScenarios() {
-  return fs.readdirSync(SCENARIO_DIR)
+  return fs
+    .readdirSync(SCENARIO_DIR)
     .filter((file) => file.endsWith('.json'))
     .sort()
     .map((file) =>
@@ -23,12 +24,18 @@ function loadScenarios() {
 function parseArgs(argv) {
   const args = {
     list: false,
+    trace: false,
     scenarioNames: [],
   };
 
   for (const arg of argv) {
     if (arg === '--list') {
       args.list = true;
+      continue;
+    }
+
+    if (arg === '--trace' || arg === '--verbose') {
+      args.trace = true;
       continue;
     }
 
@@ -80,7 +87,9 @@ async function runScenario({ scenario, scriptLoader, logWriter }) {
     name: scenario.name,
     description: scenario.description,
     steps: stepResults,
-    events: logWriter.events.filter((event) => event.scenario === scenario.name),
+    events: logWriter.events.filter(
+      (event) => event.scenario === scenario.name,
+    ),
     finalLogic: runtime.homeyMock.getLogicSnapshot(),
     finalDevices: runtime.homeyMock.getDeviceSnapshot(),
     tibberCalls: runtime.tibberCalls,
@@ -88,9 +97,67 @@ async function runScenario({ scenario, scriptLoader, logWriter }) {
   };
 }
 
+async function runScenarioWithExpectedFailure(args) {
+  const { scenario } = args;
+
+  if (!scenario.futureExpectedFailure) {
+    return {
+      status: 'pass',
+      result: await runScenario(args),
+    };
+  }
+
+  try {
+    const result = await runScenario(args);
+    const error = new Error(
+      `${scenario.name} is marked futureExpectedFailure but passed`,
+    );
+    error.unexpectedPass = true;
+    error.result = result;
+    throw error;
+  } catch (error) {
+    if (error.unexpectedPass || !error.futureExpectation) {
+      throw error;
+    }
+
+    return {
+      status: 'xfail',
+      name: scenario.name,
+      description: scenario.description,
+      reason: error.message,
+    };
+  }
+}
+
 function assertStep(step, stepResult) {
-  const expected = step.expect || {};
   const label = `${step.flow} step`;
+  assertStepExpect(step.expect || {}, stepResult, label);
+
+  if (step.futureExpect) {
+    try {
+      assertStepExpect(
+        step.futureExpect,
+        stepResult,
+        `${label} future expectation`,
+      );
+    } catch (error) {
+      error.futureExpectation = true;
+      throw error;
+    }
+  }
+}
+
+function assertStepExpect(expected, stepResult, label) {
+  if (expected.errorIncludes) {
+    assert.ok(stepResult.error, `${label} error`);
+    assert.match(
+      String(stepResult.error.message || ''),
+      new RegExp(escapeRegExp(expected.errorIncludes)),
+      `${label} error message`,
+    );
+  } else if (stepResult.error) {
+    throw stepResult.error;
+  }
 
   if (expected.result) {
     assertObjectContains(stepResult.result, expected.result, `${label} result`);
@@ -134,6 +201,25 @@ function assertStep(step, stepResult) {
 
   if (expected.logic) {
     assertObjectContains(stepResult.logic, expected.logic, `${label} logic`);
+  }
+
+  if (expected.logicUpdateCounts) {
+    assertObjectContains(
+      stepResult.logicUpdateCounts,
+      expected.logicUpdateCounts,
+      `${label} logic update counts`,
+    );
+  }
+
+  if (expected.logicJson) {
+    for (const [name, expectedValue] of Object.entries(expected.logicJson)) {
+      const rawValue = stepResult.logic[name];
+      assertObjectContains(
+        JSON.parse(rawValue),
+        expectedValue,
+        `${label} logic JSON ${name}`,
+      );
+    }
   }
 
   if (expected.tibberCallsDelta !== undefined) {
@@ -185,7 +271,11 @@ function assertFinalState(scenario, runtime) {
       .filter((event) => event.scenario === scenario.name)
       .map((event) => event.eventType);
 
-    assert.deepEqual(eventTypes, expected.eventTypes, `${scenario.name} events`);
+    assert.deepEqual(
+      eventTypes,
+      expected.eventTypes,
+      `${scenario.name} events`,
+    );
   }
 
   if (expected.tibberCalls !== undefined) {
@@ -226,7 +316,10 @@ function assertExpectedLogFixture(scenario, runtime) {
 }
 
 function toGoogleSheetsPayload(event) {
-  const { scenario, flow, ...payload } = event;
+  const payload = { ...event };
+  delete payload.receivedAt;
+  delete payload.scenario;
+  delete payload.flow;
   return payload;
 }
 
@@ -257,34 +350,212 @@ function assertObjectContains(actual, expected, label) {
 
 function printScenarioList(scenarios) {
   for (const scenario of scenarios) {
-    console.log(`${scenario.name} - ${scenario.description}`);
+    const marker = scenario.futureExpectedFailure ? ' [future XFAIL]' : '';
+    console.log(`${scenario.name}${marker} - ${scenario.description}`);
   }
 }
 
-function printScenarioResult(result) {
+function printScenarioOutcome(outcome, options = {}) {
+  if (outcome.status === 'xfail') {
+    printExpectedFailureResult(outcome);
+    return;
+  }
+
+  printScenarioResult(outcome.result, options);
+}
+
+function printScenarioResult(result, options = {}) {
   console.log(`PASS ${result.name}`);
   console.log(`  ${result.description}`);
 
   for (const step of result.steps) {
     const summary = summarizeStep(step);
     console.log(`  - ${summary}`);
+    if (options.trace) printStepTrace(step);
   }
 
   const events = result.events.map(
     (event) => `${event.flow}:${event.eventType}`,
   );
   console.log(`  Tibber calls: ${result.tibberCalls}`);
-  console.log(`  Log events  : ${events.length > 0 ? events.join(', ') : 'none'}`);
+  console.log(
+    `  Log events  : ${events.length > 0 ? events.join(', ') : 'none'}`,
+  );
+}
+
+function printStepTrace(step) {
+  const beforePlug = step.devicesBefore.plug;
+  const beforeVehicle = step.devicesBefore.mercedes;
+  const afterPlug = step.devices.plug;
+  const result = step.result || {};
+  const changedLogic = diffValues(step.logicBefore, step.logic);
+  const newCommands = afterPlug.commands.slice(beforePlug.commands.length);
+  const plannerEvent = step.events.find(
+    (event) => event.eventType === 'smartcharge_decision',
+  );
+
+  console.log('    INPUT');
+  console.log(`      now: ${formatTraceValue(step.now)}`);
+  console.log(
+    `      sessionId: ${formatTraceValue(step.logicBefore.ChargeConnectedAt)}`,
+  );
+  console.log(
+    `      vehicleStatus: ${formatTraceValue(readFirstCapability(beforeVehicle, ['text_charging_status', 'charging_status', 'charge_status', 'ladestatus']))}`,
+  );
+  console.log(
+    `      charging: ${formatTraceValue(readFirstCapability(beforeVehicle, ['onoff_charging']))}`,
+  );
+  console.log(
+    `      vehicleChargePower: ${formatTraceValue(readCapabilityDiagnostic(beforeVehicle, 'measure_charge_power'))}`,
+  );
+  console.log(
+    `      preconditioning: ${formatTraceValue(readFirstCapability(beforeVehicle, ['onoff_precond', 'preconditioning', 'preconditioning_active']))}`,
+  );
+  console.log(
+    `      batteryPct: ${formatTraceValue(readCapability(beforeVehicle, 'measure_battery'))}`,
+  );
+  console.log(
+    `      disconnectObservedAt: ${formatTraceValue(step.logicBefore.SmartChargeDisconnectObservedAt)}`,
+  );
+  console.log(
+    `      plug: on=${formatTraceValue(readCapability(beforePlug, 'onoff'))}, powerW=${formatTraceValue(readCapability(beforePlug, 'measure_power'))}`,
+  );
+  console.log('    DECISION');
+  console.log(
+    `      telemetry: ${formatTraceValue(result.vehicleTelemetryHealth)}/${formatTraceValue(result.vehicleTelemetryFreshness)}`,
+  );
+  console.log(
+    `      vehicleChargingPowerW: ${formatTraceValue(result.vehicleChargingPowerW)}`,
+  );
+  console.log(`      runtimeState: ${formatTraceValue(result.runtimeState)}`);
+  console.log(
+    `      plannerShouldCharge: ${formatTraceValue(result.plannerShouldCharge)}`,
+  );
+  console.log(
+    `      desiredPlugState: ${formatTraceValue(result.desiredPlugState)}`,
+  );
+  console.log(
+    `      lifecycleAction: ${formatTraceValue(result.proposedLifecycleAction)}`,
+  );
+  console.log(
+    `      reason: ${formatTraceValue(result.runtimeDecisionReason)}`,
+  );
+  if (result.stabilityMode === 'shadow') {
+    console.log(
+      `      stability: ${result.stabilityDecision}/${result.stabilityReasonCode}; revision=${formatTraceValue(result.acceptedStrategyRevision)}`,
+    );
+    console.log(
+      `      stabilityEconomics: current=${formatTraceValue(result.currentStrategyRemainingCostEur)}, candidate=${formatTraceValue(result.candidateRemainingCostEur)}, savings=${formatTraceValue(result.replacementSavingsEur)} (${formatTraceValue(result.replacementSavingsPct)}%)`,
+    );
+    console.log(
+      `      stabilityTransition: ${result.transition}; disruptive=${result.disruptiveTransition}; candidate=${result.candidateShouldCharge}; shadowEffective=${result.shadowEffectiveShouldCharge}`,
+    );
+  }
+  console.log('    OUTPUT');
+  console.log(`      action: ${formatTraceValue(result.action)}`);
+  console.log(
+    `      actualPlugState: ${formatTraceValue(result.actualPlugState)}`,
+  );
+  console.log(
+    `      sessionId: ${formatTraceValue(step.logic.ChargeConnectedAt)}`,
+  );
+  console.log(
+    `      chargeMinutes: ${formatTraceValue(plannerEvent?.chargeMinutes ?? step.logic.ChargeMinutes)}`,
+  );
+  console.log(
+    `      chargeSlots: ${formatTraceValue(plannerEvent?.chargeSlots ?? step.logic.ChargeSlots)}`,
+  );
+  console.log(
+    `      plannedStart: ${formatTraceValue(plannerEvent?.plannedStart ?? step.logic.SmartChargePlannedStart)}`,
+  );
+  console.log(
+    `      plannedEnd: ${formatTraceValue(plannerEvent?.plannedEnd ?? step.logic.SmartChargePlannedEnd)}`,
+  );
+  console.log(
+    `      chargeWindows: ${formatTraceValue(plannerEvent?.chargeWindowsJson)}`,
+  );
+  console.log(
+    `      disconnectObservedAt: ${formatTraceValue(step.logic.SmartChargeDisconnectObservedAt)}`,
+  );
+  console.log(
+    `      SmartChargeShouldCharge: ${formatTraceValue(step.logic.SmartChargeShouldCharge)}`,
+  );
+  console.log(
+    `      plugCommands: ${newCommands.length ? newCommands.map((command) => `${command.capability}=${command.value}`).join(', ') : 'none'}`,
+  );
+  console.log(
+    `      events: ${step.eventTypes.length ? step.eventTypes.join(', ') : 'none'}`,
+  );
+  console.log(
+    `      logicChanges: ${
+      Object.keys(changedLogic).length
+        ? Object.entries(changedLogic)
+            .map(
+              ([key, value]) =>
+                `${key}: ${formatTraceValue(value.before)} -> ${formatTraceValue(value.after)}`,
+            )
+            .join('; ')
+        : 'none'
+    }`,
+  );
+  if (step.error) console.log(`      error: ${step.error.message}`);
+}
+
+function readCapability(device, name) {
+  return device?.capabilitiesObj?.[name]?.value ?? null;
+}
+
+function readCapabilityDiagnostic(device, name) {
+  const capability = device?.capabilitiesObj?.[name];
+  if (!capability) return null;
+  const units = capability.units || capability.unit || null;
+  return `${name}=${capability.value}${units ? ` ${units}` : ''}`;
+}
+
+function readFirstCapability(device, names) {
+  for (const name of names) {
+    const value = readCapability(device, name);
+    if (value !== null && value !== undefined && value !== '')
+      return `${name}=${value}`;
+  }
+  return null;
+}
+
+function diffValues(before, after) {
+  const result = {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (!Object.is(before[key], after[key]))
+      result[key] = { before: before[key], after: after[key] };
+  }
+  return result;
+}
+
+function formatTraceValue(value) {
+  if (value === null || value === undefined || value === '') return 'null';
+  return String(value);
+}
+
+function printExpectedFailureResult(result) {
+  console.log(`XFAIL ${result.name}`);
+  console.log(`  ${result.description}`);
+  console.log(`  Future expectation: ${result.reason}`);
 }
 
 function summarizeStep(step) {
+  if (step.error) {
+    return (
+      `${step.flow} @ ${step.now}; error=${step.error.message}; ` +
+      `tibber+${step.tibberCallsDelta}`
+    );
+  }
+
   const reason = step.result.reason ? `; reason=${step.result.reason}` : '';
-  const charge = step.result.shouldChargeNow !== undefined
-    ? `; shouldChargeNow=${step.result.shouldChargeNow}`
-    : '';
-  const events = step.eventTypes.length > 0
-    ? step.eventTypes.join('|')
-    : 'none';
+  const charge =
+    step.result.shouldChargeNow !== undefined
+      ? `; shouldChargeNow=${step.result.shouldChargeNow}`
+      : '';
+  const events =
+    step.eventTypes.length > 0 ? step.eventTypes.join('|') : 'none';
 
   return (
     `${step.flow} @ ${step.now}; events=${events}; ` +
@@ -316,20 +587,28 @@ async function main() {
   const results = [];
 
   for (const scenario of selectedScenarios) {
-    const result = await runScenario({
+    const result = await runScenarioWithExpectedFailure({
       scenario,
       scriptLoader,
       logWriter,
     });
 
     results.push(result);
-    printScenarioResult(result);
+    printScenarioOutcome(result, { trace: args.trace });
   }
+
+  const expectedFailures = results.filter(
+    (result) => result.status === 'xfail',
+  );
 
   console.log('');
   console.log(`Scenarios : ${results.length}`);
+  if (expectedFailures.length > 0) {
+    console.log(`XFAIL     : ${expectedFailures.length}`);
+  }
   console.log(`JSONL log : ${path.relative(ROOT_DIR, logWriter.jsonlPath)}`);
   console.log(`CSV log   : ${path.relative(ROOT_DIR, logWriter.csvPath)}`);
+  console.log(`HTML log  : ${path.relative(ROOT_DIR, logWriter.htmlPath)}`);
 }
 
 main().catch((error) => {

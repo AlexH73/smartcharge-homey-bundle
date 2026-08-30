@@ -5,10 +5,16 @@ smartcharge-homey-bundle/
   src/
     00-config/
     10-core/
+      planner/
     20-adapters/
     30-logger/
     90-flows/
   scripts/
+    homey/
+  assets/
+    images/
+  docs/
+  google-apps-script/
   simulator/
     fixtures/
     logs/
@@ -16,6 +22,7 @@ smartcharge-homey-bundle/
     scenarios/
     runner.js
   dist/
+  LICENSE
 ```
 
 ## `src/`
@@ -39,9 +46,26 @@ Pure or mostly pure SmartCharge logic.
 - `10-time.js` - timezone-aware departure time helpers.
 - `20-homey-logic.js` - Homey Logic variable access helpers.
 - `30-charging.js` - charging duration and slot calculations.
-- `40-planner.js` - cheapest continuous charging block selection.
+- `40-planner.js` - continuous charging planner and shared safety helpers.
 - `50-session.js` - session expiration helpers.
 - `60-decision.js` - reserved for decision-level extraction.
+
+### `src/10-core/planner/`
+
+Planner model and multi-window planning modules.
+
+- `10-charge-window.js` - creates `ChargeWindow` objects for continuous
+  charging intervals.
+- `20-charge-plan.js` - creates `ChargePlan` objects and derived window
+  summaries.
+- `30-planner-utils.js` - shared slot sorting, cheapest-slot selection,
+  adjacent-slot merging, window building, and available-slot collection.
+- `50-multi-window-planner.js` - builds the cheapest multi-window charging
+  plan from usable price slots.
+- `60-plan-comparator.js` - selects the preferred plan between continuous and
+  multi-window candidates.
+- `70-plan-selector.js` - public planner selection orchestration.
+- `99-planner.exports.js` - reserved public planner API boundary.
 
 ### `src/20-adapters/`
 
@@ -64,6 +88,7 @@ SmartCharge event logging.
 Executable HomeyScript entrypoints.
 
 - `start-session.entry.js`
+- `connection-evidence.entry.js`
 - `run-decision.entry.js`
 - `log-on.entry.js`
 - `log-off.entry.js`
@@ -74,10 +99,43 @@ inside HomeyScript.
 
 ## `scripts/`
 
-Build tooling.
+Build tooling and optional Homey helper templates.
 
 - `build-homey.js` - concatenates shared `src` modules plus one flow entrypoint
   into a standalone HomeyScript file under `dist/`.
+- `homey/SESSION - Save ConnectedAt.js` - sanitized optional legacy helper for
+  manually saving the connected-at timestamp. The generated Start Session
+  script is preferred for normal production use.
+
+## `assets/`
+
+Repository media assets used by documentation and project presentation.
+
+- `images/hero.png` - README cover image showing the SmartCharge architecture
+  and product positioning.
+- `images/README.md` - public safety note for documentation images.
+
+## `docs/`
+
+Engineering and public setup documentation.
+
+- `Installation.md` - public installation checklist and Homey Logic variables.
+- `HomeyFlows.md` - required Homey Flow setup.
+- `GoogleSheetsSetup.md` - Google Apps Script and webhook setup.
+- `PublicDashboard.md` - public dashboard publishing guidance.
+- `Privacy.md` - privacy and public release safety rules.
+- `Simulator.md` - local simulator commands, logs, scenarios, and limitations.
+- `ChargePlan.md` - ChargePlan contract and planner model notes.
+- `Roadmap.md` - planned product and engineering work.
+- `DevelopmentWorkflow.md` - branch model, release flow, and Definition of
+  Done.
+
+## `google-apps-script/`
+
+Sanitized Google Apps Script templates.
+
+- `SmartChargeLogger.gs` - webhook template for appending SmartCharge events to
+  a private Google Sheet.
 
 ## `simulator/`
 
@@ -112,6 +170,8 @@ Local hourly price profiles used by the Tibber mock.
 - `price-spike.json`
 - `missing-tomorrow.json`
 - `price-update-evening.json`
+- `multi-window-adjacent.json`
+- `multi-window-separated.json`
 - `late-plan.json`
 - `no-prices.json`
 
@@ -127,6 +187,8 @@ steps, and expectations. Stored Homey Logic timestamps such as
 `ChargeConnectedAt` should use the production `YYYY-MM-DD HH:mm:ss` format.
 Tibber price grids are anchored per scenario through `priceAnchor` or `now`, so
 multi-step scenarios keep a stable `today` / `tomorrow` price grid.
+The simulator currently includes 20 passing scenarios, including multi-window
+planner coverage.
 
 ### `simulator/logs/`
 
@@ -134,13 +196,20 @@ Generated simulator output.
 
 - `events.jsonl`
 - `events.csv`
+- `events.html`
 - `<scenario>-actual-log.json`
 
+`events.html` is the human-readable report with a highlighted sticky header row.
 Generated log files are ignored by git. `.gitkeep` keeps the directory present.
 
 ## `dist/`
 
 Generated HomeyScript files ready to copy into Homey.
 
-Files in this directory are generated artifacts and should not be edited
-manually.
+Generated `.js` files in this directory are local artifacts and ignored by git.
+`dist/README.md` is kept in the repository to document which generated script
+does what.
+
+## `LICENSE`
+
+ISC license for public repository use.

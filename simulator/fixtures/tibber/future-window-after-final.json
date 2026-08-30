@@ -1,0 +1,12 @@
+{
+  "name": "future-window-after-final",
+  "description": "A future cheap slot keeps the planner waiting after the final characterized multi-window slot.",
+  "today": [
+    0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6,
+    0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6
+  ],
+  "tomorrow": [
+    0.6, 0.6, 0.6, 0.6, 0.6, 0.1, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6,
+    0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6
+  ]
+}

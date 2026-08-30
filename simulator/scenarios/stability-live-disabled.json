@@ -1,0 +1,21 @@
+{
+  "name": "stability-live-disabled",
+  "description": "Disabled live shadow performs no accepted-strategy persistence interaction.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "shadow-current-horizon",
+  "initial": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
+    "devices": { "mercedes": { "capabilitiesObj": { "measure_battery": 80 } } }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": { "shouldChargeNow": true },
+        "logic": { "SmartChargeAcceptedStrategy": "null" },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 0 }
+      }
+    }
+  ]
+}

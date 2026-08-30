@@ -1,0 +1,120 @@
+{
+  "name": "stability-shadow-multi-window",
+  "description": "Shadow continuation preserves one accepted revision through separated windows and gaps while fresh SOC removes elapsed allocation.",
+  "shadowStability": true,
+  "now": "2026-07-07T18:00:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "multi-window-separated",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "ChargeFactor": 2,
+      "ChargeReserve": 20
+    },
+    "devices": { "mercedes": { "capabilitiesObj": { "measure_battery": 20 } } }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "result": {
+          "shouldChargeNow": false,
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T20:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 30 } }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": true,
+          "stabilityDecision": "CONTINUE",
+          "acceptedStrategyRevision": 1,
+          "candidateShouldCharge": true,
+          "shadowEffectiveShouldCharge": true
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T21:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 50 } }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": false,
+          "stabilityDecision": "CONTINUE",
+          "acceptedStrategyRevision": 1,
+          "candidateShouldCharge": false,
+          "shadowEffectiveShouldCharge": false
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T23:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 60 } }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": true,
+          "stabilityDecision": "CONTINUE",
+          "acceptedStrategyRevision": 1,
+          "candidateShouldCharge": true,
+          "shadowEffectiveShouldCharge": true
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T00:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 80 } }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": false,
+          "stabilityDecision": "CONTINUE",
+          "acceptedStrategyRevision": 1,
+          "candidateShouldCharge": false,
+          "shadowEffectiveShouldCharge": false
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T02:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 90 } }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": true,
+          "stabilityDecision": "CONTINUE",
+          "acceptedStrategyRevision": 1,
+          "candidateShouldCharge": true,
+          "shadowEffectiveShouldCharge": true
+        }
+      }
+    }
+  ],
+  "expect": { "tibberCalls": 6 }
+}

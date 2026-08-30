@@ -1,0 +1,12 @@
+{
+  "name": "shadow-soc-shrink",
+  "description": "The earliest slot remains cheapest as a two-slot accepted plan shrinks to one slot.",
+  "today": [
+    0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
+    0.5, 0.5, 0.5, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6
+  ],
+  "tomorrow": [
+    0.4, 0.3, 0.15, 0.16, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4,
+    0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4
+  ]
+}

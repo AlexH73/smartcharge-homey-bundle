@@ -30,18 +30,14 @@
           "eventType": "smartcharge_off",
           "loggerWritten": true
         },
-        "events": [
-          "smartcharge_off"
-        ],
+        "events": ["smartcharge_off"],
         "plugOn": true
       }
     }
   ],
   "expect": {
     "plugOn": true,
-    "eventTypes": [
-      "smartcharge_off"
-    ],
+    "eventTypes": ["smartcharge_off"],
     "tibberCalls": 0
   }
 }

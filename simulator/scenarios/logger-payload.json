@@ -32,9 +32,7 @@
           "plannedStart": "2026-07-08 02:00:00",
           "plannedEnd": "2026-07-08 04:00:00"
         },
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "plugCommandCount": 0,
         "tibberCallsDelta": 1
@@ -44,9 +42,7 @@
   "expect": {
     "plugOn": false,
     "plugCommandCount": 0,
-    "eventTypes": [
-      "smartcharge_decision"
-    ],
+    "eventTypes": ["smartcharge_decision"],
     "tibberCalls": 1,
     "logFixture": "google-logger-payload.json"
   }

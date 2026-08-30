@@ -1,6 +1,6 @@
 {
   "name": "smartcharge-homey-bundle",
-  "version": "1.0.0",
+  "version": "0.6.1",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -8,9 +8,16 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "npm run simulate:all",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "verify": "npm run lint && npm run format:check && npm test && npm run build:homey -- --reuse-version",
+    "test": "node tests/estimated-cost-engine.test.js && node tests/plan-stability-primitives.test.js && node tests/plan-stability-policy.test.js && node tests/stability-debug.test.js && node tests/apps-script-session-materializer.test.js && node tests/runtime-controller.test.js && npm run simulate:all",
+    "test:cost": "node tests/estimated-cost-engine.test.js",
     "simulate": "node simulator/runner.js",
     "simulate:all": "node simulator/runner.js all",
+    "simulate:runtime-review": "node simulator/runner.js runtime-connection-evidence-shadow runtime-connection-evidence-active runtime-connection-evidence-write-failure runtime-connection-evidence-runtime-failure runtime-mercedes-charge-break runtime-mercedes-stale-charge-break runtime-mercedes-active-charging runtime-mercedes-power-w runtime-mercedes-preconditioning runtime-session-creation runtime-shadow-mode runtime-reconciliation runtime-suspected-disconnect-plug-off runtime-disconnect-confirmation runtime-disconnect-confirmation-plug-off runtime-disconnect-actuator-failure runtime-disconnect-cancelled runtime-reconnect-confirmed-replans runtime-reconnect-before-timeout-replans runtime-reconnect-higher-battery-replans runtime-reconnect-during-old-window-replans runtime-expired-terminal runtime-actuator-telemetry runtime-battery-unavailable runtime-planner-failure runtime-actuator-failure --trace",
     "simulate:overnight": "node simulator/runner.js overnight",
     "simulate:battery-full": "node simulator/runner.js battery-full",
     "simulate:no-active-session": "node simulator/runner.js no-active-session",
@@ -26,17 +33,44 @@
     "simulate:plug-disconnected": "node simulator/runner.js plug-disconnected",
     "simulate:low-power-after-charging": "node simulator/runner.js low-power-after-charging",
     "simulate:charging-completed": "node simulator/runner.js charging-completed",
+    "simulate:multi-window-needed": "node simulator/runner.js multi-window-needed",
+    "simulate:adjacent-cheap-slots": "node simulator/runner.js adjacent-cheap-slots",
+    "simulate:fallback-when-not-enough-slots": "node simulator/runner.js fallback-when-not-enough-slots",
+    "simulate:multi-window-price-update": "node simulator/runner.js multi-window-price-update",
+    "simulate:state-sync-plug-off": "node simulator/runner.js state-sync-plug-off",
+    "simulate:state-sync-plug-on": "node simulator/runner.js state-sync-plug-on",
+    "simulate:state-sync-noop-off": "node simulator/runner.js state-sync-noop-off",
+    "simulate:state-sync-noop-on": "node simulator/runner.js state-sync-noop-on",
+    "simulate:state-sync-no-active-session": "node simulator/runner.js state-sync-no-active-session",
+    "simulate:state-sync-battery-full": "node simulator/runner.js state-sync-battery-full",
+    "simulate:state-sync-battery-null": "node simulator/runner.js state-sync-battery-null",
+    "simulate:state-sync-battery-blank": "node simulator/runner.js state-sync-battery-blank",
+    "simulate:state-sync-string-true": "node simulator/runner.js state-sync-string-true",
+    "simulate:state-sync-blank-session": "node simulator/runner.js state-sync-blank-session",
+    "simulate:state-sync-command-error": "node simulator/runner.js state-sync-command-error",
+    "simulate:state-sync-plug-off-no-vehicle": "node simulator/runner.js state-sync-plug-off-no-vehicle",
+    "simulate:state-sync-ambiguous-plug": "node simulator/runner.js state-sync-ambiguous-plug",
     "build:decision": "node scripts/build-homey.js run-decision",
+    "build:connection-evidence": "node scripts/build-homey.js connection-evidence",
+    "build:runtime": "node scripts/build-homey.js runtime-controller",
     "build:reset": "node scripts/build-homey.js reset-session",
     "build:start": "node scripts/build-homey.js start-session",
     "build:log-on": "node scripts/build-homey.js log-on-session",
     "build:log-off": "node scripts/build-homey.js log-off-session",
-    "build:homey": "npm run build:decision && npm run build:reset && npm run build:start && npm run build:log-on && npm run build:log-off"
+    "build:state-sync": "node scripts/build-homey.js state-sync",
+    "build:manual-on": "node scripts/build-homey.js manual-on",
+    "build:manual-off": "node scripts/build-homey.js manual-off",
+    "build:homey": "node scripts/build-homey.js all"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5"
   }
 }

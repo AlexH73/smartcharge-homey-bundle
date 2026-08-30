@@ -1,0 +1,36 @@
+{
+  "name": "runtime-planner-failure",
+  "description": "Runtime fails loudly without actuator changes when the canonical planner cannot fetch Tibber data.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "TIBBER_ACCESS_TOKEN": "null",
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Charge"
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "errorIncludes": "Tibber access token is missing",
+        "events": [],
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 17:00:00" },
+    "plugOn": false,
+    "plugCommandCount": 0
+  }
+}

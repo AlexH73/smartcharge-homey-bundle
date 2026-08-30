@@ -1,0 +1,67 @@
+{
+  "name": "runtime-disconnect-confirmation",
+  "description": "A confirmed disconnect switches an energized plug off before closing the session and remains idempotent.",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeShouldCharge": true,
+      "SmartChargeManualMode": true,
+      "SmartChargeDisconnectObservedAt": "2026-07-07T15:44:00.000Z"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Unplugged"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:00:00+02:00",
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "would_confirm_disconnect",
+          "desiredPlugState": false,
+          "actualPlugState": false,
+          "action": "switched_off",
+          "sessionActive": false
+        },
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeSessionStatus": "disconnected",
+          "SmartChargeDisconnectObservedAt": "null"
+        },
+        "events": ["smartcharge_off", "charger_disconnected"],
+        "plugOn": false,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:01:00+02:00",
+      "expect": {
+        "result": {
+          "desiredPlugState": false,
+          "actualPlugState": false,
+          "action": "none",
+          "sessionActive": false
+        },
+        "events": [],
+        "plugCommandCount": 1
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "ChargeConnectedAt": "null" },
+    "eventTypes": ["smartcharge_off", "charger_disconnected"],
+    "plugOn": false,
+    "plugCommandCount": 1
+  }
+}

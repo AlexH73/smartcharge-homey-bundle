@@ -1,0 +1,46 @@
+{
+  "name": "runtime-mercedes-stale-charge-break",
+  "description": "A retained Charge break with an old provider timestamp cannot create a phantom session.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 84,
+          "text_charging_status": {
+            "value": "Charge break",
+            "lastUpdated": "2026-07-07T16:00:00+02:00"
+          },
+          "onoff_charging": false,
+          "measure_charge_power": 0,
+          "onoff_connector": null,
+          "text_connector_status": null
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "sessionActive": false,
+          "vehicleTelemetryHealth": "HEALTHY",
+          "vehicleTelemetryFreshness": "STALE",
+          "vehicleStatusCapability": "text_charging_status",
+          "vehicleStatusRawValue": "Charge break"
+        },
+        "events": [],
+        "logic": { "ChargeConnectedAt": "null" },
+        "tibberCallsDelta": 0,
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": { "eventTypes": [], "plugOn": false, "plugCommandCount": 0 }
+}

@@ -1,0 +1,52 @@
+{
+  "name": "fallback-when-not-enough-slots",
+  "description": "Safety fallback starts charging when three slots are required but fewer usable slots remain before departure.",
+  "now": "2026-07-08T06:50:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "ChargeFactor": 2,
+      "ChargeReserve": 20
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 20
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 180,
+          "chargeSlots": 3,
+          "chargeHoursAhead": 1,
+          "plannedStart": null,
+          "plannedEnd": null,
+          "shouldChargeNow": true,
+          "reason": "Safety fallback: latest safe start reached and no plan found"
+        },
+        "events": ["smartcharge_decision"],
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": true,
+    "plugCommandCount": 1,
+    "eventTypes": ["smartcharge_decision"],
+    "tibberCalls": 1
+  }
+}

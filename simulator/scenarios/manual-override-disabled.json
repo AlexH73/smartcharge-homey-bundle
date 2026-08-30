@@ -1,0 +1,52 @@
+{
+  "name": "manual-override-disabled",
+  "description": "Manual override disable logs current runtime state without changing charging state.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeManualMode": false,
+      "SmartChargeShouldCharge": true
+    },
+    "devices": {
+      "mercedes": { "capabilitiesObj": { "measure_battery": 70 } },
+      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 7200 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "manual-off",
+      "expect": {
+        "events": ["manual_override_disabled"],
+        "eventPayload": {
+          "eventType": "manual_override_disabled",
+          "decisionSource": "manual",
+          "shouldChargeNow": null,
+          "reasonCode": "MANUAL_OVERRIDE_DISABLED",
+          "reason": "Automatic charging mode restored",
+          "source": "smartcharge-manual-override",
+          "message": "Control returned to the SmartCharge planner",
+          "sessionId": "2026-07-07 18:00:00",
+          "connectedAt": "2026-07-07 18:00:00",
+          "battery": 70,
+          "plugOn": true,
+          "plugPower": 7200
+        },
+        "plugOn": true,
+        "plugCommandCount": 0,
+        "logic": {
+          "SmartChargeManualMode": false,
+          "SmartChargeShouldCharge": true
+        },
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "eventTypes": ["manual_override_disabled"],
+    "plugOn": true,
+    "plugCommandCount": 0,
+    "tibberCalls": 0
+  }
+}

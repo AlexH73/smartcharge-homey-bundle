@@ -1,0 +1,50 @@
+{
+  "name": "runtime-disconnect-confirmation-plug-off",
+  "description": "A confirmed disconnect closes the session without a duplicate command when the plug is already off.",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeShouldCharge": true,
+      "SmartChargeDisconnectObservedAt": "2026-07-07T15:44:00.000Z"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Unplugged"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": { "onoff": false, "measure_power": 0 }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:00:00+02:00",
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "would_confirm_disconnect",
+          "desiredPlugState": false,
+          "actualPlugState": false,
+          "action": "none",
+          "sessionActive": false
+        },
+        "events": ["charger_disconnected"],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeSessionStatus": "disconnected"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "eventTypes": ["charger_disconnected"],
+    "plugOn": false,
+    "plugCommandCount": 0
+  }
+}

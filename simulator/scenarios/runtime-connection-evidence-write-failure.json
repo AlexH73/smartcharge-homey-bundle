@@ -1,0 +1,30 @@
+{
+  "name": "runtime-connection-evidence-write-failure",
+  "description": "A failed evidence write aborts before Runtime Controller executes.",
+  "now": "2026-08-21T00:32:15.123Z",
+  "initial": {
+    "failLogicUpdateVariableNames": ["SmartChargeConnectionEvidenceAt"],
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeConnectionEvidenceAt": "null",
+      "SmartChargeRuntimeMode": "active"
+    }
+  },
+  "steps": [
+    {
+      "flow": "connection-evidence",
+      "expect": {
+        "errorIncludes": "updateVariable failed: SmartChargeConnectionEvidenceAt",
+        "logic": { "SmartChargeConnectionEvidenceAt": "null" },
+        "events": [],
+        "tibberCallsDelta": 0,
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "SmartChargeConnectionEvidenceAt": "null" },
+    "eventTypes": [],
+    "plugCommandCount": 0
+  }
+}

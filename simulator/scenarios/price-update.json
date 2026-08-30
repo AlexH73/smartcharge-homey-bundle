@@ -33,9 +33,7 @@
           "plannedEnd": "2026-07-08 04:00:00"
         },
         "reasonIncludes": "Waiting for selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "plugCommandCount": 0,
         "tibberCallsDelta": 1
@@ -52,9 +50,7 @@
           "plannedEnd": "2026-07-07 23:00:00"
         },
         "reasonIncludes": "Waiting for selected charging plan",
-        "events": [
-          "smartcharge_decision"
-        ],
+        "events": ["smartcharge_decision"],
         "plugOn": false,
         "plugCommandCount": 0,
         "tibberCallsDelta": 1
@@ -64,10 +60,7 @@
   "expect": {
     "plugOn": false,
     "plugCommandCount": 0,
-    "eventTypes": [
-      "smartcharge_decision",
-      "smartcharge_decision"
-    ],
+    "eventTypes": ["smartcharge_decision", "smartcharge_decision"],
     "tibberCalls": 2
   }
 }

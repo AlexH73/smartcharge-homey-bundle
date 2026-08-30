@@ -1,0 +1,52 @@
+{
+  "name": "runtime-shadow-mode",
+  "description": "Shadow mode proposes lifecycle and actuator actions without mutating Homey state.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeRuntimeMode": "shadow",
+      "SmartChargeConnectionEvidenceAt": "2026-07-07T17:55:00+02:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Charge"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "mode": "shadow",
+          "proposedLifecycleAction": "would_create_session",
+          "action": "would_switch_off",
+          "sessionActive": false
+        },
+        "events": [],
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeSessionStatus": "",
+          "SmartChargeDisconnectObservedAt": "null",
+          "SmartChargeConnectionEvidenceAt": "2026-07-07T17:55:00+02:00"
+        },
+        "plugOn": true,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "ChargeConnectedAt": "null" },
+    "eventTypes": [],
+    "plugOn": true,
+    "plugCommandCount": 0
+  }
+}

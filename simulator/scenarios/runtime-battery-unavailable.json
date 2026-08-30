@@ -1,0 +1,42 @@
+{
+  "name": "runtime-battery-unavailable",
+  "description": "Existing session is preserved conservatively when battery telemetry is unavailable.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeShouldCharge": false
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": null,
+          "charging_status": null
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "sessionActive": true,
+          "vehicleTelemetryHealth": "UNAVAILABLE",
+          "desiredPlugState": false,
+          "action": "none"
+        },
+        "events": [],
+        "tibberCallsDelta": 0,
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 17:00:00" },
+    "plugOn": false,
+    "plugCommandCount": 0
+  }
+}

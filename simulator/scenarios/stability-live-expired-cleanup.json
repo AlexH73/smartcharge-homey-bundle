@@ -1,0 +1,47 @@
+{
+  "name": "stability-live-expired-cleanup",
+  "description": "A successful expired-Session OFF transition completes lifecycle cleanup before clearing the persisted accepted strategy.",
+  "liveStabilityShadow": true,
+  "now": "2026-07-07T18:00:00+02:00",
+  "fixture": "shadow-waiting-current",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 90,
+          "charging_status": "Charge"
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": { "result": { "stabilityDecision": "INITIAL_ACCEPT" } }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-08T10:00:00+02:00",
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "would_expire_session",
+          "action": "switched_off",
+          "sessionActive": false
+        },
+        "events": ["smartcharge_off", "session_expired"],
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeAcceptedStrategy": "null"
+        },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 2 },
+        "plugOn": false,
+        "plugCommandCount": 1
+      }
+    }
+  ]
+}

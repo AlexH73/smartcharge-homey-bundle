@@ -25,9 +25,7 @@
           "shouldChargeNow": false
         },
         "reasonIncludes": "Session expired",
-        "events": [
-          "session_expired"
-        ],
+        "events": ["session_expired"],
         "plugOn": false,
         "tibberCallsDelta": 0
       }
@@ -35,9 +33,7 @@
   ],
   "expect": {
     "plugOn": false,
-    "eventTypes": [
-      "session_expired"
-    ],
+    "eventTypes": ["session_expired"],
     "tibberCalls": 0
   }
 }

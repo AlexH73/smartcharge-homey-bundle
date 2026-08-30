@@ -1,0 +1,46 @@
+{
+  "name": "estimated-savings-multi-window",
+  "description": "Estimated EUR cost is allocated across three separated selected windows.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "fixture": "multi-window-separated",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "ChargeFactor": 2,
+      "ChargeReserve": 20
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 20
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "chargeMinutes": 180,
+          "estimatedSelectedCostEur": 0.702,
+          "estimatedBaselineCostEur": 3.38,
+          "estimatedSavingsEur": 2.678,
+          "estimatedSavingsPct": 79.23,
+          "allocatedChargeMinutes": 180
+        },
+        "eventPayload": {
+          "plannerMode": "multi-window",
+          "windowCount": 3
+        },
+        "events": ["smartcharge_decision"]
+      }
+    }
+  ]
+}

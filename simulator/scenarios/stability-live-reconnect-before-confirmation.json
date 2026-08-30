@@ -1,0 +1,92 @@
+{
+  "name": "stability-live-reconnect-before-confirmation",
+  "description": "A suspected disconnect preserves the persisted anchor and reconnecting in the same session restores it with fresh SOC.",
+  "liveStabilityShadow": true,
+  "now": "2026-07-07T18:05:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "shadow-soc-shrink",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "text_charging_status": {
+            "value": "Charge",
+            "lastUpdated": "2026-07-07T16:05:00.000Z"
+          }
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1
+        },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 }
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:10:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "text_charging_status": {
+                "value": "Unplugged",
+                "lastUpdated": "2026-07-07T16:10:00.000Z"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "proposedLifecycleAction": "suspected_disconnect",
+          "sessionActive": true
+        },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 }
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": 90,
+              "text_charging_status": {
+                "value": "Charge",
+                "lastUpdated": "2026-07-07T16:15:00.000Z"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "sessionId": "2026-07-07 18:00:00",
+          "stabilityDecision": "CONTINUE",
+          "acceptedStrategyRevision": 1,
+          "persistenceStatus": "PRESERVED"
+        },
+        "logic": { "SmartChargeDisconnectObservedAt": "null" },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 }
+      }
+    }
+  ],
+  "expect": {
+    "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 },
+    "tibberCalls": 2
+  }
+}

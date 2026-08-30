@@ -1,0 +1,51 @@
+{
+  "name": "state-sync-ambiguous-plug",
+  "description": "State synchronization fails safely when the configured plug name matches multiple devices.",
+  "now": "2026-07-08T02:05:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeShouldCharge": true
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70
+        }
+      },
+      "plug": {
+        "name": "Auto Plug In Garage",
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      },
+      "plugBackup": {
+        "name": "Auto Plug In Balcony",
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "state-sync",
+      "expect": {
+        "errorIncludes": "Multiple devices found",
+        "events": [],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": [],
+    "tibberCalls": 0
+  }
+}

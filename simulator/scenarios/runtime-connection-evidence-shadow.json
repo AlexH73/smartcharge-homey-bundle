@@ -1,0 +1,51 @@
+{
+  "name": "runtime-connection-evidence-shadow",
+  "description": "The Mercedes connected event records evidence and executes Runtime Controller without shadow mutations.",
+  "now": "2026-08-21T00:32:15.123Z",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeConnectionEvidenceAt": "null",
+      "SmartChargeRuntimeMode": "shadow"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 84,
+          "text_charging_status": "Charge break",
+          "onoff_charging": false,
+          "measure_charge_power": { "value": 0, "units": "kW" }
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "connection-evidence",
+      "expect": {
+        "result": {
+          "mode": "shadow",
+          "sessionActive": false,
+          "proposedLifecycleAction": "would_create_session",
+          "action": "none"
+        },
+        "logic": {
+          "ChargeConnectedAt": "null",
+          "SmartChargeConnectionEvidenceAt": "2026-08-21T00:32:15.123Z"
+        },
+        "events": [],
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeConnectionEvidenceAt": "2026-08-21T00:32:15.123Z"
+    },
+    "eventTypes": [],
+    "plugCommandCount": 0
+  }
+}

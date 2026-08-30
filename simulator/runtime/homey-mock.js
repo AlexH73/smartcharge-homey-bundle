@@ -22,10 +22,15 @@ class MockDevice {
     this.id = device.id;
     this.name = device.name;
     this.capabilitiesObj = deepClone(device.capabilitiesObj || {});
+    this.failSetCapabilityValue = Boolean(device.failSetCapabilityValue);
     this.commands = [];
   }
 
   async setCapabilityValue(capability, value) {
+    if (this.failSetCapabilityValue) {
+      throw new Error(`setCapabilityValue failed: ${this.name}.${capability}`);
+    }
+
     this.commands.push({
       capability,
       value,
@@ -63,6 +68,15 @@ class HomeyMock {
     }
 
     this.logicVariables = toLogicVariableEntries(logicValues);
+    for (const name of initialState.missingLogicVariables || []) {
+      delete this.logicVariables[name];
+    }
+    this.failLogicUpdateVariableNames = new Set(
+      initialState.failLogicUpdateVariableNames || [],
+    );
+    this.logicUpdateCounts = {};
+    this.failLogicGetVariables = Boolean(initialState.failLogicGetVariables);
+    this.failGetDevices = Boolean(initialState.failGetDevices);
     this.devices = Object.fromEntries(
       Object.entries(devices).map(([key, device]) => [
         key,
@@ -72,17 +86,29 @@ class HomeyMock {
 
     this.api = {
       logic: {
-        getVariables: async () => this.logicVariables,
+        getVariables: async () => {
+          if (this.failLogicGetVariables) {
+            throw new Error('getVariables failed');
+          }
+          return this.logicVariables;
+        },
         updateVariable: async ({ id, variable }) => {
           if (!this.logicVariables[id]) {
             throw new Error(`Logic variable not found: ${id}`);
           }
+          if (this.failLogicUpdateVariableNames.has(id)) {
+            throw new Error(`updateVariable failed: ${id}`);
+          }
 
           this.logicVariables[id].value = variable.value;
+          this.logicUpdateCounts[id] = (this.logicUpdateCounts[id] || 0) + 1;
         },
       },
       devices: {
-        getDevices: async () => this.devices,
+        getDevices: async () => {
+          if (this.failGetDevices) throw new Error('getDevices failed');
+          return this.devices;
+        },
       },
     };
   }
@@ -118,6 +144,10 @@ class HomeyMock {
         device.capabilitiesObj[capability] = normalizeCapabilityValue(value);
       }
     }
+
+    if (patch.failSetCapabilityValue !== undefined) {
+      device.failSetCapabilityValue = Boolean(patch.failSetCapabilityValue);
+    }
   }
 
   getLogicValue(name) {
@@ -129,6 +159,15 @@ class HomeyMock {
       Object.values(this.logicVariables).map((variable) => [
         variable.name,
         variable.value,
+      ]),
+    );
+  }
+
+  getLogicUpdateCounts() {
+    return Object.fromEntries(
+      Object.keys(this.logicVariables).map((name) => [
+        name,
+        this.logicUpdateCounts[name] || 0,
       ]),
     );
   }
@@ -158,7 +197,9 @@ function mergeDevice(base, override) {
   };
 
   if (override.capabilitiesObj) {
-    for (const [capability, value] of Object.entries(override.capabilitiesObj)) {
+    for (const [capability, value] of Object.entries(
+      override.capabilitiesObj,
+    )) {
       result.capabilitiesObj[capability] = normalizeCapabilityValue(value);
     }
   }

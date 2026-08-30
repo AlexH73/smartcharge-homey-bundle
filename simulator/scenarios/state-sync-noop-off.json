@@ -1,0 +1,43 @@
+{
+  "name": "state-sync-noop-off",
+  "description": "State synchronization does nothing when SmartChargeShouldCharge is false and the plug is already off.",
+  "now": "2026-07-08T04:05:00+02:00",
+  "fixture": "normal-day",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeShouldCharge": false
+    },
+    "devices": {
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "state-sync",
+      "expect": {
+        "result": {
+          "synced": true,
+          "action": "none",
+          "plugOnBefore": false,
+          "plugOnAfter": false
+        },
+        "events": [],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 0
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": [],
+    "tibberCalls": 0
+  }
+}

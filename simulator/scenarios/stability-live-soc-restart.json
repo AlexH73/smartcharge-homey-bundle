@@ -1,0 +1,42 @@
+{
+  "name": "stability-live-soc-restart",
+  "description": "Fresh SOC after an independent execution shrinks the restored accepted strategy without a write or revision change.",
+  "liveStabilityShadow": true,
+  "now": "2026-07-07T18:05:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "shadow-soc-shrink",
+  "initial": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
+    "devices": { "mercedes": { "capabilitiesObj": { "measure_battery": 70 } } }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:15:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 90 } }
+        }
+      },
+      "expect": {
+        "result": {
+          "stabilityDecision": "CONTINUE",
+          "stabilityReasonCode": "EQUIVALENT_STRATEGY",
+          "acceptedStrategyRevision": 1,
+          "projectedRemainingMinutes": 40,
+          "persistenceStatus": "PRESERVED"
+        },
+        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 }
+      }
+    }
+  ]
+}

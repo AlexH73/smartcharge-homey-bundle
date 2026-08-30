@@ -1,5 +1,9 @@
 const { HomeyMock } = require('./homey-mock');
 const { createTibberFetch } = require('./tibber-mock');
+const {
+  applyStabilityShadowResult,
+  createStabilityShadowInput,
+} = require('./stability-shadow');
 
 class SimulatorRuntime {
   constructor({ scenario, scriptLoader, logWriter }) {
@@ -13,6 +17,7 @@ class SimulatorRuntime {
     this.priceAnchor = scenario.priceAnchor || scenario.now;
     this.scriptLogs = [];
     this.tibberCalls = 0;
+    this.stabilityShadowAnchor = null;
 
     const tibberFetch = createTibberFetch({
       getFixtureName: () => this.currentFixture,
@@ -35,15 +40,30 @@ class SimulatorRuntime {
   async runStep(step) {
     this.applyStepState(step);
 
+    const logicBefore = this.homeyMock.getLogicSnapshot();
+    const devicesBefore = this.homeyMock.getDeviceSnapshot();
     const beforeEventCount = this.logWriter.events.length;
     const beforeTibberCalls = this.tibberCalls;
-    const result = await this.scriptLoader.executeFlow({
-      flow: step.flow,
-      homey: this.homeyMock.api,
-      fetch: this.fetch,
-      log: this.log.bind(this),
-      now: this.currentNow,
-    });
+    let result = null;
+    let error = null;
+
+    try {
+      result = await this.scriptLoader.executeFlow({
+        flow: step.flow,
+        homey: this.homeyMock.api,
+        fetch: this.fetch,
+        log: this.log.bind(this),
+        now: this.currentNow,
+        stabilityShadow: createStabilityShadowInput(this, step),
+        liveStabilityShadowEnabled: this.scenario.liveStabilityShadow === true,
+        stabilityShadowFailure: step.stabilityShadowFailure || null,
+      });
+      applyStabilityShadowResult(this, result);
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    if (error) applyStabilityShadowResult(this, null);
 
     const events = this.logWriter.events.slice(beforeEventCount);
 
@@ -52,11 +72,15 @@ class SimulatorRuntime {
       now: this.currentNow,
       fixture: this.currentFixture,
       result,
+      error,
       events,
       eventTypes: events.map((event) => event.eventType),
       tibberCallsDelta: this.tibberCalls - beforeTibberCalls,
       tibberCallsTotal: this.tibberCalls,
+      logicBefore,
+      devicesBefore,
       logic: this.homeyMock.getLogicSnapshot(),
+      logicUpdateCounts: this.homeyMock.getLogicUpdateCounts(),
       devices: this.homeyMock.getDeviceSnapshot(),
     };
   }
@@ -74,6 +98,17 @@ class SimulatorRuntime {
       for (const [deviceKey, patch] of Object.entries(step.set.devices)) {
         this.homeyMock.setDeviceState(deviceKey, patch);
       }
+    }
+
+    if (step.set?.failLogicUpdateVariableNames) {
+      this.homeyMock.failLogicUpdateVariableNames = new Set(
+        step.set.failLogicUpdateVariableNames,
+      );
+    }
+    if (step.set?.failLogicGetVariables !== undefined) {
+      this.homeyMock.failLogicGetVariables = Boolean(
+        step.set.failLogicGetVariables,
+      );
     }
   }
 

@@ -1,0 +1,49 @@
+{
+  "name": "runtime-disconnect-cancelled",
+  "description": "Charging evidence cancels a persisted suspected disconnect.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeRuntimeMode": "active",
+      "SmartChargeDisconnectObservedAt": "2026-07-07T16:00:00.000Z",
+      "SmartChargeManualMode": true
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 70,
+          "charging_status": "Unplugged"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": { "onoff": true, "measure_power": 2600 }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "result": {
+          "vehicleTelemetryHealth": "CONTRADICTED",
+          "sessionActive": true,
+          "desiredPlugState": true,
+          "action": "none"
+        },
+        "logic": { "SmartChargeDisconnectObservedAt": "null" },
+        "events": ["smartcharge_decision"],
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00",
+      "SmartChargeDisconnectObservedAt": "null"
+    },
+    "plugOn": true,
+    "plugCommandCount": 0
+  }
+}

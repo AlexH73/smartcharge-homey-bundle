@@ -18,6 +18,11 @@ const DEFAULT_LOGIC_VARIABLES = Object.freeze({
   SmartChargeReason: '',
   SmartChargeTargetDeparture: 'null',
   SmartChargeSessionStatus: '',
+  SmartChargeManualMode: false,
+  SmartChargeAcceptedStrategy: 'null',
+  SmartChargeRuntimeMode: 'shadow',
+  SmartChargeDisconnectObservedAt: 'null',
+  SmartChargeConnectionEvidenceAt: 'null',
 });
 
 const DEFAULT_DEVICES = Object.freeze({
@@ -27,6 +32,25 @@ const DEFAULT_DEVICES = Object.freeze({
     capabilitiesObj: {
       measure_battery: {
         value: 70,
+      },
+      text_charging_status: {
+        value: null,
+      },
+      onoff_charging: {
+        value: false,
+      },
+      measure_charge_power: {
+        value: 0,
+        units: 'kW',
+      },
+      onoff_precond: {
+        value: false,
+      },
+      onoff_connector: {
+        value: null,
+      },
+      text_connector_status: {
+        value: null,
       },
     },
   },

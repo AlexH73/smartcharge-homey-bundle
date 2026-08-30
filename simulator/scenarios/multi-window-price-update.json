@@ -1,0 +1,89 @@
+{
+  "name": "multi-window-price-update",
+  "description": "An updated price fixture replaces one continuous plan with better separated charging windows without toggling the plug while waiting.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "fixture": "multi-window-adjacent",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "ChargeFactor": 2,
+      "ChargeReserve": 20
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 20
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:00:00+02:00",
+      "fixture": "multi-window-adjacent",
+      "expect": {
+        "result": {
+          "chargeMinutes": 180,
+          "chargeSlots": 3,
+          "plannedStart": "2026-07-07 21:00:00",
+          "plannedEnd": "2026-07-08 00:00:00",
+          "shouldChargeNow": false
+        },
+        "reasonIncludes": "Waiting for selected charging plan",
+        "events": ["smartcharge_decision"],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:15:00+02:00",
+      "fixture": "multi-window-separated",
+      "expect": {
+        "result": {
+          "chargeMinutes": 180,
+          "chargeSlots": 3,
+          "shouldChargeNow": false
+        },
+        "reasonIncludes": "Waiting for selected charging plan",
+        "events": ["smartcharge_decision"],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      },
+      "futureExpect": {
+        "result": {
+          "plannedWindows": [
+            {
+              "plannedStart": "2026-07-07 20:00:00",
+              "plannedEnd": "2026-07-07 21:00:00"
+            },
+            {
+              "plannedStart": "2026-07-07 23:00:00",
+              "plannedEnd": "2026-07-08 00:00:00"
+            },
+            {
+              "plannedStart": "2026-07-08 02:00:00",
+              "plannedEnd": "2026-07-08 03:00:00"
+            }
+          ],
+          "shouldChargeNow": false
+        }
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": ["smartcharge_decision", "smartcharge_decision"],
+    "tibberCalls": 2
+  }
+}

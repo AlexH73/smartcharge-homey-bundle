@@ -57,34 +57,31 @@ function buildPriceInfo(fixture, anchorValue, nowValue = anchorValue) {
   const tomorrow =
     fixture.tomorrow === null
       ? []
-      : normalizePrices(
-          fixture.tomorrow || [],
-          tomorrowDate,
-          offset,
-        );
+      : normalizePrices(fixture.tomorrow || [], tomorrowDate, offset);
   const currentSlot = findCurrentSlot([...today, ...tomorrow], nowValue);
   const currentTotal =
     typeof fixture.current === 'number'
       ? fixture.current
-      : currentSlot?.total ??
+      : (currentSlot?.total ??
         today[anchorLocal.hour]?.total ??
         today[0]?.total ??
-        null;
+        null);
   const currentFallbackParts = getLocalParts(new Date(nowValue));
 
   return {
-    current: currentTotal === null
-      ? null
-      : {
-          total: currentTotal,
-          startsAt:
-            currentSlot?.startsAt ||
-            createLocalIso(
-              currentFallbackParts,
-              currentFallbackParts.hour,
-              getOffset(nowValue),
-            ),
-        },
+    current:
+      currentTotal === null
+        ? null
+        : {
+            total: currentTotal,
+            startsAt:
+              currentSlot?.startsAt ||
+              createLocalIso(
+                currentFallbackParts,
+                currentFallbackParts.hour,
+                getOffset(nowValue),
+              ),
+          },
     today,
     tomorrow,
   };
@@ -135,7 +132,9 @@ function getLocalParts(date) {
 }
 
 function addDays(parts, days) {
-  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+  const date = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day + days),
+  );
 
   return {
     year: date.getUTCFullYear(),

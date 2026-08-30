@@ -29,9 +29,7 @@
           "reset": true,
           "loggerWritten": true
         },
-        "events": [
-          "session_reset"
-        ],
+        "events": ["session_reset"],
         "plugOn": false,
         "logic": {
           "ChargeConnectedAt": "null",
@@ -42,9 +40,7 @@
   ],
   "expect": {
     "plugOn": false,
-    "eventTypes": [
-      "session_reset"
-    ],
+    "eventTypes": ["session_reset"],
     "tibberCalls": 0
   }
 }

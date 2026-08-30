@@ -1,0 +1,8 @@
+dist/
+node_modules/
+coverage/
+simulator/logs/
+docs/
+.smartcharge-build.json
+src/00-config/00-build-info.generated.js
+package-lock.json

@@ -30,9 +30,7 @@
           "eventType": "smartcharge_off",
           "loggerWritten": true
         },
-        "events": [
-          "smartcharge_off"
-        ],
+        "events": ["smartcharge_off"],
         "plugOn": false
       }
     },
@@ -44,9 +42,7 @@
           "reset": true,
           "loggerWritten": true
         },
-        "events": [
-          "session_reset"
-        ],
+        "events": ["session_reset"],
         "plugOn": false,
         "logic": {
           "ChargeConnectedAt": "null",
@@ -57,10 +53,7 @@
   ],
   "expect": {
     "plugOn": false,
-    "eventTypes": [
-      "smartcharge_off",
-      "session_reset"
-    ],
+    "eventTypes": ["smartcharge_off", "session_reset"],
     "tibberCalls": 0
   }
 }

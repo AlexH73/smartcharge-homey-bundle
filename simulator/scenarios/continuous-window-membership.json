@@ -1,0 +1,50 @@
+{
+  "name": "continuous-window-membership",
+  "description": "Canonical decisions are false before and after a continuous window and true while inside it.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
+    "devices": {
+      "mercedes": { "capabilitiesObj": { "measure_battery": 70 } },
+      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "result": { "shouldChargeNow": false },
+        "eventPayload": { "plannerMode": "continuous", "windowCount": 1 },
+        "reasonIncludes": "Waiting for selected charging plan"
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T02:15:00+02:00",
+      "expect": {
+        "result": { "shouldChargeNow": true },
+        "eventPayload": { "plannerMode": "continuous", "windowCount": 1 },
+        "reasonIncludes": "inside selected charging plan"
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T04:15:00+02:00",
+      "fixture": "future-window-after-final",
+      "set": {
+        "devices": {
+          "mercedes": { "capabilitiesObj": { "measure_battery": 80 } }
+        }
+      },
+      "expect": {
+        "result": { "shouldChargeNow": false },
+        "eventPayload": { "plannerMode": "continuous", "windowCount": 1 },
+        "reasonIncludes": "Waiting for selected charging plan"
+      }
+    }
+  ],
+  "expect": { "tibberCalls": 3 }
+}

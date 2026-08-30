@@ -2,11 +2,27 @@ const fs = require('fs');
 const path = require('path');
 
 const target = process.argv[2] || 'run-decision';
+const releaseArgumentIndex = process.argv.indexOf('--release');
+const releaseVersion =
+  releaseArgumentIndex >= 0 ? process.argv[releaseArgumentIndex + 1] : null;
+const reuseVersion = process.argv.includes('--reuse-version');
+
+if (releaseVersion && reuseVersion) {
+  throw new Error('--release and --reuse-version cannot be used together');
+}
 
 const SRC_DIR = path.resolve('src');
 const DIST_DIR = path.resolve('dist');
 
 const TARGETS = {
+  'connection-evidence': {
+    entry: 'src/90-flows/connection-evidence.entry.js',
+    out: 'SMARTCHARGE - Connection Evidence.js',
+  },
+  'runtime-controller': {
+    entry: 'src/90-flows/runtime-controller.entry.js',
+    out: 'SMARTCHARGE - Runtime Controller.js',
+  },
   'run-decision': {
     entry: 'src/90-flows/run-decision.entry.js',
     out: 'SMARTCHARGE - Run Decision.js',
@@ -27,9 +43,40 @@ const TARGETS = {
     entry: 'src/90-flows/log-off.entry.js',
     out: 'SMARTCHARGE - Log Off.js',
   },
+  'state-sync': {
+    entry: 'src/90-flows/state-sync.entry.js',
+    out: 'SMARTCHARGE - State Sync.js',
+  },
+  'manual-on': {
+    entry: 'src/90-flows/manual-on.entry.js',
+    out: 'SMARTCHARGE - Manual Override On.js',
+  },
+  'manual-off': {
+    entry: 'src/90-flows/manual-off.entry.js',
+    out: 'SMARTCHARGE - Manual Override Off.js',
+  },
+  'stability-debug': {
+    entry: 'src/90-flows/stability-debug.entry.js',
+    out: 'SMARTCHARGE - Stability Debug.js',
+  },
 };
 
-if (!TARGETS[target]) {
+const BUILD_ALL_TARGET = 'all';
+const DEFAULT_BUILD_ORDER = [
+  'connection-evidence',
+  'runtime-controller',
+  'run-decision',
+  'reset-session',
+  'start-session',
+  'log-on-session',
+  'log-off-session',
+  'state-sync',
+  'manual-on',
+  'manual-off',
+  'stability-debug',
+];
+
+if (target !== BUILD_ALL_TARGET && !TARGETS[target]) {
   throw new Error(`Unknown build target: ${target}`);
 }
 
@@ -47,10 +94,34 @@ function readBuildState() {
 
 function writeBuildInfo() {
   const state = readBuildState();
-  state.build += 1;
-  state.patch += 1;
-
   const now = new Date();
+
+  if (reuseVersion) {
+    const version = `${state.major}.${state.minor}.${state.patch}`;
+
+    return {
+      version,
+      fullVersion: `${version}+build.${state.build}`,
+      builtAt: now,
+    };
+  }
+
+  state.build += 1;
+
+  if (releaseVersion) {
+    const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(releaseVersion);
+
+    if (!match) {
+      throw new Error(`Invalid release version: ${releaseVersion}`);
+    }
+
+    state.major = Number(match[1]);
+    state.minor = Number(match[2]);
+    state.patch = Number(match[3]);
+  } else {
+    state.patch += 1;
+  }
+
   const version = `${state.major}.${state.minor}.${state.patch}`;
   const fullVersion = `${version}+build.${state.build}`;
 
@@ -92,42 +163,54 @@ function collectSharedFiles(dir) {
   });
 }
 
-const buildInfo = writeBuildInfo();
-const targetConfig = TARGETS[target];
+function buildTarget(targetName, buildInfo) {
+  const targetConfig = TARGETS[targetName];
 
-const files = [
-  ...collectSharedFiles(SRC_DIR).sort(),
-  path.resolve(targetConfig.entry),
-];
+  const files = [
+    ...collectSharedFiles(SRC_DIR).sort(),
+    path.resolve(targetConfig.entry),
+  ];
 
-const outFile = path.join(DIST_DIR, targetConfig.out);
+  const outFile = path.join(DIST_DIR, targetConfig.out);
 
-let output = '';
+  let output = '';
 
-output += '// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.\n';
-output += '// Source: smartcharge-homey-bundle\n';
-output += `// Target: ${target}\n`;
-output += `// Version: ${buildInfo.fullVersion}\n`;
-output += `// Built at: ${buildInfo.builtAt.toISOString()}\n\n`;
+  output += '// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY IN HOMEY.\n';
+  output += '// Source: smartcharge-homey-bundle\n';
+  output += `// Target: ${targetName}\n`;
+  output += `// Version: ${buildInfo.fullVersion}\n`;
+  output += `// Built at: ${buildInfo.builtAt.toISOString()}\n\n`;
 
-for (const file of files) {
-  const relativePath = path.relative(process.cwd(), file).replaceAll('\\', '/');
+  for (const file of files) {
+    const relativePath = path
+      .relative(process.cwd(), file)
+      .replaceAll('\\', '/');
 
-  output +=
-    '// -----------------------------------------------------------------------------\n';
-  output += `// Source file: ${relativePath}\n`;
-  output +=
-    '// -----------------------------------------------------------------------------\n\n';
-  output += fs.readFileSync(file, 'utf8');
-  output += '\n\n';
+    output +=
+      '// -----------------------------------------------------------------------------\n';
+    output += `// Source file: ${relativePath}\n`;
+    output +=
+      '// -----------------------------------------------------------------------------\n\n';
+    output += fs.readFileSync(file, 'utf8');
+    output += '\n\n';
+  }
+
+  fs.mkdirSync(DIST_DIR, { recursive: true });
+  fs.writeFileSync(outFile, output, 'utf8');
+
+  console.log(`Target  : ${targetName}`);
+  console.log(`Files   : ${files.length}`);
+  console.log(`Output  : ${path.relative(process.cwd(), outFile)}`);
 }
 
-fs.mkdirSync(DIST_DIR, { recursive: true });
-fs.writeFileSync(outFile, output, 'utf8');
+const buildInfo = writeBuildInfo();
+const targetsToBuild =
+  target === BUILD_ALL_TARGET ? DEFAULT_BUILD_ORDER : [target];
 
 console.log('SmartCharge Homey Builder');
 console.log('-------------------------');
-console.log(`Target  : ${target}`);
 console.log(`Version : ${buildInfo.fullVersion}`);
-console.log(`Files   : ${files.length}`);
-console.log(`Output  : ${path.relative(process.cwd(), outFile)}`);
+
+for (const targetName of targetsToBuild) {
+  buildTarget(targetName, buildInfo);
+}

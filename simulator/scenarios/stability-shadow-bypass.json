@@ -1,0 +1,61 @@
+{
+  "name": "stability-shadow-bypass",
+  "description": "Manual, disconnect, and latest-safe-start flags bypass stability without corrupting the accepted simulator anchor.",
+  "shadowStability": true,
+  "now": "2026-07-07T18:00:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "shadow-waiting-current",
+  "initial": {
+    "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
+    "devices": { "mercedes": { "capabilitiesObj": { "measure_battery": 90 } } }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT",
+          "acceptedStrategyRevision": 1
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:15:00+02:00",
+      "shadow": { "manualOverrideActive": true },
+      "expect": {
+        "result": {
+          "stabilityDecision": "BYPASS",
+          "stabilityReasonCode": "MANUAL_OVERRIDE",
+          "acceptedStrategyRevision": 1
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:20:00+02:00",
+      "shadow": { "disconnectSafetyActive": true },
+      "expect": {
+        "result": {
+          "stabilityDecision": "BYPASS",
+          "stabilityReasonCode": "DISCONNECT_SAFETY",
+          "acceptedStrategyRevision": 1
+        }
+      }
+    },
+    {
+      "flow": "run-decision",
+      "now": "2026-07-08T06:55:00+02:00",
+      "fixture": "late-plan",
+      "expect": {
+        "result": {
+          "shouldChargeNow": true,
+          "stabilityDecision": "BYPASS",
+          "stabilityReasonCode": "SAFETY_OVERRIDE",
+          "acceptedStrategyRevision": 1
+        }
+      }
+    }
+  ],
+  "expect": { "tibberCalls": 4 }
+}

@@ -31,9 +31,7 @@
           "shouldChargeNow": false
         },
         "reasonIncludes": "Session expired",
-        "events": [
-          "session_expired"
-        ],
+        "events": ["session_expired"],
         "plugOn": true,
         "plugCommandCount": 0,
         "tibberCallsDelta": 0
@@ -43,9 +41,7 @@
   "expect": {
     "plugOn": true,
     "plugCommandCount": 0,
-    "eventTypes": [
-      "session_expired"
-    ],
+    "eventTypes": ["session_expired"],
     "tibberCalls": 0
   }
 }
