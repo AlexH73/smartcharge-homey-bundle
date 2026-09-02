@@ -30,6 +30,13 @@
           "acceptedStrategyRevision": 1,
           "persistenceStatus": "PRESERVED"
         },
+        "logicJson": {
+          "SmartChargeStabilityDiagnostics": {
+            "stabilityDecision": "BYPASS",
+            "reason": "MANUAL_OVERRIDE",
+            "acceptedRevision": 1
+          }
+        },
         "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 }
       }
     },

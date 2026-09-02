@@ -66,3 +66,20 @@ perform persistent lifecycle cleanup. Explicit manual reset owns its cleanup
 boundary and may also clear the anchor. A later session begins with revision 1.
 Read, evaluation, write, or cleanup failures are isolated from the Runtime
 actuator path.
+
+## Last-result diagnostics
+
+`SmartChargeStabilityDiagnostics` is a manually created Text variable whose
+initial value is `null`. After each live-shadow evaluation it receives one
+schema-versioned JSON object containing the final decision, canonical
+`productionShouldCharge`, shadow-effective result, transition, effective
+accepted revision, already-calculated costs and savings, accepted-anchor
+persistence status, and reason. It is overwritten on the next evaluation; no
+history is retained.
+
+Production decision logic never reads this variable. Missing variables and
+write failures are ignored by planning, stability evaluation, accepted-anchor
+persistence, Runtime reconciliation, and lifecycle. Diagnostics intentionally
+remain after terminal cleanup for post-mortem inspection, with `sessionId`
+allowing Stability Debug to report whether the observation matches the current
+Session.

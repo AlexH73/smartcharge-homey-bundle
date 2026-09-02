@@ -337,6 +337,17 @@ async function runCanonicalDecision(options = {}) {
   }
 
   if (liveStabilityEnabled && stabilityResult) {
+    const diagnosticsWrite = await writeStabilityDiagnostics({
+      now,
+      sessionId,
+      productionShouldCharge: shouldChargeNow,
+      stabilityResult,
+    });
+    stabilityResult.diagnosticsPersistenceStatus = diagnosticsWrite.status;
+    stabilityResult.diagnosticsPersistenceError = diagnosticsWrite.error;
+  }
+
+  if (liveStabilityEnabled && stabilityResult) {
     log(
       `Plan stability   : ${stabilityResult.stabilityDecision || 'ERROR'}/${stabilityResult.stabilityReasonCode || stabilityResult.stabilityError || 'UNKNOWN'}; revision=${stabilityResult.acceptedStrategyRevision ?? 'null'}; persistence=${stabilityResult.persistenceStatus || 'none'}`,
     );

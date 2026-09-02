@@ -484,6 +484,10 @@ async function runRuntimeController() {
             persistenceStatus:
               snapshot.plannerDecision.persistenceStatus || null,
             persistenceError: snapshot.plannerDecision.persistenceError || null,
+            diagnosticsPersistenceStatus:
+              snapshot.plannerDecision.diagnosticsPersistenceStatus || null,
+            diagnosticsPersistenceError:
+              snapshot.plannerDecision.diagnosticsPersistenceError || null,
           }
         : {}),
     };

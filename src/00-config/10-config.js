@@ -29,6 +29,7 @@ const CONFIG = {
   smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
   smartChargeManualModeVariableName: 'SmartChargeManualMode',
   acceptedStrategyVariableName: 'SmartChargeAcceptedStrategy',
+  stabilityDiagnosticsVariableName: 'SmartChargeStabilityDiagnostics',
   runtimeModeVariableName: 'SmartChargeRuntimeMode',
   runtimeDisconnectObservedAtVariableName: 'SmartChargeDisconnectObservedAt',
   runtimeConnectionEvidenceAtVariableName: 'SmartChargeConnectionEvidenceAt',

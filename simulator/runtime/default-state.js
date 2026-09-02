@@ -20,6 +20,7 @@ const DEFAULT_LOGIC_VARIABLES = Object.freeze({
   SmartChargeSessionStatus: '',
   SmartChargeManualMode: false,
   SmartChargeAcceptedStrategy: 'null',
+  SmartChargeStabilityDiagnostics: 'null',
   SmartChargeRuntimeMode: 'shadow',
   SmartChargeDisconnectObservedAt: 'null',
   SmartChargeConnectionEvidenceAt: 'null',
