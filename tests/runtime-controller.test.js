@@ -68,7 +68,15 @@ assert.equal(
     manualOverride: false, plannerShouldCharge: false,
     preconditioningActive: true, plugOn: true
   }).desiredPlugOn`),
-  true,
+  false,
+);
+assert.equal(
+  call(`deriveDesiredPlugState({
+    sessionActive: true, batteryPct: 50, targetBatteryPct: 100,
+    manualOverride: false, plannerShouldCharge: false,
+    preconditioningActive: true, plugOn: false
+  }).desiredPlugOn`),
+  false,
 );
 assert.equal(
   call(`evaluateCompletionEvidence({

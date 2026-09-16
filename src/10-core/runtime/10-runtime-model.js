@@ -135,11 +135,6 @@ function deriveDesiredPlugState(snapshot) {
     return { desiredPlugOn: true, reason: 'Manual override requests power' };
   if (snapshot.plannerShouldCharge)
     return { desiredPlugOn: true, reason: 'Planner requests charging' };
-  if (snapshot.preconditioningActive && snapshot.plugOn)
-    return {
-      desiredPlugOn: true,
-      reason: 'Preconditioning keeps power available',
-    };
   return { desiredPlugOn: false, reason: 'Planner requests waiting' };
 }
 

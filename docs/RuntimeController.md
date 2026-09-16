@@ -82,7 +82,8 @@ controller from creating its own zero-power evidence.
 
 Completion from target battery has higher priority than disconnect, followed
 by expired Session, confirmed disconnect, suspected disconnect, manual
-override, planner request, preconditioning, and waiting. In active mode an
+override, planner request, and waiting. Preconditioning is diagnostic and does
+not keep the plug on outside a selected charging window. In active mode an
 expired planner result is a runtime-owned terminal transition: the plug is
 switched off, `session_expired` is emitted, and runtime state is cleared without
 turning the Session into `manual_reset`. Runtime states remain internal and do
