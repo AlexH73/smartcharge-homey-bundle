@@ -24,12 +24,13 @@ a new activation.
 - START_CONFIRMED requires two independent fresh **plug** `measure_power`
   samples above 500 W, at least 30 seconds apart. Re-reading one timestamp does
   not count. Samples must be at/after activation, non-future, at most 60 seconds
-  old, with the plug ON. Lower power or a gap over 60 seconds resets unconfirmed
-  high-power evidence.
+  old, with the plug ON. Lower power, an unavailable/stale observation, or a gap
+  over 360 seconds resets unconfirmed high-power evidence.
 - LOW_POWER only applies after confirmed consumption. Independent samples
-  at/below 3 W spanning 180 seconds trigger OFF and completion. Power above 3 W
-  resets the interval. More than 60 seconds without fresh readings resets the
-  uncompleted low interval, including after restart. Missing/invalid/negative
+  at/below 5 W spanning 180 seconds trigger OFF and completion. Power above 5 W
+  resets the interval. An unavailable/stale observation or more than 360 seconds
+  between readings resets the uncompleted low interval, including after restart.
+  Missing/invalid/negative
   or timestamp-less power is never zero and cannot confirm either transition.
 - MAX_DURATION_REACHED triggers at 360 minutes from activation even without
   power or vehicle readings. Restart and duplicate ON cannot extend it.
@@ -71,9 +72,12 @@ before an operator resets the lease to `null`; preserve manual timestamps.
 
 Thresholds run on the next runtime invocation with qualifying samples. They
 are not hard real-time cutoffs or proof of continuous power between samples.
-Invoke runtime on power updates and a frequent periodic watchdog (preferably
-30 seconds, using a supported Homey scheduling mechanism). Samples must advance
-at most 60 seconds apart for LOW_POWER. A 15-minute legacy schedule is unsuitable.
+The deployed five-minute watchdog can confirm two fresh samples without
+resetting evidence on every tick. Individual samples remain at most 60 seconds
+old; the maximum observation gap is 360 seconds. LOW_POWER still requires
+180 seconds between independent low samples, typically stopping on the next
+five-minute tick. Unobserved power recovery between ticks cannot be excluded.
+The cadence is unchanged; this is sampled evidence, not continuous monitoring.
 Software protections do not replace line, EVSE, plug, or vehicle protections.
 
 Request/success/failure are diagnosed locally; webhook delivery is best effort
@@ -216,3 +220,9 @@ time. Shadow mode never consumes connection evidence, persists disconnect
 state, updates planner Logic variables, switches the plug, or emits lifecycle or
 decision telemetry. Telemetry v2 schema remains unchanged during this hardening
 pass.
+
+After a device command ACK, runtime command and following lifecycle events
+publish null plugOn/plugPower rather than pre-command or synthetic values.
+The actuator request message contains the pre-command snapshot; the success
+message identifies ACK and physicalStateVerified=false. Event columns and
+session materialization are unchanged. ACK is not proof of physical OFF.

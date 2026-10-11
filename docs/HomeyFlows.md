@@ -22,10 +22,13 @@ mode is active. Do not change deployed Flows until the local change is reviewed.
    State Sync and Run Decision now delegate to the same runtime owner.
 6. Keep trustworthy connection events pointed at Connection Evidence. Do not
    generate fresh evidence from a timer or a retained status value.
-7. Invoke runtime on actual plug power updates, on Homey startup, and with a
-   frequent watchdog. Prefer a supported 30-second schedule; sample gaps above
-   60 seconds invalidate LOW_POWER evidence. Consolidate ordinary triggers;
-   separate activations can still overlap and the Logic lease is not a mutex.
+7. Keep the existing five-minute watchdog and startup recovery. Version 0.6.4
+   accepts independent observations at most 360 seconds apart while each power
+   sample must still be at most 60 seconds old. LOW_POWER requires samples at
+   or below 5 W spanning at least 180 seconds, usually detected on the next
+   five-minute tick. Recovery between ticks can be missed; this does not prove
+   continuously low power. Do not add parallel power-event runtime writers.
+   Separate activations can still overlap and the Logic lease is not a mutex.
    User Stop must remain callable promptly, independently of vehicle events.
 8. Disable duplicate legacy Log On/Log Off branches for runtime-owned commands;
    runtime logs successful transitions itself, including without auto sessions.

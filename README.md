@@ -5,7 +5,7 @@
 </p>
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![SmartCharge](https://img.shields.io/badge/SmartCharge-v0.6.3-blue)](docs/DevelopmentWorkflow.md)
+[![SmartCharge](https://img.shields.io/badge/SmartCharge-v0.6.4-blue)](docs/DevelopmentWorkflow.md)
 [![HomeyScript](https://img.shields.io/badge/HomeyScript-runtime-00C7B7)](https://homey.app/en-us/app/com.athom.homeyscript/HomeyScript/)
 [![Tibber](https://img.shields.io/badge/Tibber-price%20API-FF5A5F)](https://developer.tibber.com/)
 [![Google Sheets](https://img.shields.io/badge/Google%20Sheets-analytics-34A853?logo=googlesheets&logoColor=white)](docs/GoogleSheetsSetup.md)
@@ -21,11 +21,13 @@ It decides when charging should start, compares continuous and multi-window
 charging plans, and keeps the logic testable outside Homey through a local
 simulator.
 
-Version 0.6.3 is prepared for local release review. Its manual lifecycle changes
-have not been deployed or validated on real Homey. Follow the migration in
-`docs/HomeyFlows.md`; strict execution serialization remains a separate task
-described in `docs/HomeyExecutionSerialization.md`. The Russian deployment and
-rollback checklist is in [HomeyDeploymentReadiness.ru.md](docs/HomeyDeploymentReadiness.ru.md).
+Version 0.6.4+build.17 is prepared for local release review. It corrects manual
+start observation at a five-minute cadence, uses a 5 W LOW_POWER threshold,
+and distinguishes command ACK from observed plug state in telemetry. This
+release has not been deployed or validated on real Homey. Update instructions
+and watchdog limitations are in [Release-0.6.4.ru.md](docs/Release-0.6.4.ru.md).
+Strict execution serialization remains a separate task described in
+[HomeyExecutionSerialization.md](docs/HomeyExecutionSerialization.md).
 
 ## Features
 

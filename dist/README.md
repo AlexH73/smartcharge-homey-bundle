@@ -12,11 +12,11 @@ npm run build:homey
 For an explicit release version:
 
 ```bash
-npm run build:homey -- --release 0.6.2
+npm run build:homey -- --release 0.6.4
 ```
 
 The release build keeps the project-wide build number monotonic. The current
-release review metadata is `0.6.2+build.15`.
+release review metadata is `0.6.4+build.17`.
 
 The build writes standalone HomeyScript files here:
 

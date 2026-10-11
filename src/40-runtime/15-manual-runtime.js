@@ -71,10 +71,17 @@ async function runtimeEvent(
     loggedAt: new Date(),
     battery:
       state && !manualBatteryFresh ? null : (snapshot?.batteryPct ?? null),
-    plugOn: snapshot?.plug ? getCapabilityValue(snapshot.plug, 'onoff') : null,
-    plugPower: snapshot?.plug
-      ? runtimeNumberOrNull(getCapabilityValue(snapshot.plug, 'measure_power'))
-      : null,
+    plugOn: snapshot?.commandAcknowledged
+      ? null
+      : snapshot?.plug
+        ? getCapabilityValue(snapshot.plug, 'onoff')
+        : null,
+    plugPower:
+      !snapshot?.commandAcknowledged && snapshot?.plug
+        ? runtimeNumberOrNull(
+            getCapabilityValue(snapshot.plug, 'measure_power'),
+          )
+        : null,
     shouldChargeNow: state
       ? !state.stopReason
       : (snapshot?.plannerShouldCharge ?? false),
@@ -149,6 +156,10 @@ async function executeRuntimePlugCommand(
   const requestMessage = JSON.stringify({
     command: desiredOn ? 'ON' : 'OFF',
     phase: 'requested',
+    beforePlugOn: getCapabilityValue(snapshot.plug, 'onoff'),
+    beforePlugPowerW: runtimeNumberOrNull(
+      getCapabilityValue(snapshot.plug, 'measure_power'),
+    ),
   });
   log(`Actuator requested: ${requestMessage}; ${reasonCode}`);
   // Never await webhook before an OFF safety command.
@@ -195,20 +206,10 @@ async function executeRuntimePlugCommand(
     );
     throw error;
   }
+  // ACK does not refresh the captured capabilities or prove physical power.
+  // Subsequent lifecycle events must not publish pre-command values as current.
+  snapshot.commandAcknowledged = true;
   let compensated = false;
-  const commandSnapshot = {
-    ...snapshot,
-    plug: {
-      capabilitiesObj: {
-        onoff: { value: desiredOn },
-        measure_power: {
-          value: runtimeNumberOrNull(
-            getCapabilityValue(snapshot.plug, 'measure_power'),
-          ),
-        },
-      },
-    },
-  };
   if (desiredOn) {
     let safety;
     try {
@@ -236,7 +237,7 @@ async function executeRuntimePlugCommand(
   await runtimeEvent(
     SmartChargeLogger.EVENT_TYPES.ACTUATOR_REQUEST,
     reasonCode,
-    commandSnapshot,
+    snapshot,
     state,
     requestMessage,
   );
@@ -245,8 +246,13 @@ async function executeRuntimePlugCommand(
       ? SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ON
       : SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_OFF,
     reasonCode,
-    commandSnapshot,
+    snapshot,
     state,
+    JSON.stringify({
+      command: desiredOn ? 'ON' : 'OFF',
+      phase: 'acknowledged',
+      physicalStateVerified: false,
+    }),
   );
   if (compensated) return 'switched_off';
   return desiredOn ? 'switched_on' : 'switched_off';

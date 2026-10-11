@@ -121,12 +121,14 @@ function evaluateManualCharging(state, input) {
     input.plugOn && freshManualMeasurement(input.power, now, next.startedAt);
   if (
     !next.lastPowerAt ||
-    now - new Date(next.lastPowerAt) > CONFIG.manualPowerFreshnessSeconds * 1000
+    now - new Date(next.lastPowerAt) > CONFIG.manualObservationGapSeconds * 1000
   ) {
     next.lowPowerSince = null;
     next.highPowerAt = null;
   }
   if (!powerFresh) {
+    next.lowPowerSince = null;
+    next.highPowerAt = null;
     return {
       state: next,
       stopReason: null,
@@ -149,7 +151,7 @@ function evaluateManualCharging(state, input) {
   }
   if (
     next.lastPowerAt &&
-    at - new Date(next.lastPowerAt) > CONFIG.manualPowerFreshnessSeconds * 1000
+    at - new Date(next.lastPowerAt) > CONFIG.manualObservationGapSeconds * 1000
   ) {
     next.lowPowerSince = null;
     next.highPowerAt = null;

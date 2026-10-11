@@ -1,7 +1,7 @@
 # SmartCharge — готовность к deployment на Homey Pro
 
 Дата: 2026-10-11. Ветка: `feature/manual-charging-reliability`.
-Релиз для review: **0.6.3+build.16**, package version **0.6.3**.
+Релиз для review: **0.6.4+build.17**, package version **0.6.4**.
 Это план будущих действий. Homey, реальные Flows и Google Sheets не изменялись.
 
 ## Решение по готовности
@@ -13,10 +13,13 @@ deployment. Готовность к автономной эксплуатаци�
 физического OFF и реальной задержки выполнения. Строгая сериализация команд
 текущей реализацией не обеспечивается.
 
-Штатный builder увеличил patch/build с 0.6.2+build.15 до 0.6.3+build.16;
+Штатный builder увеличил patch/build с 0.6.3+build.16 до 0.6.4+build.17;
 package.json и package-lock.json синхронизированы через npm version без tag.
-0.6.1+build.14 не переиспользован. Поведение production runtime в этой подготовке
-не изменялось; изменения — версия и документы миграции.
+Изменены manual observation gap (360 s), LOW_POWER (5 W), сброс недоступных
+измерений и телеметрия после command ACK. MAX_DURATION остаётся 360 минут.
+Для уже установленной 0.6.3 новые Flows/Logic/Apps Script не требуются:
+[краткая инструкция обновления](Release-0.6.4.ru.md). Ниже сохранён полный
+checklist исходной миграции; его не нужно повторять при корректной установке 0.6.3.
 
 ## Финальный аудит и известные ограничения
 
@@ -33,7 +36,7 @@ adapter, telemetry contract, regression tests и оба предыдущих rev
 | Manual ON | Новый manual intent сохраняет block=true; повторная активация не продлевает deadline | ERROR/STOPPING проходят recovery, не новую активацию |
 | Auto Mode | Только явный entry выдаёт grant, связанный с current stop token; требуется завершённый lifecycle, свободный lease и onoff=false | Grant и device call не атомарны с конкурентным Stop |
 | Mercedes | Auto требует trustworthy connection evidence и SOC 0..<100 с non-future timestamp, окно 30 минут | Старый retained status нельзя переобозначать новым connection event |
-| Plug power | Два разных свежих timestamp >500 W с интервалом ≥30 s подтверждают старт; ≤3 W в течение 180 s после подтверждения завершает зарядку | Пробел >60 s сбрасывает pending LOW_POWER; одинаковый timestamp не новый sample |
+| Plug power | Два разных свежих timestamp >500 W с интервалом ≥30 s подтверждают старт; два независимых ≤5 W samples, охватывающих ≥180 s, после подтверждения завершают зарядку | Watchdog 5 минут не доказывает непрерывную низкую мощность; недоступное/старое измерение или разрыв >360 s сбрасывает pending interval; каждый sample не старше 60 s; одинаковый timestamp не новый sample |
 | Нет power timestamp | Недоступность диагностируется; нет подтверждения старта/LOW_POWER и подстановки 0 W | USER_STOP и исходный deadline 360 минут остаются; OFF производится на следующем runtime invocation |
 | Actuator ownership | Все production ON/OFF проходят единый helper; automatic OFF не забирает валидную manual зарядку | Один helper в независимых VM не означает один исполнитель |
 | Legacy | Active Run Decision/State Sync делегируют runtime; compatibility ON проходит тот же block gate | Shadow runtime сам не переключает, но compatibility legacy может переключать при разрешённом automatic |
@@ -49,16 +52,16 @@ automatic session, planner=true и отсутствие новых ON для в�
 
 | Проверка | Результат |
 | --- | --- |
-| npm test | PASS: все unit suites, 40 manual-runtime и 112 manual-terminal cases |
+| npm test | PASS: все unit suites, 52 manual-runtime и 112 manual-terminal cases |
 | simulator (npm test → simulate:all) | PASS: 94/94, без XFAIL |
 | npm run lint | PASS |
 | npm run format:check | PASS |
 | npm run build:homey | PASS: 12 bundles, единая версия |
 | Build validation | PASS: package/lock/build metadata согласованы; полное сравнение каждого bundle с header и исходниками, syntax parsing |
-| Compiled bundle smoke | PASS: Manual ON, runtime, USER_STOP, blocked legacy; две mock actuator команды |
+| Compiled bundle smoke | Для 0.6.4 отдельно не повторялся; выполнены source-based suites и syntax parsing всех generated bundles |
 | git diff --check | PASS |
 
-Логи и SHA-256 manifest: `diagnostics/deployment-readiness/`.
+Логи и SHA-256 manifest: `diagnostics/release-0.6.4/`.
 Bundles находятся в dist, ignored по существующей политике репозитория;
 commit фиксирует исходники и build metadata. Перед установкой использовать
 именно проверенные bundles и сверять manifest, не делать отдельные target builds.
@@ -121,7 +124,9 @@ commit фиксирует исходники и build metadata. Перед ус�
   не сбрасывать state/block/token/lock к initial defaults после каждого restart.
 - [ ] Power events использовать для наблюдения; для предлагаемой topology
   не добавлять отдельный параллельный runtime вызов на каждый power update.
-  Проверить watchdog cadence ≤30 s и фактические sample gaps ≤60 s.
+  Сохранить watchdog 5 минут, sample gaps ≤360 s и возраст каждого sample ≤60 s.
+  Пауза/возобновление между ticks могут быть пропущены; непрерывные 180 s LOW_POWER
+  не доказаны. Не увеличивать частоту runtime в рамках этого релиза.
 
 ## Logic variables и initial values
 
@@ -168,7 +173,7 @@ commit фиксирует исходники и build metadata. Перед ус�
    Manual Override On, Auto Mode. Ранний Stop готовится первым, но это не
    разрешение запускать его среди оставшихся старых writers.
 5. Заменить Connection Evidence, Run Decision, State Sync; затем Start Session,
-   Reset Session, Log On, Log Off, Stability Debug. Все — 0.6.3+build.16.
+   Reset Session, Log On, Log Off, Stability Debug. Все — 0.6.4+build.17.
 6. Проверить сохранённый код/headers, Script IDs и Flow references, Logic types,
    конфигурацию device matching. Обновлять существующие IDs либо явно исправить
    все ссылки при создании новых scripts. Проверить, что старых writers не осталось.
@@ -193,9 +198,9 @@ commit фиксирует исходники и build metadata. Перед ус�
 Предлагаемые роли Advanced Flows (не созданы):
 
 1. **SC Runtime Watchdog**: единственный обычный периодический caller Runtime
-   Controller, целевой интервал 30 s. Проверить поддержку такой cadence на
-   установленной платформе; иначе согласовать доступную цепочку Delay со строго
-   одним операторским запуском. Не добавлять одновременно timer и looping chain.
+   Controller, сохраняется существующий интервал 5 минут. Для 0.6.4 не менять
+   cadence и не добавлять looping chain или независимый power-event controller.
+   Фактическую свежесть samples и задержку исполнения проверить под наблюдением.
    Завершение HomeyScript card ожидается внутри одной цепочки; нет parallel fan-out
    к State Sync/Run Decision и нет retries, повторяющих ON после timeout.
 2. **SC Connection Evidence**: только реальные события подключения, один caller
@@ -262,7 +267,7 @@ Executor в этом релизе не реализован.
 - [ ] Проверить USER_STOP под нагрузкой и физическое прекращение зарядки,
   repeated Stop, последующие blocked ticks и сохранность automatic session.
 - [ ] Проверить естественное завершение: LOW_POWER при SOC не100 и свежих samples
-  ≤3 W в течение ≥180 s либо BATTERY_FULL при свежем реальном SOC100. Если
+  ≤5 W с независимыми timestamps, охватывающими ≥180 s, либо BATTERY_FULL при свежем реальном SOC100. Если
   условия не возникли, соответствующая аппаратная проверка остаётся pending.
 - [ ] MAX_DURATION требует исходных 6 часов и работающего watchdog; не сокращать
   production threshold ради теста. До аппаратной проверки действует local evidence.

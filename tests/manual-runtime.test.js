@@ -196,13 +196,84 @@ async function main() {
     const r = runtime();
     await confirmed(r);
     await low(r, 40, 100);
-    await run(r, 'runtime-controller', 130, power(4, 130));
+    await run(r, 'runtime-controller', 130, power(6, 130));
     assert.equal(state(r).lowPowerSince, null);
     await run(r, 'runtime-controller', 160, power(0, 160));
     await run(r, 'runtime-controller', 221);
     assert.equal(state(r).lowPowerSince, null);
     await run(r, 'runtime-controller', 222, power(null, 222));
     assert.equal(state(r).lowPowerSince, null);
+  });
+  for (const watts of [3, 4, 5, 5.1, 6]) {
+    await test(`Five-minute watchdog with ${watts} W`, async () => {
+      const r = runtime();
+      await run(r, 'manual-on');
+      await run(r, 'runtime-controller', 300, power(2600, 300));
+      const started = await run(r, 'runtime-controller', 600, power(2600, 600));
+      assert.equal(state(r).status, 'CHARGING');
+      assert.equal(
+        started.eventTypes.includes('manual_charging_started'),
+        true,
+      );
+      await run(r, 'runtime-controller', 900, power(watts, 900));
+      await run(r, 'runtime-controller', 1200, power(watts, 1200));
+      assert.equal(state(r).stopReason, watts <= 5 ? 'LOW_POWER' : null);
+      if (watts <= 5) {
+        const events = r.logWriter.events.filter((event) =>
+          [
+            'smartcharge_off',
+            'manual_charging_completed',
+            'manual_override_disabled',
+          ].includes(event.eventType),
+        );
+        assert.equal(events.length, 3);
+        for (const event of events) {
+          assert.equal(event.plugOn, null);
+          assert.equal(event.plugPower, null);
+        }
+      }
+    });
+  }
+  await test('Watchdog gaps, restart, duplicate and missing power evidence', async () => {
+    const r = runtime();
+    await run(r, 'manual-on');
+    await run(r, 'runtime-controller', 300, power(2600, 300));
+    r.scriptLoader = new ScriptLoader(root);
+    await run(r, 'runtime-controller', 600, power(2600, 600));
+    assert.equal(state(r).confirmedAt, at(600));
+    await run(r, 'runtime-controller', 900, power(4, 900));
+    await run(r, 'runtime-controller', 930, power(4, 900));
+    assert.equal(state(r).lowPowerSince, at(900));
+    await run(r, 'runtime-controller', 960, power(6, 960));
+    assert.equal(state(r).lowPowerSince, null);
+    await run(r, 'runtime-controller', 1200, power(4, 1200));
+    await run(r, 'runtime-controller', 1500, power(null, 1500));
+    assert.equal(state(r).lowPowerSince, null);
+    await run(r, 'runtime-controller', 1800, power(4, 1800));
+    r.scriptLoader = new ScriptLoader(root);
+    await run(r, 'runtime-controller', 2161, power(4, 2161));
+    assert.equal(state(r).lowPowerSince, at(2161));
+    assert.equal(state(r).stopReason, null);
+  });
+  await test('Persisted confirmation survives a lost start webhook', async () => {
+    const r = runtime();
+    await run(r, 'manual-on');
+    await run(r, 'runtime-controller', 300, power(2600, 300));
+    r.handleLocalWebhook = () => {
+      throw new Error('webhook unavailable');
+    };
+    await run(r, 'runtime-controller', 600, power(2600, 600));
+    assert.equal(state(r).status, 'CHARGING');
+    assert.equal(
+      r.logWriter.events.some(
+        (event) => event.eventType === 'manual_charging_started',
+      ),
+      false,
+    );
+    r.scriptLoader = new ScriptLoader(root);
+    await run(r, 'runtime-controller', 900, power(2600, 900));
+    assert.equal(state(r).confirmedAt, at(600));
+    assert.equal(r.homeyMock.devices.plug.commands.length, 1);
   });
   await test('N maximum duration below six hours', async () => {
     const r = runtime();
@@ -409,6 +480,41 @@ async function main() {
     );
     assert.notEqual(r.homeyMock.getLogicValue('ChargeConnectedAt'), 'null');
   });
+  for (const [label, socAt, statusAt, soc, allowed] of [
+    ['stale vehicle', -3600, -3600, 44, false],
+    ['fresh SOC only', 3, -3600, 44, false],
+    ['fresh status only', -3600, 3, 44, false],
+    ['full battery', 3, 3, 100, false],
+    ['recovered capabilities without connection event', 3, 3, 44, true],
+  ]) {
+    await test(`Auto Mode ${label} after restored terminal state`, async () => {
+      const r = runtime();
+      await run(r, 'manual-on');
+      await run(r, 'manual-off', 1);
+      r.scriptLoader = new ScriptLoader(root);
+      await run(r, 'auto-mode', 3, {
+        devices: {
+          mercedes: {
+            capabilitiesObj: {
+              text_charging_status: {
+                value: 'Charge break',
+                lastUpdated: at(statusAt),
+              },
+              measure_battery: { value: soc, lastUpdated: at(socAt) },
+            },
+          },
+        },
+      });
+      assert.equal(
+        r.homeyMock.getLogicValue('SmartChargeAutoStartBlocked'),
+        !allowed,
+      );
+      if (!allowed)
+        assert.equal(r.homeyMock.getLogicValue('ChargeConnectedAt'), 'null');
+      assert.equal(state(r).startedAt, base);
+      assert.equal(state(r).endedAt, at(1));
+    });
+  }
   await test('Reactivation preserves automatic block without reusing old deadline', async () => {
     const r = runtime();
     await run(r, 'manual-on');

@@ -1,5 +1,12 @@
 # Telemetry Contract
 
+Runtime actuator ACK events and subsequent lifecycle events in the same invocation
+leave `plugOn` and `plugPower` (`plugPowerW` in Sheets) empty: the pre-command
+snapshot is no longer current. The request `message` records `beforePlugOn` and
+`beforePlugPowerW`; the success message records `phase=acknowledged` and
+`physicalStateVerified=false`. A command ACK is not a physical OFF measurement.
+The Events/Sessions schema and event-driven materializer remain unchanged.
+
 ## Manual reliability events (schema v2 compatible)
 
 No columns are renamed, reordered, or added. Existing `smartcharge_on`,
