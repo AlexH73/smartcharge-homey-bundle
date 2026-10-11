@@ -18,7 +18,7 @@ on:
         options: [dry-run, deploy, rollback]
         default: dry-run
       confirmation:
-        description: For writes type INSTALL or ROLLBACK SmartCharge 0.6.4+build.17
+        description: For writes type INSTALL or ROLLBACK SmartCharge <approved version>
         required: false
         type: string
       backup_id:
@@ -69,8 +69,8 @@ jobs:
           [[ "$CI_RUN_ID" =~ ^[0-9]+$ && "$ARTIFACT_ID" =~ ^[0-9]+$ ]]
           case "$DEPLOY_MODE" in
             dry-run) ;;
-            deploy) [[ "$WRITE_CONFIRMATION" == 'INSTALL SmartCharge 0.6.4+build.17' ]] ;;
-            rollback) [[ "$WRITE_CONFIRMATION" == 'ROLLBACK SmartCharge 0.6.4+build.17' && "$BACKUP_ID" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] ;;
+            deploy) [[ "$WRITE_CONFIRMATION" == "INSTALL SmartCharge ${SOURCE_RELEASE_TAG#v}" ]] ;;
+            rollback) [[ "$WRITE_CONFIRMATION" == "ROLLBACK SmartCharge ${SOURCE_RELEASE_TAG#v}" && "$BACKUP_ID" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] ;;
             *) exit 1 ;;
           esac
           # A named environment alone does not enable approval protection.
@@ -120,7 +120,8 @@ jobs:
         run: |
           node scripts/verify-release-source.js manifest verified-artifact approved-provenance/provenance.json approved-provenance/smartcharge-manifest.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/release-artifact.js verify verified-artifact
+          $taskProvenance = Get-Content -LiteralPath approved-provenance/provenance.json -Raw | ConvertFrom-Json
+          node scripts/release-artifact.js verify verified-artifact $taskProvenance.manifestSha256 $taskProvenance.tag
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         shell: pwsh
       - name: Controlled operation with immutable artifact and private backup

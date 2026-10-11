@@ -80,20 +80,10 @@ function createReader(address, token, fetchImpl = fetch) {
 }
 
 function selectScript(scripts, expectedName) {
-  let matches = Object.values(scripts).filter(
+  const matches = Object.values(scripts).filter(
     (script) =>
       script.name === expectedName || script.name === expectedName + '.js',
   );
-  if (matches.length > 1) {
-    // This corrective release explicitly upgrades the installed 0.6.3+build.16.
-    // Never choose arbitrarily between duplicate IDs of that installed release.
-    const installed = matches.filter((script) =>
-      /^\/\/ Version: (?:0\.6\.3\+build\.16|0\.6\.4\+build\.17)\r?$/m.test(
-        script.code || '',
-      ),
-    );
-    if (installed.length === 1) matches = installed;
-  }
   assert.equal(
     matches.length,
     1,
@@ -120,6 +110,7 @@ function replacementPlan(manifest, scripts, directory) {
     const currentHash = sha256(Buffer.from(script.code, 'utf8'));
     const newHash = sha256(fs.readFileSync(path.join(directory, bundle.file)));
     return {
+      releaseVersion: manifest.version,
       file: bundle.file,
       id: script.id,
       name: script.name,

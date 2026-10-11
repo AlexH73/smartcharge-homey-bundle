@@ -14,6 +14,12 @@ async function main() {
   };
   const responses = {
     [`repos/${repository}`]: { private: false },
+    [`repos/${repository}/contents/.smartcharge-build.json?ref=${sha}`]: {
+      encoding: 'base64',
+      content: Buffer.from(
+        JSON.stringify({ major: 0, minor: 6, patch: 4, build: 17 }),
+      ).toString('base64'),
+    },
     [`repos/${repository}/actions/runs/123`]: {
       workflow_id: 99,
       head_repository: { full_name: repository },
@@ -73,6 +79,46 @@ async function main() {
     object[field] = old;
     cases++;
   }
+  await assert.rejects(
+    verifySource(get, { ...approved, repository: 'attacker/fork' }),
+  );
+  await assert.rejects(verifySource(get, { ...approved, tag: 'latest' }));
+  const metadata =
+    responses[
+      `repos/${repository}/contents/.smartcharge-build.json?ref=${sha}`
+    ];
+  const savedMetadata = metadata.content;
+  metadata.content = Buffer.from(
+    JSON.stringify({ major: 0, minor: 7, patch: 0, build: 18 }),
+  ).toString('base64');
+  await assert.rejects(verifySource(get, approved), /release metadata/);
+  metadata.content = savedMetadata;
+  const future = { ...approved, tag: 'v0.7.1+build.23' };
+  responses[`repos/${repository}/commits/${encodeURIComponent(future.tag)}`] = {
+    sha,
+  };
+  responses[
+    `repos/${repository}/releases/tags/${encodeURIComponent(future.tag)}`
+  ] = {
+    ...responses[
+      `repos/${repository}/releases/tags/${encodeURIComponent(approved.tag)}`
+    ],
+    tag_name: future.tag,
+    assets: [
+      {
+        id: 11,
+        name: 'smartcharge-manifest.json',
+        size: 1234,
+        browser_download_url: `https://github.com/${repository}/releases/download/${encodeURIComponent(future.tag)}/smartcharge-manifest.json`,
+      },
+    ],
+  };
+  metadata.content = Buffer.from(
+    JSON.stringify({ major: 0, minor: 7, patch: 1, build: 23 }),
+  ).toString('base64');
+  assert.equal((await verifySource(get, future)).version, '0.7.1+build.23');
+  metadata.content = savedMetadata;
+  cases += 4;
   const now = Date.now();
   const snapshot = {
     devices: {

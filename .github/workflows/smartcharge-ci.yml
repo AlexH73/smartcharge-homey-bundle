@@ -24,14 +24,32 @@ jobs:
       - run: npm ci
       - name: Verify without version bump
         run: npm run verify
+      # Source-only PR validation must not relabel corrected bytes as an old release.
+      - name: Build independently approved release commit
+        if: github.event_name != 'pull_request' && vars.SOURCE_COMMIT_SHA == github.sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_TAG: ${{ vars.SOURCE_RELEASE_TAG }}
+        run: |
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/$APPROVED_TAG" --jq .sha)" = "$GITHUB_SHA"
+          npm run build:homey -- --reuse-version
       - name: Validate all bundles and create release manifest
+        if: github.event_name != 'pull_request' && vars.SOURCE_COMMIT_SHA == github.sha
         run: node scripts/release-artifact.js create
       - name: Prove repeat builds are identical
+        if: github.event_name != 'pull_request' && vars.SOURCE_COMMIT_SHA == github.sha
         run: |
           npm run build:homey -- --reuse-version
           node scripts/release-artifact.js create
           git diff --exit-code
+      - name: Verify independent release approval before upload
+        if: github.event_name != 'pull_request' && vars.SOURCE_COMMIT_SHA == github.sha
+        env:
+          MANIFEST_SHA256: ${{ vars.SOURCE_MANIFEST_SHA256 }}
+          RELEASE_TAG: ${{ vars.SOURCE_RELEASE_TAG }}
+        run: node scripts/release-artifact.js verify dist/release "$MANIFEST_SHA256" "$RELEASE_TAG"
       - name: Upload immutable release artifact
+        if: github.event_name != 'pull_request' && vars.SOURCE_COMMIT_SHA == github.sha
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: smartcharge-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}

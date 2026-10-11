@@ -8,13 +8,19 @@ const {
   discover,
   inventory,
 } = require('./homey-discovery');
-const { verifyArtifact, sha256 } = require('./release-artifact');
+const {
+  verifyArtifact,
+  sha256,
+  releaseVersion,
+} = require('./release-artifact');
 const { auditFlows } = require('./homey-flow-audit');
 
 const app = '/api/manager/apps/app/com.athom.homeyscript';
 const scriptsPath = '/api/app/com.athom.homeyscript/script';
-const confirmation = 'INSTALL SmartCharge 0.6.4+build.17';
-const rollbackConfirmation = 'ROLLBACK SmartCharge 0.6.4+build.17';
+const confirmation = (version) =>
+  'INSTALL SmartCharge ' + releaseVersion(version);
+const rollbackConfirmation = (version) =>
+  'ROLLBACK SmartCharge ' + releaseVersion(version);
 
 function createClient(address, token, fetchImpl = fetch) {
   const origin = secureUrl(address);
@@ -344,11 +350,10 @@ async function writeBatch(
 async function deploy(directory, backupRoot, client, proof, approval) {
   assert.equal(
     approval,
-    confirmation,
+    confirmation(releaseVersion(proof.tag)),
     'Explicit deployment confirmation required',
   );
-  const manifest = verifyArtifact(directory);
-  assert.equal(manifest.version, '0.6.4+build.17');
+  verifyArtifact(directory, proof);
   const report = await discover(directory, backupRoot, client.get);
   const snapshot = verifyBackup(report.backupDir);
   assert.equal(snapshot.origin, client.origin);
@@ -356,7 +361,7 @@ async function deploy(directory, backupRoot, client, proof, approval) {
   safeMaintenance(snapshot, proof);
   for (const item of snapshot.releasePlan) {
     assert.ok(
-      ['0.6.3+build.16', '0.6.4+build.17'].includes(item.installedVersion),
+      releaseVersion(item.installedVersion) === item.installedVersion,
       'Unsupported installed SmartCharge release',
     );
   }
@@ -391,12 +396,13 @@ async function deploy(directory, backupRoot, client, proof, approval) {
 }
 
 async function preflight(directory, backupRoot, client, proof) {
+  verifyArtifact(directory, proof);
   const report = await discover(directory, backupRoot, client.get);
   const snapshot = verifyBackup(report.backupDir);
   assert.equal(snapshot.origin, client.origin);
   assert.ok(
-    Object.values(snapshot.releasePlan).every((item) =>
-      ['0.6.3+build.16', '0.6.4+build.17'].includes(item.installedVersion),
+    Object.values(snapshot.releasePlan).every(
+      (item) => releaseVersion(item.installedVersion) === item.installedVersion,
     ),
     'Unexpected installed SmartCharge release',
   );
@@ -417,10 +423,23 @@ async function preflight(directory, backupRoot, client, proof) {
 async function rollback(backupDir, backupRoot, client, proof, approval) {
   assert.equal(
     approval,
-    rollbackConfirmation,
+    rollbackConfirmation(releaseVersion(proof.tag)),
     'Explicit rollback confirmation required',
   );
   const original = verifyBackup(backupDir);
+  assert.equal(
+    original.artifactManifestSha256,
+    proof.manifestSha256,
+    'Rollback approved manifest mismatch',
+  );
+  assert.ok(
+    original.releasePlan.every(
+      (item) =>
+        item.releaseVersion === undefined ||
+        item.releaseVersion === releaseVersion(proof.tag),
+    ),
+    'Rollback approved version mismatch',
+  );
   checkApprovedIds(original, proof);
   assert.equal(
     original.origin,
@@ -530,6 +549,9 @@ if (require.main === module) {
               scriptIds: Object.fromEntries(
                 report.plan.map((item) => [item.file, item.id]),
               ),
+              tag: report.version,
+              manifestSha256: verifyBackup(report.backupDir)
+                .artifactManifestSha256,
               confirmedAt: null,
               independentStopVerified: false,
               pendingExecutionsDrained: false,
@@ -569,7 +591,7 @@ if (require.main === module) {
           process.env.HOMEY_ARTIFACT_DIR,
           'Validated artifact directory required for CLI rollback provenance',
         );
-        verifyArtifact(process.env.HOMEY_ARTIFACT_DIR);
+        verifyArtifact(process.env.HOMEY_ARTIFACT_DIR, proof);
         assert.equal(
           verifyBackup(path.resolve(process.argv[3])).artifactManifestSha256,
           sha256(

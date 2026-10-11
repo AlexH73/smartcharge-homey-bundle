@@ -164,9 +164,9 @@ run. Leave maintenance in place before separately supervised operational tests.
 
 Update order is the [manifest order](Release-0.6.4.md); already identical code is
 skipped, with the full selected set still verified. Approved Script IDs must match
-the dry-run plan. Duplicate names are refused unless the release-specific baseline
-selects exactly one 0.6.3+build.16/0.6.4+build.17 script; multiple eligible duplicates
-still fail. No new scripts are created and no names/compatibility modes are changed.
+the dry-run plan. All duplicate name mappings fail closed, including old release
+copies; the client never selects a script by release ranking. Resolve ambiguities
+manually before maintenance. No new scripts are created and no names/compatibility modes are changed.
 
 The local client verifies artifact bytes/metadata but does not itself fetch GitHub
 provenance. Locally approve source commit, source-to-bundle comparison and manifest
@@ -209,3 +209,31 @@ does not itself prove fresh telemetry or a trustworthy connection event.
 
 Validation: `npm run verify` includes offline release/deployment/provenance tests;
 `npm run test:deployment` runs the deployment and source-provenance suites directly.
+
+## Version-independent contract and pending runtime correction
+
+The installed 0.6.4+build.17 remains unchanged. Corrected Actuator source bytes
+require a separately authorized new release, build number, tag and deployment.
+Local tests create temporary candidates only; they do not replace dist/release.
+
+Build/source verification uses the release checkout and all twelve builder targets.
+Artifact integrity verification uses the explicit schema-1 bundle allowlist,
+manifest metadata, SHA-256, regular files and exact directory contents, without
+reading checkout source/build metadata. Unsupported schemas or safety threshold
+formats fail closed. Tooling compatibility depends on supported schema, not equal
+checkout versions. Integrity alone does not authenticate the source.
+
+CLI `inspect` performs integrity-only checks. CLI `verify <directory> <approved-digest>
+<approved-tag>` additionally requires an independently approved manifest digest and
+tag/version. GitHub provenance binds the public repository, commit, tag-to-commit
+mapping, that commit's build metadata, trusted successful non-PR workflow, artifact
+ID/name/digest and published release manifest. Existing release publication fails
+instead of replacing its assets. Matching artifact version/header is mandatory.
+
+Maintenance templates now include `tag` and `manifestSha256`. Compare these fields
+with independent approval; template values copied from the artifact are not proof
+of trusted origin. Deploy/preflight require this binding plus all existing operator
+conditions. Typed approval is `INSTALL SmartCharge <approved version>` or
+`ROLLBACK SmartCharge <approved version>`, without a leading v. Renewal and
+independent physical OFF remain mandatory. Original checksummed snapshots/journals
+remain supported; do not rewrite them to add newer optional plan fields.

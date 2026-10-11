@@ -7,6 +7,15 @@ The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 
 ## Unreleased
 
+### Fixed
+
+- Preserve ON/OFF ACK order during USER_STOP compensation; force recovery OFF
+  despite stale cached OFF or unknown ON outcome, with no logger-driven command retry.
+- Derive release approval from trusted tag/commit metadata and independent manifest
+  digest; verify schema-1 artifacts independently of tooling checkout version.
+- Check source candidates without replacing the installed 0.6.4+build.17 artifact.
+  Runtime corrections require a new separately authorized release and deployment.
+
 ### Added
 
 - GitHub-hosted CI, immutable artifacts and manual public release workflow.
@@ -15,7 +24,7 @@ The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
   No create/delete/run endpoints or automatic rollback.
 - Authenticated source/commit/tag/CI artifact provenance and separate private Windows
   deployment repository scaffold. The repository/runner is not created or tested.
-- Offline release checks, 22 deployment mock and 10 provenance test cases.
+- Offline release checks, 23 deployment mock and 14 provenance test cases.
 
 ### Changed
 

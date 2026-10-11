@@ -6,7 +6,8 @@ controls a charging plug, and optionally logs events to Google Sheets.
 Manual Charging has an independent persisted lifecycle and does not require Tibber
 or available vehicle telemetry to start or stop.
 
-Current code version: **0.6.4+build.17**. All twelve bundles have been installed in
+Installed release baseline: **0.6.4+build.17**. This branch contains an unreleased
+Actuator correction; installing it requires a new release identity. All twelve bundles have been installed in
 one controlled Homey installation and verified by readback. This proves code
 installation, not unattended charging readiness; supervised operational acceptance
 is still pending. The private GitHub deployment repository/runner has not been
@@ -56,12 +57,11 @@ needs trustworthy vehicle/connection telemetry and Tibber access.
 ```powershell
 npm ci
 npm run verify
-npm run build:homey -- --reuse-version
-node scripts/release-artifact.js create
-node scripts/release-artifact.js verify dist/release
+node scripts/release-artifact.js verify dist/release '<APPROVED_MANIFEST_SHA256>' '<APPROVED_RELEASE_TAG>'
 ```
 
-These commands reproduce the committed version without a version bump or deployment.
+`verify` checks candidate sources without rewriting the installed release. The
+artifact verification command requires an independently approved digest and tag.
 Do not run an ordinary or single-target build before installing an already approved
 artifact: those builds change release metadata.
 

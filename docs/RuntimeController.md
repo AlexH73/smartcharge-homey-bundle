@@ -227,3 +227,17 @@ code installation. Never reset saved safety state merely because Homey restarted
 After ACK, command and following lifecycle events publish null plugOn/plugPower,
 not old or synthetic values. The request message contains the pre-command snapshot;
 the ACK message includes physicalStateVerified=false. Event columns are unchanged.
+
+## Unreleased Actuator correction
+
+After ON ACK and a newly observed stop, compensating OFF ignores the pre-command
+cached OFF value. Unknown ON outcomes also request a compensating OFF while
+preserving the original error and Durable Auto Block. An OFF failure remains an
+error and never produces a successful OFF event.
+
+ACK events are queued in command order and emitted after compensation, so an ON
+ACK is not logged after its compensating OFF ACK. Webhook waits and failures do
+not delay or repeat compensation. Requested, acknowledged and physically verified
+states remain distinct; ACK does not prove physical power. This does not cancel
+other executions or provide a strict mutex. These changes require a new release
+identity; they are not installed in 0.6.4+build.17.

@@ -61,8 +61,8 @@ preconditioning while waiting and Plan Stability shadow characterization.
 
 Additional test suites are not counted as scenario JSON files: 52 manual lifecycle
 and 112 terminal regression cases, planner/cost/persistence tests, Apps Script
-materialization tests, release reproduction checks, 22 deployment mock scenarios
-and 10 authenticated-provenance cases. Run them with `npm run verify`; isolate
+materialization tests, release reproduction checks, 23 deployment mock scenarios
+and 14 authenticated-provenance cases. Run them with `npm run verify`; isolate
 deployment/provenance suites with `npm run test:deployment`. Mock deployment tests
 do not send real Homey requests. Local passing tests are not hardware acceptance.
 
@@ -225,3 +225,13 @@ the fixture date grid.
 - Google Sheets logging is replaced by local JSONL and CSV files.
 - Real access tokens and webhook URLs must not be added to fixtures, scenarios,
   or logs.
+
+## Unreleased PR review regressions
+
+`tests/actuator-compensation.test.js` controls ACK/stop ordering, stale snapshots,
+unknown ON, OFF failure and logger failure; integration checks two invocations,
+Durable Auto Block, terminal persistence and ACK-before-completion event order.
+`tests/artifact-compatibility.test.js` covers older/newer artifact versions without
+checkout metadata, unknown schema/format, tampered files/digest and tag mismatch.
+Deployment mocks also cover future release approval and rollback. The RuntimeLock
+race test is characterization evidence, not a strict serialization guarantee.

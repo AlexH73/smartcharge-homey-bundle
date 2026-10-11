@@ -50,7 +50,7 @@ function prepare(directory) {
   );
   fs.writeFileSync(
     path.join(destination, 'README.md'),
-    '# Private SmartCharge deployment\n\nReviewed tooling snapshot for 0.6.4+build.17. No public CI workflows, Homey credentials, backups or Logic snapshots are copied. Configure private Environment approvals and source provenance variables before dispatch. Do not run build-homey.js here; deploy only approved artifact.\n',
+    '# Private SmartCharge deployment\n\nReviewed tooling snapshot. Compatible schema-1 artifacts require independent tag/commit/digest approval. No public CI workflows, Homey credentials, backups or Logic snapshots are copied. Configure private Environment approvals and source provenance variables before dispatch. Do not run build-homey.js here; deploy only approved artifact.\n',
   );
   console.log(
     'Private repository scaffold prepared locally; no GitHub repository created, no credentials/backups copied',

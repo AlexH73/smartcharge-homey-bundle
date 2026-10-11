@@ -16,7 +16,7 @@ git diff --check
 ```
 
 `verify` runs ESLint, Prettier, unit/regression suites, simulator, all twelve
-reuse-version builds and offline release/deployment/provenance checks. Add
+source-only reuse-version checks and offline release/deployment/provenance checks. Add
 meaningful tests for behavior changes. Documentation links/examples/privacy need
 separate validation because docs are excluded from Prettier and simulator evidence
 cannot prove real Flow/driver behavior. Follow [Coding standards](CodingStandards.md).
@@ -31,15 +31,16 @@ merge/CI success authorizes Homey deployment or GitHub Release publication.
 
 Ordinary `npm run build:homey` and target builds increment patch/build metadata.
 Only release-authoring work should do this. `--release VERSION` sets the requested
-semantic version and advances the monotonic build counter. Review/CI reproduction:
+semantic version and advances the monotonic build counter. Source review without writing release files:
 
 ```powershell
-npm run build:homey -- --reuse-version
-node scripts/release-artifact.js create
-node scripts/release-artifact.js verify dist/release
+npm run build:homey -- --reuse-version --check
+node scripts/release-artifact.js verify dist/release '<APPROVED_MANIFEST_SHA256>' '<APPROVED_RELEASE_TAG>'
 ```
 
-These preserve committed identity/time and compare full source bytes/metadata.
+The source check preserves metadata and approved artifacts. After an explicitly
+authorized new version/build, ordinary release creation compares full source
+bytes/metadata. Do not recreate 0.6.4+build.17 from this corrected branch.
 Approve one immutable artifact; do not rebuild, bump version or edit code during
 deployment. Release tags identify approved source (for this version,
 `v0.6.4+build.17` or `0.6.4+build.17`). Tag creation/release publication are separate
@@ -49,7 +50,11 @@ approved SHA/digest and successful non-PR CI artifact; it never deploys Homey.
 ## Public CI and private deployment
 
 Public pushes to `feature/**`/`develop`, PRs and manual dispatch use GitHub-hosted
-runners and upload verified artifacts. The inactive Windows LAN workflow belongs
+runners for source-only checks. Artifact building/upload occurs only for a non-PR
+run whose SHA equals `SOURCE_COMMIT_SHA`, whose approved tag resolves to that SHA,
+and whose final manifest matches `SOURCE_MANIFEST_SHA256` and `SOURCE_RELEASE_TAG`.
+Configure these independently after authoring a new release, then rerun CI using
+manual dispatch. Ordinary feature/PR runs do not publish release bytes. The inactive Windows LAN workflow belongs
 in a separate private repository, with trusted-main tooling, authenticated source
 provenance, Environment reviewers and private credentials/backups. It has not been
 created or end-to-end tested. See [Homey deployment](HomeyDeployment.md).

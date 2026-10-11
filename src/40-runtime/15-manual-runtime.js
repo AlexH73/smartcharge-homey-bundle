@@ -108,8 +108,11 @@ async function executeRuntimePlugCommand(
   desiredOn,
   reasonCode,
   state = null,
+  forceOff = false,
+  pendingEvents = null,
 ) {
-  if (desiredOn === getCapabilityValue(snapshot.plug, 'onoff')) return 'none';
+  if (!forceOff && desiredOn === getCapabilityValue(snapshot.plug, 'onoff'))
+    return 'none';
   if (!desiredOn && !state && reasonCode === 'AUTOMATIC_RECONCILIATION') {
     const safety = await readRuntimeSafety();
     if (safety.manual || isManualRunning(safety.state)) return 'off_blocked';
@@ -175,87 +178,134 @@ async function executeRuntimePlugCommand(
     )
       return 'on_blocked';
   }
+  const ownsEvents = pendingEvents === null;
+  const events = pendingEvents || [];
+  const emit = async (...args) => {
+    events.push(args);
+  };
+  // Preserve ACK ordering, but never let a webhook delay compensating OFF.
   try {
-    if (
-      desiredOn &&
-      runtimeOwnedLock &&
-      (await getVariableValue(CONFIG.runtimeLockVariableName)) !==
-        runtimeOwnedLock
-    )
-      return 'on_blocked';
-    if (desiredOn) await setDeviceOn(snapshot.plug);
-    else await setDeviceOff(snapshot.plug);
-  } catch (error) {
-    error.actuatorRequestedOn = desiredOn;
-    await runtimeEvent(
+    try {
+      if (
+        desiredOn &&
+        runtimeOwnedLock &&
+        (await getVariableValue(CONFIG.runtimeLockVariableName)) !==
+          runtimeOwnedLock
+      )
+        return 'on_blocked';
+      if (desiredOn) await setDeviceOn(snapshot.plug);
+      else await setDeviceOff(snapshot.plug);
+    } catch (error) {
+      error.actuatorRequestedOn = desiredOn;
+      await emit(
+        SmartChargeLogger.EVENT_TYPES.ACTUATOR_REQUEST,
+        reasonCode,
+        snapshot,
+        state,
+        requestMessage,
+      );
+      await emit(
+        SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ERROR,
+        'COMMAND_FAILED',
+        snapshot,
+        state,
+        JSON.stringify({
+          command: desiredOn ? 'ON' : 'OFF',
+          error: error.message,
+        }),
+      );
+      // ON may have reached the device even when its ACK is lost. Never trust
+      // a pre-command OFF snapshot for the recovery request. Preserve the error.
+      if (desiredOn) {
+        await updateVariableByName(
+          CONFIG.autoStartBlockedVariableName,
+          true,
+        ).catch((e) => log(e.message));
+        try {
+          await executeRuntimePlugCommand(
+            snapshot,
+            false,
+            'COMMAND_FAILED',
+            state,
+            true,
+            events,
+          );
+        } catch (offError) {
+          log(`Emergency OFF failed: ${offError.message}`);
+          error.compensationError = offError.message;
+        }
+      }
+      throw error;
+    }
+    // ACK does not refresh the captured capabilities or prove physical power.
+    // Subsequent lifecycle events must not publish pre-command values as current.
+    snapshot.commandAcknowledged = true;
+    await emit(
       SmartChargeLogger.EVENT_TYPES.ACTUATOR_REQUEST,
       reasonCode,
       snapshot,
       state,
       requestMessage,
     );
-    await runtimeEvent(
-      SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ERROR,
-      'COMMAND_FAILED',
+    await emit(
+      desiredOn
+        ? SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ON
+        : SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_OFF,
+      reasonCode,
       snapshot,
       state,
       JSON.stringify({
         command: desiredOn ? 'ON' : 'OFF',
-        error: error.message,
+        phase: 'acknowledged',
+        physicalStateVerified: false,
       }),
     );
-    throw error;
-  }
-  // ACK does not refresh the captured capabilities or prove physical power.
-  // Subsequent lifecycle events must not publish pre-command values as current.
-  snapshot.commandAcknowledged = true;
-  let compensated = false;
-  if (desiredOn) {
-    let safety;
-    try {
-      safety = await readRuntimeSafety();
-    } catch (error) {
-      safety = { blocked: true };
-      await updateVariableByName(
-        CONFIG.autoStartBlockedVariableName,
-        true,
-      ).catch((writeError) => log(writeError.message));
-      log(`Post-command recovery blocked: ${error.message}`);
+    let compensated = false;
+    if (desiredOn) {
+      let safety;
+      try {
+        safety = await readRuntimeSafety();
+      } catch (error) {
+        safety = { blocked: true };
+        await updateVariableByName(
+          CONFIG.autoStartBlockedVariableName,
+          true,
+        ).catch((writeError) => log(writeError.message));
+        log(`Post-command recovery blocked: ${error.message}`);
+      }
+      if (
+        (!state && safety.blocked) ||
+        (state &&
+          (!safety.manualAllowed ||
+            safety.state.id !== state.id ||
+            safety.state.stopReason)) ||
+        (!state && safety.manual)
+      ) {
+        await executeRuntimePlugCommand(
+          snapshot,
+          false,
+          'USER_STOP',
+          state,
+          true,
+          events,
+        );
+        compensated = true;
+      }
     }
-    if (
-      (!state && safety.blocked) ||
-      (state &&
-        (!safety.manualAllowed ||
-          safety.state.id !== state.id ||
-          safety.state.stopReason)) ||
-      (!state && safety.manual)
-    ) {
-      await executeRuntimePlugCommand(snapshot, false, 'USER_STOP', state);
-      compensated = true;
-    }
+    if (compensated) return 'switched_off';
+    return desiredOn ? 'switched_on' : 'switched_off';
+  } finally {
+    if (ownsEvents)
+      for (const args of events) {
+        try {
+          await runtimeEvent(...args);
+        } catch (error) {
+          log(
+            `Logger error: ${error.message}; command is not retried by logger`,
+          );
+        }
+      }
   }
-  await runtimeEvent(
-    SmartChargeLogger.EVENT_TYPES.ACTUATOR_REQUEST,
-    reasonCode,
-    snapshot,
-    state,
-    requestMessage,
-  );
-  await runtimeEvent(
-    desiredOn
-      ? SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ON
-      : SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_OFF,
-    reasonCode,
-    snapshot,
-    state,
-    JSON.stringify({
-      command: desiredOn ? 'ON' : 'OFF',
-      phase: 'acknowledged',
-      physicalStateVerified: false,
-    }),
-  );
-  if (compensated) return 'switched_off';
-  return desiredOn ? 'switched_on' : 'switched_off';
 }
 
 async function collectManualSnapshot() {

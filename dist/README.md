@@ -1,12 +1,12 @@
 # Generated HomeyScript bundles
 
 Only this README is tracked. Generated JavaScript and `dist/release` stay outside
-Git. Current committed identity: **0.6.4+build.17**. Reproduce it without a bump:
+Git. Current committed identity: **0.6.4+build.17**. The preserved release artifact must not be replaced by corrected source bytes.
+Check candidates without writing bundles:
 
 ```powershell
-npm run build:homey -- --reuse-version
-node scripts/release-artifact.js create
-node scripts/release-artifact.js verify dist/release
+npm run build:homey -- --reuse-version --check
+node scripts/release-artifact.js verify dist/release '<APPROVED_MANIFEST_SHA256>' '<APPROVED_RELEASE_TAG>'
 ```
 
 The complete release artifact contains twelve bundles, `manifest.json` and

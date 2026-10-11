@@ -102,3 +102,8 @@ and all device writers. At the research stage no real topology, installed versio
 was inspected. Later read-only discovery and controlled code installation are
 recorded separately in [Homey deployment](HomeyDeployment.md); those do not prove
 strict exclusion or resolve the mock race. Historical evidence is retained privately.
+
+`tests/runtime-lock-race.test.js` is characterization/regression evidence. Its
+success means the separate-scope `[ON, ON]` race remains reproducible, not that
+actuation is serialized. The compensated ACK-ordering fix does not solve this
+race. A single serialized Actuator owner remains a separate architectural task.

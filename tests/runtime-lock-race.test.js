@@ -1,3 +1,4 @@
+// Characterization evidence: a passing test confirms the absence of a strict mutex.
 const path = require('path');
 const assert = require('assert/strict');
 const { ScriptLoader } = require('../simulator/runtime/script-loader');
@@ -104,7 +105,9 @@ async function execute(label) {
     finalLock: homey.getLogicValue('SmartChargeRuntimeLock'),
   };
   assert.equal(result.commands.length, 2);
-  console.log('PASS RuntimeLock limitation: separate scopes can both issue ON');
+  console.log(
+    'CHARACTERIZATION RuntimeLock limitation: separate scopes can both issue ON',
+  );
 })().catch((e) => {
   console.error(e);
   process.exitCode = 1;

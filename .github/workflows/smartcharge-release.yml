@@ -37,7 +37,8 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$CI_RUN_ID" =~ ^[0-9]+$ && "$ARTIFACT_ID" =~ ^[0-9]+$ && "$APPROVED_SHA" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$RELEASE_TAG" == 'v0.6.4+build.17' || "$RELEASE_TAG" == '0.6.4+build.17' ]]
+          [[ "$RELEASE_TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+\+build\.[1-9][0-9]*$ ]]
+          gh api "repos/$REPOSITORY/contents/.smartcharge-build.json?ref=$APPROVED_SHA" --jq .content | node -e 'let input="";process.stdin.on("data",d=>input+=d).on("end",()=>{const s=JSON.parse(Buffer.from(input,"base64"));const v=`${s.major}.${s.minor}.${s.patch}+build.${s.build}`;if(v!==process.env.RELEASE_TAG.replace(/^v/,""))process.exit(1);});'
           [[ "$(gh api "repos/$REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$APPROVED_SHA" ]]
           workflow_id=$(gh api "repos/$REPOSITORY/actions/workflows/smartcharge-ci.yml" --jq .id)
           run=$(gh api "repos/$REPOSITORY/actions/runs/$CI_RUN_ID")
@@ -60,9 +61,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/release-artifact.js verify verified-artifact
+          node scripts/release-artifact.js verify verified-artifact "$MANIFEST_SHA256" "$RELEASE_TAG"
           [[ "$MANIFEST_SHA256" =~ ^[a-f0-9]{64}$ ]]
           [[ "$(sha256sum verified-artifact/manifest.json | cut -d ' ' -f1)" == "$MANIFEST_SHA256" ]]
           cp verified-artifact/manifest.json smartcharge-manifest.json
           (cd verified-artifact && zip -q ../smartcharge-release.zip *)
-          gh release create "$RELEASE_TAG" smartcharge-release.zip smartcharge-manifest.json --verify-tag --title 'SmartCharge 0.6.4+build.17' --notes 'Approved immutable CI artifact; SHA-256 manifest included. No deployment is performed.'
+          gh release create "$RELEASE_TAG" smartcharge-release.zip smartcharge-manifest.json --verify-tag --title "SmartCharge ${RELEASE_TAG#v}" --notes 'Approved immutable CI artifact; SHA-256 manifest included. No deployment is performed.'

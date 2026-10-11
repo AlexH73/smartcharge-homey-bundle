@@ -6,6 +6,9 @@ const releaseArgumentIndex = process.argv.indexOf('--release');
 const releaseVersion =
   releaseArgumentIndex >= 0 ? process.argv[releaseArgumentIndex + 1] : null;
 const reuseVersion = process.argv.includes('--reuse-version');
+const checkOnly = process.argv.includes('--check');
+if (checkOnly && !reuseVersion)
+  throw new Error('--check requires --reuse-version');
 
 if (releaseVersion && reuseVersion) {
   throw new Error('--release and --reuse-version cannot be used together');
@@ -209,6 +212,16 @@ function buildTarget(targetName, buildInfo) {
     output += '\n\n';
   }
 
+  if (checkOnly) {
+    const AsyncFunction = Object.getPrototypeOf(
+      async function () {},
+    ).constructor;
+    new AsyncFunction('Homey', 'fetch', 'log', output);
+    console.log(
+      `CHECK ${targetName}: source candidate syntax; no artifact written`,
+    );
+    return;
+  }
   fs.mkdirSync(DIST_DIR, { recursive: true });
   fs.writeFileSync(outFile, output, 'utf8');
 

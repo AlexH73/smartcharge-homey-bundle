@@ -2,14 +2,18 @@
 const assert = require('assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { sha256 } = require('./release-artifact');
+const {
+  sha256,
+  verifyArtifact,
+  releaseVersion,
+} = require('./release-artifact');
 const sourceRepository = 'AlexH73/smartcharge-homey-bundle';
 
 async function verifySource(get, approved) {
   assert.equal(approved.repository, sourceRepository);
   assert.match(approved.sha, /^[a-f0-9]{40}$/);
   assert.match(approved.manifestSha256, /^[a-f0-9]{64}$/);
-  assert.match(approved.tag, /^v?0\.6\.4\+build\.17$/);
+  const version = releaseVersion(approved.tag);
   assert.match(String(approved.runId), /^[0-9]+$/);
   assert.match(String(approved.artifactId), /^[0-9]+$/);
   const prefix = `repos/${sourceRepository}`;
@@ -36,6 +40,18 @@ async function verifySource(get, approved) {
     commit.sha,
     approved.sha,
     'Release tag must resolve to approved commit, including annotated tags',
+  );
+  const metadata = await get(
+    `${prefix}/contents/.smartcharge-build.json?ref=${approved.sha}`,
+  );
+  assert.equal(metadata.encoding, 'base64');
+  const state = JSON.parse(
+    Buffer.from(metadata.content, 'base64').toString('utf8'),
+  );
+  assert.equal(
+    `${state.major}.${state.minor}.${state.patch}+build.${state.build}`,
+    version,
+    'Tag differs from approved commit release metadata',
   );
   const release = await get(
     `${prefix}/releases/tags/${encodeURIComponent(approved.tag)}`,
@@ -76,6 +92,7 @@ async function verifySource(get, approved) {
   return {
     schemaVersion: 1,
     ...approved,
+    version,
     releaseId: release.id,
     manifestAssetId: asset.id,
     manifestAssetUrl: asset.browser_download_url,
@@ -84,6 +101,11 @@ async function verifySource(get, approved) {
 }
 
 function checkManifest(directory, provenance, publishedFile) {
+  assert.equal(provenance.repository, sourceRepository);
+  assert.equal(provenance.schemaVersion, 1);
+  assert.match(provenance.sha, /^[a-f0-9]{40}$/);
+  assert.equal(provenance.version, releaseVersion(provenance.tag));
+  verifyArtifact(directory, provenance);
   const manifest = fs.readFileSync(path.join(directory, 'manifest.json'));
   assert.equal(
     sha256(manifest),

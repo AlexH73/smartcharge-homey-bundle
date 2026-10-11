@@ -1,19 +1,16 @@
+const { fixture: createArtifact } = require('./helpers/release-fixture');
 const assert = require('assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const {
-  createArtifact,
-  targets,
-  sha256,
-} = require('../scripts/release-artifact');
+const { targets, sha256 } = require('../scripts/release-artifact');
 const {
   createClient,
   deploy,
   rollback,
   verifyBackup,
-  confirmation,
-  rollbackConfirmation,
+  confirmation: installConfirmation,
+  rollbackConfirmation: restoreConfirmation,
   preflight,
 } = require('../scripts/homey-deployment');
 const { discover, inventory } = require('../scripts/homey-discovery');
@@ -21,8 +18,12 @@ const { auditFlows } = require('../scripts/homey-flow-audit');
 
 const origin = 'https://192-168-178-79.homey.homeylocal.com';
 const scriptPath = '/api/app/com.athom.homeyscript/script';
+const confirmation = installConfirmation('0.6.4+build.17');
+const rollbackConfirmation = restoreConfirmation('0.6.4+build.17');
+let releaseApproval;
 const clone = (data) => JSON.parse(JSON.stringify(data));
 const proof = () => ({
+  ...releaseApproval,
   origin,
   scriptIds: Object.fromEntries(
     targets().map((target, i) => [target.file, `id-${i}`]),
@@ -148,7 +149,13 @@ async function main() {
   };
   try {
     const artifact = path.join(temporary, 'artifact');
-    createArtifact(artifact);
+    const manifest = createArtifact(artifact);
+    releaseApproval = {
+      tag: manifest.version,
+      manifestSha256: sha256(
+        fs.readFileSync(path.join(artifact, 'manifest.json')),
+      ),
+    };
     const backupRoot = path.join(temporary, 'backup');
     await test('successful install preserves IDs/names/API mode; full readback and rollback', async () => {
       const { state, client } = mockApi();
@@ -316,7 +323,7 @@ async function main() {
         assert.equal(state.writes.length, 1);
       });
     }
-    await test('duplicate Stability Debug: known old release untouched; ambiguous baseline refused', async () => {
+    await test('duplicate Stability Debug: all ambiguous name mappings refused', async () => {
       const { client, state } = mockApi();
       const debug = Object.values(state.scripts).find((script) =>
         script.name.endsWith('Stability Debug'),
@@ -326,24 +333,11 @@ async function main() {
         id: 'old-debug',
         code: '// Version: 0.6.1+build.14\nold',
       };
-      const result = await deploy(
-        artifact,
-        backupRoot,
-        client,
-        proof(),
-        confirmation,
+      await assert.rejects(
+        deploy(artifact, backupRoot, client, proof(), confirmation),
+        /ambiguous/,
       );
-      assert.equal(
-        state.scripts['old-debug'].code,
-        '// Version: 0.6.1+build.14\nold',
-      );
-      await rollback(
-        result.backupDir,
-        backupRoot,
-        client,
-        proof(),
-        rollbackConfirmation,
-      );
+      delete state.scripts['old-debug'];
       state.scripts['duplicate-debug'] = { ...debug, id: 'duplicate-debug' };
       const before = state.writes.length;
       await assert.rejects(
@@ -509,6 +503,81 @@ async function main() {
       );
       assert.equal(state.writes.length, 12);
       assert.equal(sha256(Buffer.from(code)).length, 64);
+    });
+    await test('future release has dynamic install and rollback approval', async () => {
+      const futureDir = path.join(temporary, 'future');
+      fs.cpSync(artifact, futureDir, { recursive: true });
+      const future = JSON.parse(
+        fs.readFileSync(path.join(futureDir, 'manifest.json')),
+      );
+      const oldVersion = future.version;
+      future.version = '0.7.1+build.23';
+      for (const item of future.bundles) {
+        const file = path.join(futureDir, item.file);
+        const data = Buffer.from(
+          fs.readFileSync(file, 'utf8').replaceAll(oldVersion, future.version),
+        );
+        fs.writeFileSync(file, data);
+        item.bytes = data.length;
+        item.sha256 = sha256(data);
+      }
+      fs.writeFileSync(
+        path.join(futureDir, 'manifest.json'),
+        JSON.stringify(future, null, 2) + '\n',
+      );
+      fs.writeFileSync(
+        path.join(futureDir, 'SHA256SUMS'),
+        [...future.bundles.map((b) => b.file), 'manifest.json']
+          .sort()
+          .map(
+            (file) =>
+              sha256(fs.readFileSync(path.join(futureDir, file))) +
+              '  ' +
+              file +
+              '\n',
+          )
+          .join(''),
+      );
+      const saved = releaseApproval;
+      releaseApproval = {
+        tag: future.version,
+        manifestSha256: sha256(
+          fs.readFileSync(path.join(futureDir, 'manifest.json')),
+        ),
+      };
+      try {
+        const { state, client } = mockApi();
+        await assert.rejects(
+          deploy(futureDir, backupRoot, client, proof(), confirmation),
+        );
+        assert.equal(state.writes.length, 0);
+        const installed = await deploy(
+          futureDir,
+          backupRoot,
+          client,
+          proof(),
+          installConfirmation(future.version),
+        );
+        assert.equal(
+          (await preflight(futureDir, backupRoot, client, proof())).status,
+          'PREFLIGHT_READY_NO_PUT',
+        );
+        assert.equal(installed.status, 'VERIFIED');
+        assert.equal(
+          (
+            await rollback(
+              installed.backupDir,
+              backupRoot,
+              client,
+              proof(),
+              restoreConfirmation(future.version),
+            )
+          ).status,
+          'VERIFIED',
+        );
+      } finally {
+        releaseApproval = saved;
+      }
     });
     console.log(
       `${cases} deployment mock scenarios passed; no real Homey requests.`,

@@ -10,6 +10,84 @@ const read = (file) =>
   canonical(fs.readFileSync(path.join(root, file), 'utf8'));
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
+// Schema 1 is an explicit supported artifact format, independent of checkout targets.
+const artifactTargets = [
+  {
+    target: 'connection-evidence',
+    file: 'SMARTCHARGE - Connection Evidence.js',
+  },
+  {
+    target: 'runtime-controller',
+    file: 'SMARTCHARGE - Runtime Controller.js',
+  },
+  {
+    target: 'run-decision',
+    file: 'SMARTCHARGE - Run Decision.js',
+  },
+  {
+    target: 'reset-session',
+    file: 'SMARTCHARGE - Reset Session.js',
+  },
+  {
+    target: 'start-session',
+    file: 'SMARTCHARGE - Start Session.js',
+  },
+  {
+    target: 'log-on-session',
+    file: 'SMARTCHARGE - Log On.js',
+  },
+  {
+    target: 'log-off-session',
+    file: 'SMARTCHARGE - Log Off.js',
+  },
+  {
+    target: 'state-sync',
+    file: 'SMARTCHARGE - State Sync.js',
+  },
+  {
+    target: 'manual-on',
+    file: 'SMARTCHARGE - Manual Override On.js',
+  },
+  {
+    target: 'manual-off',
+    file: 'SMARTCHARGE - Manual Override Off.js',
+  },
+  {
+    target: 'stability-debug',
+    file: 'SMARTCHARGE - Stability Debug.js',
+  },
+  {
+    target: 'auto-mode',
+    file: 'SMARTCHARGE - Auto Mode.js',
+  },
+];
+function releaseVersion(tag) {
+  assert.equal(typeof tag, 'string');
+  assert.match(
+    tag,
+    /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\+build\.(?:[1-9]\d*)$/,
+  );
+  return tag.replace(/^v/, '');
+}
+function checkApproval(manifestData, approved) {
+  assert.ok(
+    approved,
+    'Independently approved manifest digest and tag required',
+  );
+  assert.match(approved.manifestSha256, /^[a-f0-9]{64}$/);
+  assert.equal(
+    sha256(manifestData),
+    approved.manifestSha256,
+    'Approved manifest digest mismatch',
+  );
+  const manifest = JSON.parse(manifestData.toString('utf8'));
+  assert.equal(
+    manifest.version,
+    releaseVersion(approved.tag),
+    'Approved release tag/version mismatch',
+  );
+}
+
 function targets() {
   const matches = [
     ...read('scripts/build-homey.js').matchAll(
@@ -70,7 +148,7 @@ function sharedFiles(dir) {
   });
 }
 
-function validateBuild() {
+function validateBuild(directory = path.join(root, 'dist')) {
   const info = releaseInfo();
   const shared = sharedFiles(path.join(root, 'src')).sort();
   const bundles = targets().map((target) => {
@@ -86,7 +164,7 @@ function validateBuild() {
         read(file) +
         '\n\n';
     }
-    const data = fs.readFileSync(path.join(root, 'dist', target.file));
+    const data = fs.readFileSync(path.join(directory, target.file));
     assert.equal(
       data.toString('utf8'),
       expected,
@@ -122,17 +200,31 @@ function checksumFile(directory, manifest) {
     .join('');
 }
 
-function verifyArtifact(directory) {
-  const info = releaseInfo();
-  const manifest = JSON.parse(
-    fs.readFileSync(path.join(directory, 'manifest.json'), 'utf8'),
+function verifyArtifact(directory, approved = null) {
+  const manifestFile = path.join(directory, 'manifest.json');
+  assert.ok(
+    fs.lstatSync(manifestFile).isFile() &&
+      !fs.lstatSync(manifestFile).isSymbolicLink(),
+  );
+  const manifestData = fs.readFileSync(manifestFile);
+  if (approved) checkApproval(manifestData, approved);
+  const manifest = JSON.parse(manifestData.toString('utf8'));
+  const info = manifest;
+  assert.equal(releaseVersion(manifest.version), manifest.version);
+  assert.ok(
+    Number.isFinite(Date.parse(manifest.builtAt)),
+    'Invalid artifact timestamp',
   );
   assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.version, info.version);
-  assert.equal(manifest.builtAt, info.builtAt);
-  assert.deepEqual(manifest.thresholds, info.thresholds);
+  assert.deepEqual(manifest.thresholds, {
+    lowPowerW: 5,
+    observationGapSeconds: 360,
+    maximumDurationMinutes: 360,
+    powerFreshnessSeconds: 60,
+    lowPowerSeconds: 180,
+  });
   assert.match(manifest.sourceDigest, /^[a-f0-9]{64}$/);
-  const expected = targets();
+  const expected = artifactTargets;
   assert.equal(manifest.bundles.length, expected.length);
   assert.deepEqual(
     manifest.bundles.map(({ target, file }) => ({ target, file })),
@@ -162,6 +254,8 @@ function verifyArtifact(directory) {
     assert.ok(
       fs.lstatSync(file).isFile() && !fs.lstatSync(file).isSymbolicLink(),
     );
+    assert.match(bundle.sha256, /^[a-f0-9]{64}$/);
+    assert.ok(Number.isSafeInteger(bundle.bytes) && bundle.bytes > 0);
     const data = fs.readFileSync(file);
     assert.equal(data.length, bundle.bytes);
     assert.equal(
@@ -171,6 +265,9 @@ function verifyArtifact(directory) {
     );
     assert.ok(data.toString('utf8').includes(`// Version: ${info.version}\n`));
     assert.ok(data.toString('utf8').includes(`// Target: ${bundle.target}\n`));
+    assert.ok(
+      data.toString('utf8').includes(`// Built at: ${manifest.builtAt}\n`),
+    );
   }
   assert.equal(
     fs.readFileSync(path.join(directory, 'SHA256SUMS'), 'utf8'),
@@ -179,12 +276,12 @@ function verifyArtifact(directory) {
   return manifest;
 }
 
-function createArtifact(directory) {
-  const manifest = validateBuild();
+function createArtifact(directory, buildDirectory = path.join(root, 'dist')) {
+  const manifest = validateBuild(buildDirectory);
   fs.mkdirSync(directory, { recursive: true });
   const files = manifest.bundles.map((bundle) => ({
     name: bundle.file,
-    data: fs.readFileSync(path.join(root, 'dist', bundle.file)),
+    data: fs.readFileSync(path.join(buildDirectory, bundle.file)),
   }));
   files.push({
     name: 'manifest.json',
@@ -218,16 +315,21 @@ if (require.main === module) {
       command === 'create'
         ? createArtifact(directory)
         : command === 'verify'
-          ? verifyArtifact(directory)
-          : command === 'validate-build'
-            ? validateBuild()
-            : null;
+          ? verifyArtifact(directory, {
+              manifestSha256: process.argv[4],
+              tag: process.argv[5],
+            })
+          : command === 'inspect'
+            ? verifyArtifact(directory)
+            : command === 'validate-build'
+              ? validateBuild()
+              : null;
     assert.ok(
       manifest,
-      'Usage: node scripts/release-artifact.js create|verify|validate-build [directory]',
+      'Usage: node scripts/release-artifact.js create|inspect|verify|validate-build [directory] [approved-manifest-sha256] [approved-tag]',
     );
     console.log(
-      `PASS ${manifest.version}: ${manifest.bundles.length} bundles; SHA-256 and release metadata verified`,
+      `PASS ${manifest.version}: ${manifest.bundles.length} bundles; ${command === 'inspect' ? 'integrity only; source not authenticated' : 'SHA-256 and release metadata verified'}`,
     );
   } catch (error) {
     console.error(error.message);
@@ -241,4 +343,6 @@ module.exports = {
   verifyArtifact,
   targets,
   sha256,
+  releaseVersion,
+  checkApproval,
 };
