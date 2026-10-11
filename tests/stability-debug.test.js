@@ -1,5 +1,6 @@
 const assert = require('assert/strict');
 const path = require('path');
+const buildState = require('../.smartcharge-build.json');
 const { ScriptLoader } = require('../simulator/runtime/script-loader');
 
 const root = path.resolve(__dirname, '..');
@@ -79,7 +80,8 @@ async function executeDebug(diagnosticsValue) {
 (async () => {
   const report = await executeDebug(diagnostics());
 
-  assert.match(report, /Build: 0\.6\.1\+build\.14/);
+  const expectedBuild = `${buildState.major}.${buildState.minor}.${buildState.patch}+build.${buildState.build}`;
+  assert.equal(report.split('\n')[1], `Build: ${expectedBuild}`);
   assert.match(report, /Runtime Mode: active/);
   assert.match(report, /Live Shadow: ENABLED/);
   assert.match(report, /Status: RESTORED/);

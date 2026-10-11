@@ -17,6 +17,12 @@
  * @returns {Promise<object>}
  */
 async function main() {
+  if (
+    String(
+      await getVariableValue(CONFIG.runtimeModeVariableName),
+    ).toLowerCase() === 'active'
+  )
+    return runRuntimeController();
   const shouldChargeRaw = await getVariableValue(
     CONFIG.smartChargeShouldChargeVariableName,
   );
@@ -36,10 +42,16 @@ async function main() {
   let reason = 'Plug already matches SmartCharge decision';
 
   if (!shouldCharge && plugOnBefore) {
-    await setDeviceOff(plug);
+    action = await executeRuntimePlugCommand(
+      { plug },
+      false,
+      'AUTOMATIC_RECONCILIATION',
+    );
 
-    action = 'switched_off';
-    reason = 'State sync switched plug off to match SmartCharge decision';
+    reason =
+      action === 'off_blocked'
+        ? 'State sync skipped plug off: manual runtime owns power'
+        : 'State sync switched plug off to match SmartCharge decision';
   } else if (shouldCharge && !plugOnBefore) {
     if (!hasActiveSession) {
       reason = 'State sync skipped plug on: no active session';
@@ -55,16 +67,20 @@ async function main() {
       } else if (battery >= CONFIG.batteryFullPercentage) {
         reason = 'State sync skipped plug on: battery is full';
       } else {
-        await setDeviceOn(plug);
-
-        action = 'switched_on';
-        reason = 'State sync switched plug on to match SmartCharge decision';
+        action = await executeRuntimePlugCommand(
+          { plug, batteryPct: battery },
+          true,
+          'AUTOMATIC_RECONCILIATION',
+        );
+        reason =
+          action === 'on_blocked'
+            ? 'State sync skipped plug on: runtime safety gate'
+            : 'State sync switched plug on to match SmartCharge decision';
       }
     }
   }
 
-  const plugOnAfter =
-    action === 'switched_on' || (action === 'none' && plugOnBefore);
+  const plugOnAfter = getCapabilityValue(plug, 'onoff') === true;
 
   log('SmartCharge state synchronized');
   log(`Script version   : ${BUILD_INFO.fullVersion}`);

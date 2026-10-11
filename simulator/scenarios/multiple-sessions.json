@@ -53,7 +53,11 @@
           "shouldChargeNow": true
         },
         "reasonIncludes": "inside selected charging plan",
-        "events": ["smartcharge_decision"],
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_on"
+        ],
         "plugOn": true,
         "plugCommandCount": 1,
         "tibberCallsDelta": 1
@@ -174,7 +178,11 @@
           "shouldChargeNow": true
         },
         "reasonIncludes": "inside selected charging plan",
-        "events": ["smartcharge_decision"],
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_on"
+        ],
         "plugOn": true,
         "plugCommandCount": 2,
         "tibberCallsDelta": 1
@@ -188,12 +196,16 @@
       "session_start",
       "smartcharge_decision",
       "smartcharge_decision",
+      "actuator_request",
+      "smartcharge_on",
       "smartcharge_on",
       "smartcharge_off",
       "session_reset",
       "session_start",
       "smartcharge_decision",
-      "smartcharge_decision"
+      "smartcharge_decision",
+      "actuator_request",
+      "smartcharge_on"
     ],
     "tibberCalls": 4
   }

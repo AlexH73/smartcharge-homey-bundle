@@ -19,7 +19,12 @@
           }
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
@@ -87,7 +92,11 @@
           "desiredPlugState": true,
           "action": "switched_on"
         },
-        "events": ["smartcharge_decision", "smartcharge_on"],
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_on"
+        ],
         "eventPayload": {
           "battery": 42,
           "chargeMinutes": 140,

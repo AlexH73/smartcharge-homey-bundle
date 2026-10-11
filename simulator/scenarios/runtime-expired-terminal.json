@@ -15,7 +15,12 @@
           "charging_status": "Charge"
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
@@ -28,7 +33,7 @@
           "action": "switched_off",
           "sessionActive": false
         },
-        "events": ["smartcharge_off", "session_expired"],
+        "events": ["actuator_request", "smartcharge_off", "session_expired"],
         "logic": {
           "ChargeConnectedAt": "null",
           "SmartChargeSessionStatus": "expired",
@@ -43,14 +48,16 @@
       "flow": "runtime-controller",
       "expect": {
         "events": [],
-        "logic": { "ChargeConnectedAt": "null" },
+        "logic": {
+          "ChargeConnectedAt": "null"
+        },
         "plugOn": false,
         "plugCommandCount": 1
       }
     }
   ],
   "expect": {
-    "eventTypes": ["smartcharge_off", "session_expired"],
+    "eventTypes": ["actuator_request", "smartcharge_off", "session_expired"],
     "logic": {
       "ChargeConnectedAt": "null",
       "SmartChargeSessionStatus": "expired"

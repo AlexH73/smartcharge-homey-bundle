@@ -12,11 +12,11 @@ npm run build:homey
 For an explicit release version:
 
 ```bash
-npm run build:homey -- --release 0.6.1
+npm run build:homey -- --release 0.6.2
 ```
 
 The release build keeps the project-wide build number monotonic. The current
-release metadata is `0.6.1+build.13`.
+release review metadata is `0.6.2+build.15`.
 
 The build writes standalone HomeyScript files here:
 
@@ -32,8 +32,12 @@ The build writes standalone HomeyScript files here:
 - `SMARTCHARGE - Log On.js` - logs SmartCharge charging start.
 - `SMARTCHARGE - Log Off.js` - logs SmartCharge charging stop.
 - `SMARTCHARGE - Reset Session.js` - clears the active session.
-- `SMARTCHARGE - Manual Override On.js` - logs manual override activation.
-- `SMARTCHARGE - Manual Override Off.js` - logs manual override deactivation.
+- `SMARTCHARGE - Manual Override On.js` - starts durable manual charging while
+  preserving the automatic block.
+- `SMARTCHARGE - Manual Override Off.js` - requests USER_STOP and keeps the
+  automatic block across restarts.
+- `SMARTCHARGE - Auto Mode.js` - explicitly grants automatic permission after
+  safe-state and fresh Mercedes telemetry checks.
 - `SMARTCHARGE - Stability Debug.js` - prints a read-only snapshot of persisted
   planner stability state.
 

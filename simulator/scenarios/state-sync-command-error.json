@@ -23,7 +23,7 @@
       "flow": "state-sync",
       "expect": {
         "errorIncludes": "setCapabilityValue failed",
-        "events": [],
+        "events": ["actuator_request", "smartcharge_error"],
         "plugOn": true,
         "plugCommandCount": 0,
         "tibberCallsDelta": 0
@@ -33,7 +33,7 @@
   "expect": {
     "plugOn": true,
     "plugCommandCount": 0,
-    "eventTypes": [],
+    "eventTypes": ["actuator_request", "smartcharge_error"],
     "tibberCalls": 0
   }
 }

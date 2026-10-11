@@ -325,6 +325,7 @@ function eventCell(header, data) {
 
 function upsertSessionFromEvent(ss, event) {
   if (!event || !event.sessionId) return;
+  if (event.eventType === 'actuator_request') return;
 
   const sheet = ensureSheet(
     ss,
@@ -537,7 +538,11 @@ function buildSessionUpdate(event, currentSession) {
     }
   }
 
-  if (event.eventType === 'smartcharge_on') {
+  if (
+    (event.eventType === 'smartcharge_on' &&
+      event.decisionSource !== 'manual') ||
+    event.eventType === 'manual_charging_started'
+  ) {
     update.chargeStartedAt = event.loggedAt;
   }
 
@@ -553,6 +558,11 @@ function buildSessionUpdate(event, currentSession) {
 
   if (event.eventType === 'session_reset') {
     update.resetAt = event.loggedAt;
+  }
+
+  if (event.eventType === 'manual_charging_completed') {
+    update.chargeStoppedAt = event.loggedAt;
+    if (hasValue(event.battery)) update.endBatteryPct = event.battery;
   }
 
   if (
@@ -606,11 +616,25 @@ function getSessionStatus(event, currentSession) {
       return 'planned';
 
     case 'smartcharge_on':
+      return event.decisionSource === 'manual' ? 'ready_to_charge' : 'charging';
+
+    case 'manual_charging_started':
       return 'charging';
 
     case 'smartcharge_off':
       if (isCompletionEvent(event, currentSession)) return 'completed';
       return 'stopped';
+
+    case 'manual_charging_completed':
+      return ['LOW_POWER', 'BATTERY_FULL'].includes(event.reasonCode)
+        ? 'completed'
+        : 'stopped';
+
+    case 'manual_override_enabled':
+      return event.decisionSource === 'manual' ? 'ready_to_charge' : 'unknown';
+
+    case 'manual_override_disabled':
+      return currentStatus || 'unknown';
 
     case 'session_reset':
       return 'manual_reset';

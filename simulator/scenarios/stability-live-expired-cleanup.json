@@ -16,13 +16,22 @@
           "charging_status": "Charge"
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
     {
       "flow": "run-decision",
-      "expect": { "result": { "stabilityDecision": "INITIAL_ACCEPT" } }
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT"
+        }
+      }
     },
     {
       "flow": "runtime-controller",
@@ -33,14 +42,25 @@
           "action": "switched_off",
           "sessionActive": false
         },
-        "events": ["smartcharge_off", "session_expired"],
+        "events": ["actuator_request", "smartcharge_off", "session_expired"],
         "logic": {
           "ChargeConnectedAt": "null",
           "SmartChargeAcceptedStrategy": "null"
         },
-        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 2 },
+        "logicUpdateCounts": {
+          "SmartChargeAcceptedStrategy": 2
+        },
         "plugOn": false,
-        "plugCommandCount": 1
+        "plugCommandCount": 2
+      },
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": true
+            }
+          }
+        }
       }
     }
   ]

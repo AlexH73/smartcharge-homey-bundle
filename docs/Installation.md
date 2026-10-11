@@ -1,5 +1,55 @@
 # Installation
 
+## Manual reliability migration (local build awaiting review)
+
+Before enabling the new active runtime, add these Homey Logic variables:
+
+| Name                        | Type    | Initial value         |
+| --------------------------- | ------- | --------------------- |
+| SmartChargeManualState      | Text    | JSON below            |
+| SmartChargeAutoStartBlocked | Boolean | true during migration |
+| SmartChargeRuntimeLock      | Text    | `null`                |
+| SmartChargeUserStopToken    | Text    | `null`                |
+
+```json
+{
+  "version": 1,
+  "status": "IDLE",
+  "id": null,
+  "startedAt": null,
+  "confirmedAt": null,
+  "highPowerAt": null,
+  "lastPowerAt": null,
+  "lowPowerSince": null,
+  "endedAt": null,
+  "stopReason": null,
+  "error": null,
+  "activationStopToken": null,
+  "autoGrant": null
+}
+```
+
+Keep `SmartChargeManualMode=false` and the physical plug OFF during migration.
+These safety variables are required, not optional: initialization/write failures
+must not silently enable power. Do not reset a saved active record on restart.
+Old terminal records with `SmartChargeAutoStartBlocked=false` are interpreted
+as blocked until explicit Auto Mode writes a valid grant. Manual ON does not
+clear the block. Old running records without an activation token can continue
+only when their original block is false; ambiguous blocked records fail closed.
+Auto Mode also requires fresh SOC, verified OFF and a clear runtime lease.
+
+After review, update Apps Script locally prepared in this repository (no column
+migration is required), install the rebuilt HomeyScripts including `Auto Mode`,
+and migrate triggers as described in `HomeyFlows.md`. Verify that the plug driver
+supplies trustworthy `measure_power.lastUpdated`/`updatedAt` timestamps. Without
+them START_CONFIRMED and LOW_POWER remain unavailable; USER_STOP and the original
+six-hour deadline still operate.
+
+Perform staged, supervised checks of Stop, block persistence, explicit Manual ON,
+Auto Mode freshness, and watchdog cadence before leaving charging unattended.
+For release use a new build identity after approval; a local `--reuse-version`
+validation bundle is not a production release. No build deploys to Homey or Sheets.
+
 This project is a HomeyScript bundle. The repository contains source code,
 simulator fixtures, public templates, and documentation only. It does not
 contain private tokens, webhook URLs, sheet IDs, Homey device IDs, or local

@@ -1,5 +1,39 @@
 # Homey Flow Setup
 
+## Migration to independent manual charging
+
+This section supersedes legacy power-control instructions below when runtime
+mode is active. Do not change deployed Flows until the local change is reviewed.
+
+1. Initialize the safety Logic variables described in `Installation.md`, with
+   manual OFF and the plug OFF. Never seed an active manual flag without its
+   real activation record.
+2. The Manual ON button invokes `SMARTCHARGE - Manual Override On` only. Remove
+   separate ON cards and writes of `SmartChargeShouldCharge`/manual flags.
+   This grants manual charging only; it does not clear the automatic block.
+3. The Stop button invokes `SMARTCHARGE - Manual Override Off` only. This is
+   USER_STOP. All manual terminal reasons block automatic starts across restarts.
+4. Add a separate Auto Mode button invoking `SMARTCHARGE - Auto Mode`. It clears
+   the block only after verified OFF, completed manual work, a clear lease,
+   fresh Mercedes connection evidence and fresh SOC below 100. Re-running
+   the planner is not an Auto Mode action.
+5. Remove legacy actuator/lifecycle branches and external plug ON/OFF cards;
+   leave event/scheduled trigger cards that invoke runtime. Active-mode legacy
+   State Sync and Run Decision now delegate to the same runtime owner.
+6. Keep trustworthy connection events pointed at Connection Evidence. Do not
+   generate fresh evidence from a timer or a retained status value.
+7. Invoke runtime on actual plug power updates, on Homey startup, and with a
+   frequent watchdog. Prefer a supported 30-second schedule; sample gaps above
+   60 seconds invalidate LOW_POWER evidence. Serialize ordinary runtime triggers.
+   User Stop must remain callable promptly, independently of vehicle events.
+8. Disable duplicate legacy Log On/Log Off branches for runtime-owned commands;
+   runtime logs successful transitions itself, including without auto sessions.
+
+A saved manual activation resumes its original deadline and confirmations.
+Corrupt/missing activation state or abandoned runtime ownership prevents
+automatic re-energization. See `RuntimeController.md` for recovery and the
+limitations of cross-instance concurrency. No real Flows are migrated by builds.
+
 SmartCharge expects Homey Flows to provide lifecycle triggers. The generated
 HomeyScripts contain the decision and logging logic; the flows decide when each
 script runs.

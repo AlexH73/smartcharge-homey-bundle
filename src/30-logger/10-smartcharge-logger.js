@@ -17,6 +17,9 @@ const SmartChargeLogger = (() => {
     BATTERY_FULL: 'battery_full',
     CHARGER_DISCONNECTED: 'charger_disconnected',
     SMARTCHARGE_ERROR: 'smartcharge_error',
+    ACTUATOR_REQUEST: 'actuator_request',
+    MANUAL_CHARGING_STARTED: 'manual_charging_started',
+    MANUAL_CHARGING_COMPLETED: 'manual_charging_completed',
   });
 
   const SUPPORTED_EVENT_TYPES = Object.freeze(Object.values(EVENT_TYPES));
@@ -32,6 +35,9 @@ const SmartChargeLogger = (() => {
     EVENT_TYPES.BATTERY_FULL,
     EVENT_TYPES.CHARGER_DISCONNECTED,
     EVENT_TYPES.SMARTCHARGE_ERROR,
+    EVENT_TYPES.ACTUATOR_REQUEST,
+    EVENT_TYPES.MANUAL_CHARGING_STARTED,
+    EVENT_TYPES.MANUAL_CHARGING_COMPLETED,
   ]);
 
   const LOGIC_VARIABLE_NAMES = Object.freeze({

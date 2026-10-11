@@ -18,7 +18,12 @@
           "text_charging_status": "Charge"
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 2600 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 2600
+        }
+      }
     }
   },
   "steps": [
@@ -31,7 +36,10 @@
           "desiredPlugState": true,
           "action": "none"
         },
-        "eventPayload": { "plannerMode": "multi-window", "windowCount": 3 },
+        "eventPayload": {
+          "plannerMode": "multi-window",
+          "windowCount": 3
+        },
         "plugOn": true,
         "plugCommandCount": 0
       }
@@ -41,7 +49,11 @@
       "now": "2026-07-07T21:15:00+02:00",
       "set": {
         "devices": {
-          "mercedes": { "capabilitiesObj": { "measure_battery": 50 } }
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": 50
+            }
+          }
         }
       },
       "expect": {
@@ -50,8 +62,15 @@
           "desiredPlugState": false,
           "action": "switched_off"
         },
-        "events": ["smartcharge_decision", "smartcharge_off"],
-        "eventPayload": { "plannerMode": "multi-window", "windowCount": 2 },
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_off"
+        ],
+        "eventPayload": {
+          "plannerMode": "multi-window",
+          "windowCount": 2
+        },
         "plugOn": false,
         "plugCommandCount": 1
       }
@@ -65,8 +84,15 @@
           "desiredPlugState": true,
           "action": "switched_on"
         },
-        "events": ["smartcharge_decision", "smartcharge_on"],
-        "eventPayload": { "plannerMode": "multi-window", "windowCount": 2 },
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_on"
+        ],
+        "eventPayload": {
+          "plannerMode": "multi-window",
+          "windowCount": 2
+        },
         "plugOn": true,
         "plugCommandCount": 2
       }
@@ -76,8 +102,10 @@
     "eventTypes": [
       "smartcharge_decision",
       "smartcharge_decision",
+      "actuator_request",
       "smartcharge_off",
       "smartcharge_decision",
+      "actuator_request",
       "smartcharge_on"
     ],
     "plugOn": true,

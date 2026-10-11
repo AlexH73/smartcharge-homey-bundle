@@ -1,5 +1,35 @@
 # Telemetry Contract
 
+## Manual reliability events (schema v2 compatible)
+
+No columns are renamed, reordered, or added. Existing `smartcharge_on`,
+`smartcharge_off`, `manual_override_enabled`, `manual_override_disabled`, and
+`smartcharge_error` remain supported. New critical event types:
+
+| eventType                 | Meaning                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| actuator_request          | ON/OFF request; `message` contains command and phase     |
+| manual_charging_started   | Two independent fresh plug samples confirmed consumption |
+| manual_charging_completed | Successful OFF reconciliation and durable end time       |
+
+Reason codes include MANUAL_START, USER_STOP, LOW_POWER, MAX_DURATION_REACHED,
+BATTERY_FULL, COMMAND_FAILED, RECOVERY_BLOCKED, and AUTOMATIC_RECONCILIATION.
+Blocked runtime results preserve the saved terminal reason; fallback is
+AUTOMATIC_BLOCKED. AUTO_MODE_PREPARE diagnoses protective OFF before granting
+Auto Mode. All manual terminal reasons deny automatic ON until explicit Auto.
+Successful actuator events are emitted without requiring an automatic session.
+Manual events use `decisionSource=manual` and a separate manual activation ID;
+their `message` contains the persisted state/stop reason/timestamps. Request
+events do not modify Sessions. The local Apps Script update recognizes manual
+completion and preserves status on manual-disabled events; deploy it explicitly
+after review. Old dashboards keep existing status values and columns.
+
+The runtime console diagnoses requests before the physical command. Webhook
+request/success events are delivered afterwards so webhook latency cannot delay
+OFF. COMMAND_FAILED is distinct from successful OFF; no completion event is
+issued on failed OFF. Webhook errors are diagnosed locally and do not retry
+physical commands. Delivery is best effort, not a durable webhook outbox.
+
 Status: Living contract
 Scope: Public data model for SmartCharge telemetry
 Primary sinks: Google Sheets, local simulator logs, future dashboard storage

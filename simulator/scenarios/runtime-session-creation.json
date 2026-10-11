@@ -9,8 +9,17 @@
       "SmartChargeRuntimeMode": "active"
     },
     "devices": {
-      "mercedes": { "capabilitiesObj": { "charging_status": "Charge" } },
-      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+      "mercedes": {
+        "capabilitiesObj": {
+          "charging_status": "Charge"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
@@ -22,8 +31,10 @@
           "sessionActive": false,
           "action": "switched_off"
         },
-        "events": [],
-        "logic": { "ChargeConnectedAt": "null" },
+        "events": ["actuator_request", "smartcharge_off"],
+        "logic": {
+          "ChargeConnectedAt": "null"
+        },
         "plugCommandCount": 1
       }
     },
@@ -35,24 +46,40 @@
           "SmartChargeConnectionEvidenceAt": "2026-07-06T17:55:00+02:00"
         },
         "devices": {
-          "mercedes": { "capabilitiesObj": { "charging_status": "Charge" } }
+          "mercedes": {
+            "capabilitiesObj": {
+              "charging_status": "Charge"
+            }
+          }
         }
       },
       "expect": {
-        "result": { "sessionActive": true },
+        "result": {
+          "sessionActive": true
+        },
         "events": ["session_start", "smartcharge_decision"],
-        "logic": { "SmartChargeConnectionEvidenceAt": "null" },
+        "logic": {
+          "SmartChargeConnectionEvidenceAt": "null"
+        },
         "plugCommandCount": 1
       }
     },
     {
       "flow": "runtime-controller",
       "fixture": "normal-day",
-      "expect": { "events": [], "plugCommandCount": 1 }
+      "expect": {
+        "events": [],
+        "plugCommandCount": 1
+      }
     }
   ],
   "expect": {
-    "eventTypes": ["session_start", "smartcharge_decision"],
+    "eventTypes": [
+      "actuator_request",
+      "smartcharge_off",
+      "session_start",
+      "smartcharge_decision"
+    ],
     "plugCommandCount": 1
   }
 }

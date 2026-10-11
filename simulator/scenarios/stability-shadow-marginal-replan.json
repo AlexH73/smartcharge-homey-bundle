@@ -5,10 +5,21 @@
   "now": "2026-07-07T18:00:00+02:00",
   "priceAnchor": "2026-07-07T18:00:00+02:00",
   "initial": {
-    "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00"
+    },
     "devices": {
-      "mercedes": { "capabilitiesObj": { "measure_battery": 80 } },
-      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 2600 } }
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 80
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 2600
+        }
+      }
     }
   },
   "steps": [
@@ -22,7 +33,7 @@
           "acceptedStrategyRevision": 1,
           "shadowEffectiveShouldCharge": true
         },
-        "plugCommandCount": 1
+        "plugCommandCount": 0
       }
     },
     {
@@ -31,7 +42,11 @@
       "fixture": "shadow-expanded-marginal",
       "set": {
         "devices": {
-          "mercedes": { "capabilitiesObj": { "measure_battery": 90 } }
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": 90
+            }
+          }
         }
       },
       "expect": {
@@ -45,9 +60,13 @@
           "candidateShouldCharge": false,
           "shadowEffectiveShouldCharge": true
         },
-        "plugCommandCount": 1
+        "plugCommandCount": 0
       }
     }
   ],
-  "expect": { "plugOn": true, "plugCommandCount": 1, "tibberCalls": 2 }
+  "expect": {
+    "plugOn": true,
+    "plugCommandCount": 0,
+    "tibberCalls": 2
+  }
 }

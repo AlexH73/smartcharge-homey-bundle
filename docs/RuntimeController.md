@@ -1,5 +1,85 @@
 # Runtime State Controller
 
+## Independent manual charging
+
+Manual ON and Auto Mode require `SmartChargeRuntimeMode=active`; explicit USER_STOP
+remains available in shadow mode as a user-requested safety action. `Manual Override On`
+now activates durable manual intent. `Manual Override Off` means USER_STOP;
+the new `Auto Mode` entry explicitly returns to automatic charging. In active
+mode `Run Decision` and `State Sync` delegate to Runtime Controller. Shadow-mode
+legacy compatibility remains, with all physical commands passing through the
+runtime command function and its safety gate.
+
+Manual charging does not create, expire, or depend on an automatic session and
+does not call Tibber. Automatic resets cannot clear its intent or timers.
+Mercedes device absence is diagnostic, not a manual stop condition.
+`SmartChargeManualMode=true` is intent, not evidence of charging.
+
+The persisted states are IDLE, STARTING, CHARGING, STOPPING, COMPLETED, STOPPED,
+and ERROR. Activation time is saved before requesting power. A restored raw flag
+without a valid activation record is RECOVERY_BLOCKED: runtime cannot invent a
+new timestamp. Repeated ON keeps the deadline; ON after a completed stop starts
+a new activation.
+
+- START_CONFIRMED requires two independent fresh **plug** `measure_power`
+  samples above 500 W, at least 30 seconds apart. Re-reading one timestamp does
+  not count. Samples must be at/after activation, non-future, at most 60 seconds
+  old, with the plug ON. Lower power or a gap over 60 seconds resets unconfirmed
+  high-power evidence.
+- LOW_POWER only applies after confirmed consumption. Independent samples
+  at/below 3 W spanning 180 seconds trigger OFF and completion. Power above 3 W
+  resets the interval. More than 60 seconds without fresh readings resets the
+  uncompleted low interval, including after restart. Missing/invalid/negative
+  or timestamp-less power is never zero and cannot confirm either transition.
+- MAX_DURATION_REACHED triggers at 360 minutes from activation even without
+  power or vehicle readings. Restart and duplicate ON cannot extend it.
+- BATTERY_FULL requires SOC at least 100 and a non-future battery timestamp
+  fresh under the existing 30-minute policy and at/after manual activation.
+  This is independent of vehicle health and status freshness.
+- USER_STOP persists `SmartChargeAutoStartBlocked=true`, clears manual intent,
+  and requests OFF. OFF failure leaves ERROR without a completion timestamp;
+  stop during in-flight runtime work remains STOPPING until reconciliation.
+
+Every manual stop reason (USER_STOP, LOW_POWER, BATTERY_FULL,
+MAX_DURATION_REACHED, COMMAND_FAILED) denies automatic ON across restarts.
+Manual ON starts only a new manual lifecycle and keeps the automatic block.
+Ordinary runtime/planner/reset execution cannot clear it. Only explicit Auto
+Mode can grant automatic permission, after stopping manual work, checking a
+clear runtime lease and verified plug OFF, and validating fresh trustworthy
+Mercedes connection evidence plus fresh SOC below 100 under the existing
+30-minute policy. Stale vehicle power cannot create an automatic session.
+
+The existing manual JSON adds `activationStopToken` and `autoGrant` (UTC `at`
+and matching `stopToken`); no additional Logic variable is required. A grant
+belongs to that saved record and is invalidated by a new activation or stop.
+Old terminal records without a valid grant remain effectively blocked even
+if the Boolean flag was false. ERROR/STOPPING cannot resume ON. Persistence
+failures invalidate intent through the stop token, block and saved error record
+where writes succeed, then request protective OFF. This is not a multi-variable
+transaction: simultaneous loss of every durable write cannot be recovered from
+memory after restart. Missing/corrupt safety records fail closed.
+
+`SmartChargeRuntimeLock` is a persisted best-effort execution lease. A valid
+busy lease skips duplicate work; an invalid or abandoned lease fails closed.
+ON re-reads intent before the command and after acknowledgement; USER_STOP
+during in-flight ON causes compensating OFF. `SmartChargeUserStopToken` also
+protects concurrent activation against clearing a new stop. Homey Logic has no
+atomic compare-and-swap in the current adapter: this is **not** a strict mutex
+between independent script instances. Serialize deployed runtime triggers.
+After a crash leaves a lease, verify all executions have ended and power is OFF
+before an operator resets the lease to `null`; preserve manual timestamps.
+
+Thresholds run on the next runtime invocation with qualifying samples. They
+are not hard real-time cutoffs or proof of continuous power between samples.
+Invoke runtime on power updates and a frequent periodic watchdog (preferably
+30 seconds, using a supported Homey scheduling mechanism). Samples must advance
+at most 60 seconds apart for LOW_POWER. A 15-minute legacy schedule is unsuitable.
+Software protections do not replace line, EVSE, plug, or vehicle protections.
+
+Request/success/failure are diagnosed locally; webhook delivery is best effort
+and happens after the physical command so it cannot delay OFF. Logging failure
+never repeats a successful command. See `TelemetryContract.md` for Events.
+
 `SMARTCHARGE - Runtime Controller.js` is the single target runtime entry point.
 It collects a normalized snapshot, evaluates provider evidence, reconciles the
 Session, invokes the canonical planner-v2 decision pipeline, derives desired
@@ -80,9 +160,10 @@ retry. Charging power or trustworthy connected evidence cancels the
 pending observation. This observation-before-action order prevents the
 controller from creating its own zero-power evidence.
 
-Completion from target battery has higher priority than disconnect, followed
-by expired Session, confirmed disconnect, suspected disconnect, manual
-override, planner request, and waiting. Preconditioning is diagnostic and does
+For automatic charging, completion from target battery has higher priority than
+disconnect, followed by expired Session, confirmed disconnect, suspected
+disconnect, planner request, and waiting. Manual charging uses the independent
+path described above. Preconditioning is diagnostic and does
 not keep the plug on outside a selected charging window. In active mode an
 expired planner result is a runtime-owned terminal transition: the plug is
 switched off, `session_expired` is emitted, and runtime state is cleared without

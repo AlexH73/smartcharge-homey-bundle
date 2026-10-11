@@ -31,7 +31,7 @@
           "action": "switched_on",
           "shouldCharge": true
         },
-        "events": [],
+        "events": ["actuator_request", "smartcharge_on"],
         "plugOn": true,
         "plugCommandCount": 1,
         "tibberCallsDelta": 0
@@ -41,7 +41,7 @@
   "expect": {
     "plugOn": true,
     "plugCommandCount": 1,
-    "eventTypes": [],
+    "eventTypes": ["actuator_request", "smartcharge_on"],
     "tibberCalls": 0
   }
 }

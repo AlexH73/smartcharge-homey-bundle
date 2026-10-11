@@ -17,7 +17,10 @@
       },
       "plug": {
         "failSetCapabilityValue": true,
-        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 0
+        }
       }
     }
   },
@@ -27,7 +30,7 @@
       "now": "2026-07-07T18:00:00+02:00",
       "expect": {
         "errorIncludes": "setCapabilityValue failed",
-        "events": [],
+        "events": ["actuator_request", "smartcharge_error"],
         "plugOn": true,
         "plugCommandCount": 0,
         "logic": {
@@ -38,8 +41,10 @@
     }
   ],
   "expect": {
-    "logic": { "ChargeConnectedAt": "2026-07-07 17:00:00" },
-    "eventTypes": [],
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 17:00:00"
+    },
+    "eventTypes": ["actuator_request", "smartcharge_error"],
     "plugOn": true,
     "plugCommandCount": 0
   }

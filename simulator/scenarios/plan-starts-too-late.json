@@ -35,7 +35,11 @@
           "plannedEnd": "2026-07-08 08:00:00",
           "reason": "Safety fallback: selected plan starts too late"
         },
-        "events": ["smartcharge_decision"],
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_on"
+        ],
         "plugOn": true,
         "plugCommandCount": 1,
         "tibberCallsDelta": 1
@@ -45,7 +49,11 @@
   "expect": {
     "plugOn": true,
     "plugCommandCount": 1,
-    "eventTypes": ["smartcharge_decision"],
+    "eventTypes": [
+      "smartcharge_decision",
+      "actuator_request",
+      "smartcharge_on"
+    ],
     "tibberCalls": 1
   }
 }

@@ -5,11 +5,11 @@
 </p>
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![SmartCharge](https://img.shields.io/badge/SmartCharge-v0.6.1-blue)](docs/DevelopmentWorkflow.md)
+[![SmartCharge](https://img.shields.io/badge/SmartCharge-v0.6.2-blue)](docs/DevelopmentWorkflow.md)
 [![HomeyScript](https://img.shields.io/badge/HomeyScript-runtime-00C7B7)](https://homey.app/en-us/app/com.athom.homeyscript/HomeyScript/)
 [![Tibber](https://img.shields.io/badge/Tibber-price%20API-FF5A5F)](https://developer.tibber.com/)
 [![Google Sheets](https://img.shields.io/badge/Google%20Sheets-analytics-34A853?logo=googlesheets&logoColor=white)](docs/GoogleSheetsSetup.md)
-[![Local Simulator](https://img.shields.io/badge/local%20simulator-93%20scenarios-6F42C1)](docs/Simulator.md)
+[![Local Simulator](https://img.shields.io/badge/local%20simulator-94%20scenarios-6F42C1)](docs/Simulator.md)
 [![Production Tested](https://img.shields.io/badge/production-tested-brightgreen)](#features)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -21,10 +21,15 @@ It decides when charging should start, compares continuous and multi-window
 charging plans, and keeps the logic testable outside Homey through a local
 simulator.
 
+Version 0.6.2 is prepared for local release review. Its manual lifecycle changes
+have not been deployed or validated on real Homey. Follow the migration in
+`docs/HomeyFlows.md`; strict execution serialization remains a separate task
+described in `docs/HomeyExecutionSerialization.md`.
+
 ## Features
 
 - Production-tested Homey flow lifecycle.
-- Local simulator with 93 passing scenarios.
+- Local simulator with 94 passing scenarios.
 - Multi-window planner for separated low-price slots.
 - Google Sheets event logging and analytics.
 - Live public dashboard.

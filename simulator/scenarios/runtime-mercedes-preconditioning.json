@@ -18,7 +18,12 @@
           "onoff_precond": true
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
@@ -40,7 +45,13 @@
     {
       "flow": "runtime-controller",
       "set": {
-        "devices": { "plug": { "capabilitiesObj": { "onoff": true } } }
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": true
+            }
+          }
+        }
       },
       "expect": {
         "result": {
@@ -48,11 +59,18 @@
           "desiredPlugState": false,
           "action": "switched_off"
         },
-        "events": ["smartcharge_decision", "smartcharge_off"],
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_off"
+        ],
         "plugOn": false,
         "plugCommandCount": 1
       }
     }
   ],
-  "expect": { "plugOn": false, "plugCommandCount": 1 }
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 1
+  }
 }

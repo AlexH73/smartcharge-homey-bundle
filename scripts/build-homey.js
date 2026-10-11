@@ -62,6 +62,10 @@ const TARGETS = {
 };
 
 const BUILD_ALL_TARGET = 'all';
+TARGETS['auto-mode'] = {
+  entry: 'src/90-flows/auto-mode.entry.js',
+  out: 'SMARTCHARGE - Auto Mode.js',
+};
 const DEFAULT_BUILD_ORDER = [
   'connection-evidence',
   'runtime-controller',
@@ -73,6 +77,7 @@ const DEFAULT_BUILD_ORDER = [
   'state-sync',
   'manual-on',
   'manual-off',
+  'auto-mode',
   'stability-debug',
 ];
 

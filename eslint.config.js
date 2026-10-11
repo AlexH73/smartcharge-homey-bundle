@@ -95,6 +95,18 @@ const sharedBundleGlobals = {
   isVehicleConnectedStatus: 'readonly',
   runRuntimeController: 'readonly',
   runCanonicalDecision: 'readonly',
+  runtimeBoolean: 'readonly',
+  runtimeNumberOrNull: 'readonly',
+  runtimeDateOrNull: 'readonly',
+  readCapabilityDiagnostic: 'readonly',
+  collectRuntimeSnapshot: 'readonly',
+  runAutomaticRuntimeController: 'readonly',
+  executeRuntimePlugCommand: 'readonly',
+  requestManualMode: 'readonly',
+  idleManualState: 'readonly',
+  parseManualState: 'readonly',
+  isManualRunning: 'readonly',
+  evaluateManualCharging: 'readonly',
 };
 
 const googleAppsScriptGlobals = {
@@ -124,6 +136,7 @@ module.exports = [
       'coverage/**',
       'backup/**',
       'simulator/logs/**',
+      'diagnostics/**',
       'src/00-config/00-build-info.generated.js',
     ],
   },

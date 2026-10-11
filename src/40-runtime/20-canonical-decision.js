@@ -494,8 +494,18 @@ async function runCanonicalDecision(options = {}) {
     chargeSlots > 0 &&
     battery < CONFIG.batteryFullPercentage
   ) {
-    await setDeviceOn(plug);
-    log('SmartCharge action: plug turned ON');
+    const actuatorAction = await executeRuntimePlugCommand(
+      {
+        plug,
+        batteryPct: battery,
+        sessionId,
+        chargeConnectedAt: connectedAtRaw,
+        plannerShouldCharge: shouldChargeNow,
+      },
+      true,
+      'AUTOMATIC_RECONCILIATION',
+    );
+    log(`SmartCharge action: ${actuatorAction}`);
   } else {
     log('SmartCharge action: no action');
   }

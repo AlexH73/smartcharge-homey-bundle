@@ -46,8 +46,8 @@ function evaluateTelemetryFreshness(observedAt, now, config = CONFIG) {
   const timestamp =
     observedAt instanceof Date ? observedAt : new Date(observedAt);
   if (Number.isNaN(timestamp.getTime())) return TELEMETRY_FRESHNESS.UNKNOWN;
-  return now.getTime() - timestamp.getTime() <=
-    config.telemetryStaleMinutes * 60000
+  const ageMs = now.getTime() - timestamp.getTime();
+  return ageMs >= 0 && ageMs <= config.telemetryStaleMinutes * 60000
     ? TELEMETRY_FRESHNESS.FRESH
     : TELEMETRY_FRESHNESS.STALE;
 }
@@ -78,7 +78,8 @@ function hasTrustworthyConnectionEvidence(snapshot) {
       isVehicleConnectedStatus(snapshot.vehicleStatus)) ||
       (snapshot.vehicleCharging &&
         snapshot.vehicleChargingFreshness === TELEMETRY_FRESHNESS.FRESH) ||
-      snapshot.vehicleChargingPowerW >= CONFIG.chargingPowerThresholdW)
+      (snapshot.vehicleChargingPowerW >= CONFIG.chargingPowerThresholdW &&
+        snapshot.vehicleChargingPowerFreshness === TELEMETRY_FRESHNESS.FRESH))
   );
 }
 

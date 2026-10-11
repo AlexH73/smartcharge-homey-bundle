@@ -2,6 +2,7 @@ dist/
 node_modules/
 coverage/
 simulator/logs/
+diagnostics/
 docs/
 .smartcharge-build.json
 src/00-config/00-build-info.generated.js
