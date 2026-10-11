@@ -1,7 +1,9 @@
 # Generated HomeyScript bundles
 
 Only this README is tracked. Generated JavaScript and `dist/release` stay outside
-Git. Current committed identity: **0.6.4+build.17**. The preserved release artifact must not be replaced by corrected source bytes.
+Git. Prepared identity: **0.6.5+build.18**. The new local artifact is
+`dist/release-0.6.5-build.18`; preserve the old 0.6.4 artifact separately.
+See [release preparation and update](../docs/Release-0.6.5.md).
 Check candidates without writing bundles:
 
 ```powershell

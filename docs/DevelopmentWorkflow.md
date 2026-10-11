@@ -5,7 +5,7 @@ Work normally starts on a scoped task branch from updated `develop`, preserving
 existing local work and following applicable operator/repository instructions.
 Prefixes describe intent: `feature/`, `fix/`, `chore/`; releases may use `release/*`
 and urgent fixes `hotfix/*`, merged back into both main/develop as appropriate.
-The current manual reliability work remains on `feature/manual-charging-reliability`.
+Manual reliability PR #1 is merged; corrective release preparation uses `release/0.6.5`.
 
 ## Validation and review
 
@@ -42,8 +42,8 @@ The source check preserves metadata and approved artifacts. After an explicitly
 authorized new version/build, ordinary release creation compares full source
 bytes/metadata. Do not recreate 0.6.4+build.17 from this corrected branch.
 Approve one immutable artifact; do not rebuild, bump version or edit code during
-deployment. Release tags identify approved source (for this version,
-`v0.6.4+build.17` or `0.6.4+build.17`). Tag creation/release publication are separate
+deployment. Release tags identify approved source (for the prepared release,
+`v0.6.5+build.18` or `0.6.5+build.18`). Tag creation/release publication are separate
 authorized actions. The public manual release workflow requires existing tag,
 approved SHA/digest and successful non-PR CI artifact; it never deploys Homey.
 

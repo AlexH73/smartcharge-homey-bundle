@@ -112,12 +112,12 @@ try {
   // Older release bytes remain valid even after source changes in this checkout.
   assert.equal(
     verifyArtifact(baseline, {
-      tag: 'v0.6.4+build.17',
+      tag: 'v' + previous,
       manifestSha256: sha256(
         fs.readFileSync(path.join(baseline, 'manifest.json')),
       ),
     }).version,
-    '0.6.4+build.17',
+    previous,
   );
   console.log(
     'PASS newer/older artifacts, unsupported schema/format, corruption, changed digest and tag/version',

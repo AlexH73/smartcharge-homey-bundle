@@ -6,8 +6,10 @@ controls a charging plug, and optionally logs events to Google Sheets.
 Manual Charging has an independent persisted lifecycle and does not require Tibber
 or available vehicle telemetry to start or stop.
 
-Installed release baseline: **0.6.4+build.17**. This branch contains an unreleased
-Actuator correction; installing it requires a new release identity. All twelve bundles have been installed in
+Prepared corrective release: **0.6.5+build.18**, containing the Actuator correction
+and release metadata contract merged through PR #1. See the
+[0.6.5 update procedure](docs/Release-0.6.5.md). It has not been deployed.
+Installed release baseline: **0.6.4+build.17**. All twelve baseline bundles have been installed in
 one controlled Homey installation and verified by readback. This proves code
 installation, not unattended charging readiness; supervised operational acceptance
 is still pending. The private GitHub deployment repository/runner has not been
