@@ -18,8 +18,6 @@ const { auditFlows } = require('../scripts/homey-flow-audit');
 
 const origin = 'https://192-168-178-79.homey.homeylocal.com';
 const scriptPath = '/api/app/com.athom.homeyscript/script';
-const confirmation = installConfirmation('0.6.4+build.17');
-const rollbackConfirmation = restoreConfirmation('0.6.4+build.17');
 let releaseApproval;
 const clone = (data) => JSON.parse(JSON.stringify(data));
 const proof = () => ({
@@ -150,6 +148,8 @@ async function main() {
   try {
     const artifact = path.join(temporary, 'artifact');
     const manifest = createArtifact(artifact);
+    const confirmation = installConfirmation(manifest.version);
+    const rollbackConfirmation = restoreConfirmation(manifest.version);
     releaseApproval = {
       tag: manifest.version,
       manifestSha256: sha256(

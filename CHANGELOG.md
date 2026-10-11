@@ -5,7 +5,11 @@ All notable SmartCharge Homey Bundle changes should be documented here.
 The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 `v1.0.0`.
 
-## Unreleased
+## 0.6.5 - 2026-10-12
+
+Corrective release **0.6.5+build.18**, prepared from merged PR #1. All twelve
+bundles are rebuilt as a new release; installation and hardware acceptance remain
+pending. See [update procedure](docs/Release-0.6.5.md).
 
 ### Fixed
 

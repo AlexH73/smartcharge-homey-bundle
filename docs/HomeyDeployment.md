@@ -1,6 +1,8 @@
 # Controlled HomeyScript deployment
 
-SmartCharge 0.6.4+build.17 supports the official HomeyScript **3.6.3** custom API.
+SmartCharge deployment tooling supports the official HomeyScript **3.6.3** custom API.
+The prepared [0.6.5+build.18 update](Release-0.6.5.md) has not been deployed;
+the installed baseline remains 0.6.4+build.17.
 The client reads installed scripts and updates existing IDs using only
 `PUT /api/app/com.athom.homeyscript/script/:id` with `{code}`. Names and API
 compatibility mode 1/2 are preserved. Create, delete and run endpoints are not used.
@@ -210,11 +212,12 @@ does not itself prove fresh telemetry or a trustworthy connection event.
 Validation: `npm run verify` includes offline release/deployment/provenance tests;
 `npm run test:deployment` runs the deployment and source-provenance suites directly.
 
-## Version-independent contract and pending runtime correction
+## Version-independent contract and corrective release
 
 The installed 0.6.4+build.17 remains unchanged. Corrected Actuator source bytes
-require a separately authorized new release, build number, tag and deployment.
-Local tests create temporary candidates only; they do not replace dist/release.
+are prepared as 0.6.5+build.18 in a separate artifact directory. Commit, publication,
+tag and deployment each remain subject to separate authorization. Local tests
+create temporary candidates only; they do not replace dist/release.
 
 Build/source verification uses the release checkout and all twelve builder targets.
 Artifact integrity verification uses the explicit schema-1 bundle allowlist,
