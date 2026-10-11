@@ -1,5 +1,42 @@
 # Telemetry Contract
 
+Runtime actuator ACK events and subsequent lifecycle events in the same invocation
+leave `plugOn` and `plugPower` (`plugPowerW` in Sheets) empty: the pre-command
+snapshot is no longer current. The request `message` records `beforePlugOn` and
+`beforePlugPowerW`; the success message records `phase=acknowledged` and
+`physicalStateVerified=false`. A command ACK is not a physical OFF measurement.
+The Events/Sessions schema and event-driven materializer remain unchanged.
+
+## Manual reliability events (schema v2 compatible)
+
+No columns are renamed, reordered, or added. Existing `smartcharge_on`,
+`smartcharge_off`, `manual_override_enabled`, `manual_override_disabled`, and
+`smartcharge_error` remain supported. New critical event types:
+
+| eventType                 | Meaning                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| actuator_request          | ON/OFF request; `message` contains command and phase     |
+| manual_charging_started   | Two independent fresh plug samples confirmed consumption |
+| manual_charging_completed | Successful OFF reconciliation and durable end time       |
+
+Reason codes include MANUAL_START, USER_STOP, LOW_POWER, MAX_DURATION_REACHED,
+BATTERY_FULL, COMMAND_FAILED, RECOVERY_BLOCKED, and AUTOMATIC_RECONCILIATION.
+Blocked runtime results preserve the saved terminal reason; fallback is
+AUTOMATIC_BLOCKED. AUTO_MODE_PREPARE diagnoses protective OFF before granting
+Auto Mode. All manual terminal reasons deny automatic ON until explicit Auto.
+Successful actuator events are emitted without requiring an automatic session.
+Manual events use `decisionSource=manual` and a separate manual activation ID;
+their `message` contains the persisted state/stop reason/timestamps. Request
+events do not modify Sessions. The local Apps Script update recognizes manual
+completion and preserves status on manual-disabled events; deploy it explicitly
+after review. Old dashboards keep existing status values and columns.
+
+The runtime console diagnoses requests before the physical command. Webhook
+request/success events are delivered afterwards so webhook latency cannot delay
+OFF. COMMAND_FAILED is distinct from successful OFF; no completion event is
+issued on failed OFF. Webhook errors are diagnosed locally and do not retry
+physical commands. Delivery is best effort, not a durable webhook outbox.
+
 Status: Living contract
 Scope: Public data model for SmartCharge telemetry
 Primary sinks: Google Sheets, local simulator logs, future dashboard storage
@@ -18,6 +55,19 @@ automation into a production charging engine with a Session Engine, Planner,
 Multi-Window Planner, Simulator, Google Sheets telemetry, Public Dashboard, and
 future Learning Engine.
 
+## Current headers and proposed extensions
+
+The Events header block below is the actual template order. The wider field tables
+also preserve extension proposals: a CURRENT field may be a logical alias or a
+derivable value, not a guaranteed populated physical column. `message` is preserved
+in `detailsJson`, not a dedicated Events column. The canonical Sessions columns
+are defined by `SESSION_HEADERS` in [the template](../scripts/google-apps-script/SmartChargeLogger.gs).
+They use `startBatteryPct`, `endBatteryPct`, `targetBatteryPct`, `missingBatteryPct`
+and `batteryDeltaPct`. `resetAt` is already written; `lastDecisionAt`, explicit
+`disconnectedAt`, metered energy/duration, quality and learning fields are not
+implemented template columns. Old research aliases must not be added as duplicate
+columns. No generic historical Events replay/rebuild tool is implemented.
+
 ## Status Levels
 
 Every field is classified by implementation maturity.
@@ -25,7 +75,7 @@ Every field is classified by implementation maturity.
 | Status | Meaning |
 | --- | --- |
 | `CURRENT` | Already emitted, already present in the current Sheets template, or derivable from current event telemetry without new runtime inputs. |
-| `NEXT RELEASE` | Should be added in the next telemetry/schema update because the data is already available or simple to derive. |
+| `PLANNED` | Proposed extension with no committed release/date; may be derivable, but is not a guaranteed sink column. |
 | `FUTURE` | Requires new sensors, new integrations, new Session Engine behavior, dashboard storage, or Learning Engine support. |
 
 ## Compatibility Rules
@@ -33,7 +83,7 @@ Every field is classified by implementation maturity.
 - Existing columns must not be renamed or reordered.
 - New Google Sheets columns must be appended at the end of the existing sheet.
 - Existing Google Sheets workbooks should not be automatically reordered to the
-  v1 layout. Use a new sheet or an explicit migration when a clean v1 layout is
+  current layout. Use a new sheet or an explicit migration when a clean current layout is
   required.
 - Existing consumers should be able to ignore unknown columns.
 - New fields are optional until every producer can populate them.
@@ -49,7 +99,7 @@ Every field is classified by implementation maturity.
   otherwise.
 - Price fields are EUR per kWh unless the field name says otherwise.
 
-## Events Telemetry V1 Header Order
+## Current Events header order (schemaVersion=2)
 
 Clean public setups should use this `Events` header order. Existing workbooks
 that still use older columns should preserve their current order and append new
@@ -107,7 +157,7 @@ baselineIncompleteReason
 ```
 
 The runtime may use internal JSON aliases such as `battery`, `currentPrice`,
-`averagePrice`, or `plugPower`. Telemetry sinks should expose the public v1
+`averagePrice`, or `plugPower`. Telemetry sinks should expose the public
 header names above.
 
 ## Entity Ownership
@@ -188,10 +238,10 @@ Known event types:
 | `sessionId` | string | Required for session events | `CURRENT` | Stable identifier for the charging session. | `2026-07-07 18:00:00` | Join Events to Sessions and rebuild session aggregates. |
 | `loggedAt` | datetime | Required | `CURRENT` | Runtime timestamp when the event was produced. | `2026-07-07T16:05:00.000Z` | Timeline ordering and session duration calculations. |
 | `source` | string | Required | `CURRENT` | Runtime component that produced the event. | `smartcharge-run-decision` | Debug ownership and component-level reliability metrics. |
-| `engineVersion` | string | Required | `CURRENT` | SmartCharge engine version used by the producer. | `0.5.0+build.8` | Compare behavior across releases. |
+| `engineVersion` | string | Required | `CURRENT` | SmartCharge engine version used by the producer. | `0.6.4+build.17` | Compare behavior across releases. |
 | `schemaVersion` | integer | Optional | `CURRENT` | Telemetry schema version. Savings cleanup uses v2. | `2` | Safe parsing and future migrations. |
-| `flowName` | enum string | Optional | `NEXT RELEASE` | Homey Flow that triggered the event. | `Run Decision` | Flow-level dashboard filters. |
-| `scriptName` | string | Optional | `NEXT RELEASE` | HomeyScript name or generated script target. | `SmartCharge - Run Decision` | Deployment validation and support diagnostics. |
+| `flowName` | enum string | Optional | `PLANNED` | Homey Flow that triggered the event. | `Run Decision` | Flow-level dashboard filters. |
+| `scriptName` | string | Optional | `PLANNED` | HomeyScript name or generated script target. | `SmartCharge - Run Decision` | Deployment validation and support diagnostics. |
 | `message` | string | Optional | `CURRENT` | Short human-readable message for lifecycle events. | `Charging plug turned on` | User-facing dashboard activity feed. |
 
 ### Events: Vehicle State
@@ -205,7 +255,7 @@ Known event types:
 | `targetDeparture` | datetime | Optional | `CURRENT` | Planned departure deadline. | `2026-07-08 07:30:00` | Planner deadline and session quality scoring. |
 | `plugOn` | boolean | Optional | `CURRENT` | Whether the charging plug is currently enabled. | `false` | Detect toggles and validate decision execution. |
 | `plugPowerW` | number | Optional | `CURRENT` | Current plug power in watts. | `3600` | Infer actual charging and low-power stop conditions. |
-| `chargerStatus` | enum string | Optional | `NEXT RELEASE` | Normalized charger state. | `connected` | Watchdog recovery and missing session detection. |
+| `chargerStatus` | enum string | Optional | `PLANNED` | Normalized charger state. | `connected` | Watchdog recovery and missing session detection. |
 | `vehicleProvider` | string | Optional | `FUTURE` | Vehicle data provider or integration name. | `Mercedes` | Multi-vehicle and provider reliability analytics. |
 
 ### Events: Planning
@@ -222,15 +272,15 @@ Known event types:
 | `chargeWindowsText` | string | Optional | `CURRENT` | Human-readable list of planned windows. | `2026-07-07 20:00:00-2026-07-07 21:00:00 | 2026-07-07 23:00:00-2026-07-08 00:00:00` | Quick spreadsheet inspection. |
 | `chargeWindowsJson` | JSON string | Optional | `CURRENT` | Machine-readable list of selected windows. | `[{"plannedStart":"2026-07-07 20:00:00","plannedEnd":"2026-07-07 21:00:00","slotCount":1}]` | Dashboard charts and Learning Engine plan reconstruction. |
 | `plannerVersion` | string | Optional | `CURRENT` | Planner algorithm version independent of engine build. | `planner-v2` | A/B comparison and learning reproducibility. |
-| `planRevision` | integer | Optional | `NEXT RELEASE` | Revision number within one session. | `2` | Detect replanning churn after price updates. |
+| `planRevision` | integer | Optional | `PLANNED` | Revision number within one session. | `2` | Detect replanning churn after price updates. |
 | `chargeFactor` | number | Optional | `CURRENT` | Estimated minutes per missing battery percent. | `2.5` | Learning Engine baseline and per-car calibration. |
-| `chargeReservePct` | number | Optional | `CURRENT` | Extra reserve percentage added to the plan. | `5` | Explain conservative planning and missed target prevention. |
+| `chargeReservePct` | number | Optional | `CURRENT` | Additional reserve minutes; legacy field name retained, not percentage. | `5` | Explain conservative planning and missed target prevention. |
 
 ### Events: Energy
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `plannedEnergyKWh` | number | Optional | `NEXT RELEASE` | Estimated energy required by the selected plan. | `9.8` | Cost estimates and public dashboard energy totals. |
+| `plannedEnergyKWh` | number | Optional | `PLANNED` | Estimated energy required by the selected plan. | `9.8` | Cost estimates and public dashboard energy totals. |
 | `actualChargeMinutes` | number | Optional | `FUTURE` | Actual charging minutes observed so far in the session. | `82` | Mid-session progress and prediction correction. |
 | `actualEnergyKWh` | number | Optional | `FUTURE` | Actual measured energy delivered so far. | `8.4` | Accurate cost and efficiency calculations. |
 | `averagePower` | number | Optional | `FUTURE` | Average charging power in watts or kW as documented by sink. | `3.4` | Detect derating and charger/vehicle limits. |
@@ -244,7 +294,7 @@ Known event types:
 | `avgPlanPriceEurKwh` | number | Optional | `CURRENT` | Average price of the selected plan. | `0.155` | Dashboard estimate and comparison to baseline. |
 | `totalPlanPrice` | number | Optional | `CURRENT` | Sum of selected slot prices, not full session cost. | `0.31` | Backward-compatible cost proxy. |
 | `priceCount` | number | Optional | `CURRENT` | Number of price entries available to the planner. | `48` | Detect missing Tibber tomorrow prices. |
-| `baselineMode` | enum string | Optional | `NEXT RELEASE` | Tariff-comparison baseline strategy. | `continuous-cheapest` | Explain tariff planner comparisons; this is not the EUR-cost baseline. |
+| `baselineMode` | enum string | Optional | `PLANNED` | Tariff-comparison baseline strategy. | `continuous-cheapest` | Explain tariff planner comparisons; this is not the EUR-cost baseline. |
 | `baselineAvgPriceEurKwh` | number | Optional | `CURRENT` | Average tariff of the cheapest continuous comparison plan. | `0.24` | Compare selected multi-window and continuous tariff plans. |
 | `baselineTotalPrice` | number | Optional | `CURRENT` | Sum-of-tariffs proxy for the continuous comparison plan. | `0.72` | Tariff-plan analysis only. |
 | `selectedAvgPriceEurKwh` | number | Optional | `CURRENT` | Average price of the selected plan. | `0.09` | Replacement for ambiguous `averagePrice`. |
@@ -252,7 +302,7 @@ Known event types:
 | `estimatedSelectedCostEur` | number | Optional | `CURRENT` | Estimated selected-plan charging cost using exact minutes and nominal power. | `1.2400` | Cost KPI. |
 | `estimatedBaselineCostEur` | number | Optional | `CURRENT` | Cost of charging immediately for the same duration and nominal power. | `1.7800` | Savings baseline. |
 | `estimatedSavingsEur` | number | Optional | `CURRENT` | Non-negative public savings versus immediate charging. | `0.5400` | Public savings KPI. |
-| `estimatedSavingsPct` | number | Optional | `CURRENT` | Percentage of real EUR savings versus immediate charging. | `30.34` | Public efficiency KPI. |
+| `estimatedSavingsPct` | number | Optional | `CURRENT` | Percentage of estimated EUR savings versus immediate charging. | `30.34` | Public efficiency KPI. |
 | `allocatedChargeMinutes` | number | Optional | `CURRENT` | Exact minutes allocated to selected slots. | `165` | Completeness diagnostics. |
 | `baselineAllocatedMinutes` | number | Optional | `CURRENT` | Exact minutes allocated to immediate charging. | `165` | Baseline completeness. |
 | `chargingPowerKw` | number | Optional | `CURRENT` | Nominal estimated charging power. | `2.6` | Cost input. |
@@ -267,16 +317,16 @@ Known event types:
 | `reason` | string | Optional | `CURRENT` | Human-readable explanation for the decision. | `Waiting for selected charging plan` | Dashboard activity and support diagnostics. |
 | `reasonCode` | enum string | Optional | `CURRENT` | Stable machine-readable reason. | `WAITING_FOR_PLAN` | Alerting, translations, and analytics without parsing text. |
 | `decisionSource` | enum string | Optional | `CURRENT` | Component that made the final decision. | `planner` | Separate planner decisions from fallback/manual decisions. |
-| `decisionState` | enum string | Optional | `NEXT RELEASE` | High-level state for the decision. | `waiting` | State charts and long-term trend analysis. |
-| `fallbackActive` | boolean | Optional | `NEXT RELEASE` | Whether a safety fallback overrode the selected plan. | `false` | Reliability and risk metrics. |
+| `decisionState` | enum string | Optional | `PLANNED` | High-level state for the decision. | `waiting` | State charts and long-term trend analysis. |
+| `fallbackActive` | boolean | Optional | `PLANNED` | Whether a safety fallback overrode the selected plan. | `false` | Reliability and risk metrics. |
 | `manualOverride` | boolean | Optional | `FUTURE` | Whether user action overrode SmartCharge. | `false` | Exclude manual sessions from learning samples. |
 
 ### Events: Environment
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `hasTomorrowPrices` | boolean | Optional | `NEXT RELEASE` | Whether tomorrow price data was available. | `true` | Explain suboptimal plans caused by missing prices. |
-| `priceDataAgeMinutes` | number | Optional | `NEXT RELEASE` | Age of the price data used by the decision. | `12` | Detect stale integrations. |
+| `hasTomorrowPrices` | boolean | Optional | `PLANNED` | Whether tomorrow price data was available. | `true` | Explain suboptimal plans caused by missing prices. |
+| `priceDataAgeMinutes` | number | Optional | `PLANNED` | Age of the price data used by the decision. | `12` | Detect stale integrations. |
 | `outsideTemperature` | number | Optional | `FUTURE` | Outside temperature in Celsius. | `-3.5` | Model charging speed and battery conditioning effects. |
 | `batteryTemperature` | number | Optional | `FUTURE` | Vehicle battery temperature in Celsius. | `8.2` | Improve energy and duration prediction. |
 | `solarForecastKWh` | number | Optional | `FUTURE` | Expected solar production before departure. | `4.1` | Solar-aware planning. |
@@ -287,16 +337,72 @@ Known event types:
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
 | `detailsJson` | JSON string | Required by Sheets | `CURRENT` | Raw JSON payload snapshot. | `{"scenario":"overnight","flow":"run-decision"}` | Backward compatibility and incident debugging. |
-| `logKey` | string | Optional | `NEXT RELEASE` | Deduplication key used by the logger. | `smartcharge_decision|70|0.58|...` | Explain skipped duplicate decision logs. |
-| `errorName` | string | Optional | `NEXT RELEASE` | Error class or stable error name. | `TibberPriceError` | Error dashboards and alert routing. |
-| `errorMessage` | string | Optional | `NEXT RELEASE` | Sanitized error message. | `Price data unavailable` | Support diagnostics without secrets. |
+| `logKey` | string | Optional | `PLANNED` | Deduplication key used by the logger. | `smartcharge_decision|70|0.58|...` | Explain skipped duplicate decision logs. |
+| `errorName` | string | Optional | `PLANNED` | Error class or stable error name. | `TibberPriceError` | Error dashboards and alert routing. |
+| `errorMessage` | string | Optional | `PLANNED` | Sanitized error message. | `Price data unavailable` | Support diagnostics without secrets. |
 | `simulatorScenario` | string | Optional | `CURRENT` | Simulator scenario name when logs are produced locally. | `multi-window-needed` | Regression analysis in simulator artifacts only. |
 | `confidenceScore` | number | Optional | `FUTURE` | Confidence assigned to the decision by a future model. | `0.86` | Learning Engine explainability and safety gates. |
 
+## Current Sessions header order
+
+New workbooks use the exact `SESSION_HEADERS` order below. Existing workbooks
+append missing headers and preserve physical order/legacy aliases. The extension
+tables after it are a broader logical/proposed model, not installation instructions.
+
+```text
+sessionId
+connectedAt
+chargeStartedAt
+chargeStoppedAt
+resetAt
+status
+firstDecisionAt
+startBatteryPct
+endBatteryPct
+batteryDeltaPct
+targetBatteryPct
+missingBatteryPct
+plannerMode
+plannerVersion
+windowCount
+plannedStart
+plannedEnd
+chargeWindowsText
+chargeWindowsJson
+chargeFactor
+chargeReservePct
+plannedChargeMinutes
+selectedAvgPriceEurKwh
+selectedTotalPrice
+baselineAvgPriceEurKwh
+baselineTotalPrice
+estimatedSavingsEur
+estimatedSavingsPct
+lastReasonCode
+lastReason
+lastEventType
+createdAt
+updatedAt
+initialWindowCount
+initialSelectedTotalPrice
+initialBaselineTotalPrice
+initialEstimatedSavingsEur
+initialEstimatedSavingsPct
+estimatedSelectedCostEur
+estimatedBaselineCostEur
+allocatedChargeMinutes
+baselineAllocatedMinutes
+chargingPowerKw
+baselineAllocationComplete
+baselineIncompleteReason
+initialEstimatedSelectedCostEur
+initialEstimatedBaselineCostEur
+```
+
 ## Sessions Schema
 
-A Session row represents one completed charging session from cable connection
-until session reset. Today this entity is mostly derived from Events. The
+A Session row is an event-driven materialized automatic Session or independent
+manual activation and can be in progress or terminal. The
 contract below defines the long-term target for the `Sessions` sheet and future
 storage.
 
@@ -330,28 +436,28 @@ charging power. They are not realized savings derived from metered energy.
 | --- | --- | --- | --- | --- | --- | --- |
 | `sessionId` | string | Required | `CURRENT` | Primary key for the completed session. | `2026-07-07 18:00:00` | Join to raw Events and dashboard session count. |
 | `connectedAt` | datetime | Required | `CURRENT` | Cable connection timestamp. | `2026-07-07 18:00:00` | Session duration and arrival bucket. |
-| `disconnectedAt` | datetime | Optional | `CURRENT` | Cable disconnect timestamp, if observed. | `2026-07-08 07:05:00` | Departure timing and session close reason. |
-| `resetAt` | datetime | Optional | `NEXT RELEASE` | Timestamp when SmartCharge cleared session state. | `2026-07-08T05:00:00Z` | Separate real disconnect from logical reset. |
-| `resetReason` | enum string | Optional | `NEXT RELEASE` | Machine-readable reason for session reset. | `CHARGING_COMPLETED` | Session quality and recovery metrics. |
+| `disconnectedAt` | datetime | Optional | `FUTURE` | Cable disconnect timestamp, if observed. | `2026-07-08 07:05:00` | Departure timing and session close reason. |
+| `resetAt` | datetime | Optional | `CURRENT` | Timestamp when SmartCharge cleared session state. | `2026-07-08T05:00:00Z` | Separate real disconnect from logical reset. |
+| `resetReason` | enum string | Optional | `PLANNED` | Machine-readable reason for session reset. | `CHARGING_COMPLETED` | Session quality and recovery metrics. |
 | `connectionSource` | string | Optional | `FUTURE` | Source that detected the connection. | `Homey charger flow` | Multi-device setups and watchdog diagnostics. |
 
 ### Sessions: Battery
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `startBattery` | number | Optional | `CURRENT` | Battery percentage at connection or first decision. | `62` | Measure charging need and learning samples. |
-| `endBattery` | number | Optional | `CURRENT` | Battery percentage at session end. | `100` | Completion quality and prediction error. |
-| `targetBattery` | number | Optional | `NEXT RELEASE` | Desired battery percentage for the session. | `100` | User profiles and charge completion scoring. |
-| `missingBatteryPercent` | number | Optional | `NEXT RELEASE` | Battery percentage needed at session start. | `38` | Normalize sessions across starting battery levels. |
-| `batteryDelta` | number | Optional | `NEXT RELEASE` | End battery minus start battery. | `38` | Learning Engine target variable. |
+| `startBatteryPct` | number | Optional | `CURRENT` | Battery percentage at connection or first decision. | `62` | Measure charging need and learning samples. |
+| `endBatteryPct` | number | Optional | `CURRENT` | Battery percentage at session end. | `100` | Completion quality and prediction error. |
+| `targetBatteryPct` | number | Optional | `CURRENT` | Desired battery percentage for the session. | `100` | User profiles and charge completion scoring. |
+| `missingBatteryPct` | number | Optional | `CURRENT` | Battery percentage needed at session start. | `38` | Normalize sessions across starting battery levels. |
+| `batteryDeltaPct` | number | Optional | `CURRENT` | End battery minus start battery. | `38` | Learning Engine target variable. |
 
 ### Sessions: Timing
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `targetDeparture` | datetime | Optional | `CURRENT` | Departure deadline used by the session. | `2026-07-08 07:30:00` | Session quality and late/early metrics. |
+| `targetDeparture` | datetime | Optional | `PLANNED` | Departure deadline available in Events; not a current Sessions column. | `2026-07-08 07:30:00` | Session quality and late/early metrics. |
 | `firstDecisionAt` | datetime | Optional | `CURRENT` | First decision event timestamp in the session. | `2026-07-07T16:05:00Z` | Detect delayed startup. |
-| `lastDecisionAt` | datetime | Optional | `CURRENT` | Last decision event timestamp in the session. | `2026-07-08T04:50:00Z` | Replanning and watchdog analysis. |
+| `lastDecisionAt` | datetime | Optional | `FUTURE` | Last decision event timestamp in the session. | `2026-07-08T04:50:00Z` | Replanning and watchdog analysis. |
 | `plannedStart` | datetime | Optional | `CURRENT` | First planned charging start from the accepted plan. | `2026-07-08 02:00:00` | Dashboard schedule summary. |
 | `plannedEnd` | datetime | Optional | `CURRENT` | Last planned charging end from the accepted plan. | `2026-07-08 04:00:00` | Dashboard schedule summary. |
 | `plannedChargeMinutes` | number | Optional | `CURRENT` | Planned charge duration for the session. | `180` | Compare expected and actual charge time. |
@@ -363,10 +469,10 @@ charging power. They are not realized savings derived from metered energy.
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `estimatedEnergyKWh` | number | Optional | `NEXT RELEASE` | Estimated energy required by the plan. | `11.2` | Cost and savings estimation. |
+| `estimatedEnergyKWh` | number | Optional | `PLANNED` | Estimated energy required by the plan. | `11.2` | Cost and savings estimation. |
 | `actualEnergyKWh` | number | Optional | `FUTURE` | Metered delivered energy for the session. | `10.7` | Accurate cost, savings, and CO2 calculations. |
 | `averagePower` | number | Optional | `FUTURE` | Average charging power during active charging. | `3.6` | Detect derating and charger limits. |
-| `chargeFactor` | number | Optional | `NEXT RELEASE` | Planning factor used for this session. | `2.5` | Explain selected charge duration. |
+| `chargeFactor` | number | Optional | `CURRENT` | Planning factor used for this session. | `2.5` | Explain selected charge duration. |
 | `learnedChargeFactor` | number | Optional | `FUTURE` | Updated factor learned from this and previous sessions. | `2.35` | Adaptive planning per car and season. |
 | `efficiencyScore` | number | Optional | `FUTURE` | Normalized session efficiency score. | `0.91` | Public dashboard summary and learning sample weight. |
 
@@ -405,9 +511,9 @@ charging power. They are not realized savings derived from metered energy.
 | `initialWindowCount` | number | Optional | `CURRENT` | Number of windows in the first valid complete plan. Immutable once stored. | `3` | Preserve original multi-window plan complexity. |
 | `windowCount` | number | Optional | `CURRENT` | Number of windows in the latest remaining plan. Updated during replanning. | `1` | Current schedule and remaining-plan metrics. |
 | `chargeWindowsJson` | JSON string | Optional | `CURRENT` | Latest remaining planned charging windows. | `[{"plannedStart":"2026-07-07 20:00:00","plannedEnd":"2026-07-07 21:00:00"}]` | Current schedule visualization. |
-| `planRevisionCount` | number | Optional | `NEXT RELEASE` | Number of distinct plan revisions during the session. | `2` | Planner stability metric. |
-| `fallbackCount` | number | Optional | `NEXT RELEASE` | Number of safety fallback decisions in the session. | `0` | Reliability and risk tracking. |
-| `replansCount` | number | Optional | `NEXT RELEASE` | Number of times selected windows changed. | `1` | Detect churn from price updates. |
+| `planRevisionCount` | number | Optional | `PLANNED` | Number of distinct plan revisions during the session. | `2` | Planner stability metric. |
+| `fallbackCount` | number | Optional | `PLANNED` | Number of safety fallback decisions in the session. | `0` | Reliability and risk tracking. |
+| `replansCount` | number | Optional | `PLANNED` | Number of times selected windows changed. | `1` | Detect churn from price updates. |
 
 ### Sessions: Learning
 
@@ -423,10 +529,10 @@ charging power. They are not realized savings derived from metered energy.
 
 | Field | Type | Required | Status | Description | Example | Future usage |
 | --- | --- | --- | --- | --- | --- | --- |
-| `dataQuality` | enum string | Optional | `NEXT RELEASE` | Overall quality of the session telemetry. | `complete` | Filter dashboard and learning samples. |
-| `incompleteReason` | enum string | Optional | `NEXT RELEASE` | Why the session is incomplete or excluded. | `MISSING_LOG_OFF` | Debug missing Homey events. |
-| `priceCoveragePercent` | number | Optional | `NEXT RELEASE` | Share of required planning horizon covered by price data. | `100` | Explain fallback or weak savings. |
-| `telemetrySchemaVersion` | integer | Optional | `NEXT RELEASE` | Schema version used to derive the session row. | `2` | Session table migrations. |
+| `dataQuality` | enum string | Optional | `PLANNED` | Overall quality of the session telemetry. | `complete` | Filter dashboard and learning samples. |
+| `incompleteReason` | enum string | Optional | `PLANNED` | Why the session is incomplete or excluded. | `MISSING_LOG_OFF` | Debug missing Homey events. |
+| `priceCoveragePercent` | number | Optional | `PLANNED` | Share of required planning horizon covered by price data. | `100` | Explain fallback or weak savings. |
+| `telemetrySchemaVersion` | integer | Optional | `PLANNED` | Schema version used to derive the session row. | `2` | Session table migrations. |
 | `notes` | string | Optional | `CURRENT` | Manual or derived notes. | `Low power stop detected` | Support and manual review. |
 
 ### Existing reserved Session columns
@@ -505,9 +611,9 @@ completed outcomes. Events provide supporting timeline and decision context.
 
 Recommended learning features:
 
-- `startBattery`
-- `targetBattery`
-- `missingBatteryPercent`
+- `startBatteryPct`
+- `targetBatteryPct`
+- `missingBatteryPct`
 - `targetDeparture`
 - `plannedChargeMinutes`
 - `actualChargeMinutes`
@@ -546,19 +652,20 @@ Recommended model health metrics:
 
 ## Migration Notes
 
-The current system can continue writing Events without a dedicated Sessions
-writer. Sessions can be derived from Events using `sessionId` and event type
-ordering.
+The current Apps Script webhook appends Events and materializes Sessions per event.
+A manual reconstruction must preserve raw Events and follow their identities/order;
+the template does not provide a general historical replay command.
 
 For existing private Google Sheets workbooks, do not reorder old columns in
-place. Append missing Events v1 columns or create a new clean `Events` sheet
-with the v1 order and migrate/import data intentionally.
+place. Append missing current Events columns or create a new clean `Events` sheet
+with the current order and migrate/import data intentionally.
 
 After Events telemetry v2, the next telemetry work should prioritize:
 
-1. Populate currently nullable v1 fields such as `reasonCode`,
-   `decisionSource`, `targetBatteryPct`, baseline pricing, and selected pricing.
-2. Add a Sessions derivation step that writes one row per completed session.
+1. Preserve already implemented reason codes, decision sources, battery targets
+   and cost/savings fields; unknown observations remain null.
+2. Extend current event-driven Sessions materialization only after defining and
+   testing the additive contract, including manual in-progress and terminal rows.
 3. Add data quality fields before using Sessions for public dashboard metrics
    or Learning Engine training.
 4. Add model and environment fields only after the required inputs exist.

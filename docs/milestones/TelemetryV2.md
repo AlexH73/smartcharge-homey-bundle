@@ -4,10 +4,19 @@ Status: Planned
 Scope: Future telemetry model improvements after Events/Sessions/Statistics/Dashboard v1
 Runtime impact: none until explicitly implemented
 
-Telemetry v2 is the next schema milestone for SmartCharge telemetry. It should
-not change the current v1 implementation immediately. Its purpose is to collect
-the future fields and migration rules that are valuable, but not yet mature
-enough to include in the frozen v1 contract.
+## Historical scope and current baseline
+
+This is the historical extension proposal named Telemetry v2. Current 0.6.4 code
+already emits schemaVersion=2 for cost/savings cleanup, stable reason codes and
+manual events. This milestone title does not mean that those changes are pending
+or that the current runtime emits schemaVersion=1. Rename/version a future wire
+schema explicitly when its contract is agreed; do not reuse 2 for incompatible data.
+
+The remaining proposals (metered energy/cost, actual charge duration, richer quality,
+environment and learning) are PLANNED. The reason/timing checklist below preserves
+original research; implemented subsets are identified here, not automatically
+checked off as complete. Events/Sessions materialization and initial estimates
+already exist. [TelemetryContract](../TelemetryContract.md) owns current headers.
 
 ## Purpose
 
@@ -25,7 +34,8 @@ The v2 milestone should focus on:
 
 ## Why This Is Postponed
 
-Telemetry v1 is frozen for now. It provides the production baseline:
+The historical v1 layered design remains the baseline; additive schemaVersion=2
+updates are already implemented:
 
 - Events as the raw append-only log;
 - Sessions as the materialized session view;
@@ -136,7 +146,7 @@ Candidate metrics:
 
 Telemetry v2 is ready to implement when:
 
-- v1 telemetry has been stable in production for multiple real charging
+- current telemetry has demonstrated stability in supervised real charging
   sessions;
 - real Events and Sessions data show which fields are actually needed;
 - each new field has a clear owner, type, calculation rule, and privacy level;

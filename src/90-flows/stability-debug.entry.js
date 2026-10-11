@@ -57,6 +57,19 @@ async function main() {
     }
   }
 
+  const rawDiagnostics = readValue(CONFIG.stabilityDiagnosticsVariableName);
+  const diagnosticsResult = parseStabilityDiagnostics(
+    rawDiagnostics,
+    sessionId,
+  );
+  const diagnostics = diagnosticsResult.diagnostics;
+  const diagnosticsSessionMatch =
+    diagnosticsResult.sessionMatch === null
+      ? 'N/A'
+      : diagnosticsResult.sessionMatch
+        ? 'YES'
+        : 'NO';
+
   const lines = [
     '=== SmartCharge Stability Debug ===',
     `Build: ${BUILD_INFO.fullVersion}`,
@@ -88,9 +101,22 @@ async function main() {
     `Disconnect Observed At: ${displayValue(readValue(CONFIG.runtimeDisconnectObservedAtVariableName))}`,
     `Connection Evidence At: ${displayValue(readValue(CONFIG.runtimeConnectionEvidenceAtVariableName))}`,
     '',
-    'Last Stability Decision: NOT PERSISTED',
-    'Last Shadow Effective ShouldCharge: NOT PERSISTED',
-    'Last Persistence Status: NOT PERSISTED',
+    'Last Stability Diagnostics:',
+    `Raw: ${displayValue(rawDiagnostics)}`,
+    `Status: ${diagnosticsResult.status}`,
+    `Session Match: ${diagnosticsSessionMatch}`,
+    `Logged At: ${displayValue(diagnostics?.loggedAt)}`,
+    `Production Should Charge: ${displayValue(diagnostics?.productionShouldCharge)}`,
+    `Stability Decision: ${displayValue(diagnostics?.stabilityDecision)}`,
+    `Shadow Effective ShouldCharge: ${displayValue(diagnostics?.shadowEffectiveShouldCharge)}`,
+    `Transition: ${displayValue(diagnostics?.transition)}`,
+    `Accepted Revision: ${displayValue(diagnostics?.acceptedRevision)}`,
+    `Continuation Cost: ${displayValue(diagnostics?.continuationCostEur)}`,
+    `Candidate Cost: ${displayValue(diagnostics?.candidateCostEur)}`,
+    `Saving EUR: ${displayValue(diagnostics?.savingEur)}`,
+    `Saving %: ${displayValue(diagnostics?.savingPct)}`,
+    `Persistence Status: ${displayValue(diagnostics?.persistenceStatus)}`,
+    `Reason: ${displayValue(diagnostics?.reason)}`,
   ];
   const report = lines.join('\n');
 

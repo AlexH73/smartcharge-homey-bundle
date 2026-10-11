@@ -4,6 +4,25 @@ Status: Living RFC
 Scope: Architecture and data contract only
 Target feature: multi-window charging
 
+## Current implementation boundary (0.6.4+build.17)
+
+This RFC preserves design history, not a literal runtime JSON/API specification.
+The implemented [ChargePlan](../src/10-core/planner/20-charge-plan.js) is flat and
+keeps compatibility fields alongside `windows`; the nested `metadata`,
+`compatibility` and `statistics` examples below are proposed presentation shapes.
+Runtime results do not provide the full proposed `PlanningResult` wrapper.
+`planRevision` defaults to 0 and `planChanged` is not a durable production revision
+counter. Live-shadow strategies have a separate revision starting at 1.
+
+Continuous/multi-window planning, adjacent-slot merging, deadline fallback and
+exact-minute cost estimates are implemented and locally tested. Selection is
+tariff-first with fewer-window tie-breaking. Near-equal-cost hysteresis, maximum
+replans, minimum revision intervals and learning are design goals, not active gates.
+[Plan Stability](plan-stability-policy.md) and [live shadow](plan-stability-live-shadow.md)
+are diagnostic and cannot change canonical `shouldChargeNow`.
+See [TelemetryContract](TelemetryContract.md) for actual headers. RFC examples may
+include future fields and must not be copied as deployment configuration.
+
 This document defines the `PlanningResult`, `ChargePlan`, and `ChargeWindow`
 models for SmartCharge. It is intended to remain the shared contract between
 the planner, decision engine, logger, simulator, dashboard, and future
@@ -459,7 +478,7 @@ merged into the same `ChargeWindow`.
     "plannerMode": "multi-window",
     "optimizationStrategy": "lowest-cost-fewer-windows",
     "createdAt": "2026-07-08 18:15:00",
-    "engineVersion": "0.3.42+build.42",
+    "engineVersion": "0.6.4+build.17",
     "connectedAt": "2026-07-08 18:00:00",
     "targetDeparture": "2026-07-09 07:30:00",
     "reason": "Waiting for selected charging windows"
@@ -698,7 +717,10 @@ Existing logger fields must remain available:
 - `chargeSlots`
 - `shouldChargeNow`
 
-Future logging may add:
+The historical list below mixes current and proposed logging. `plannerMode`,
+`windowCount`, `chargeWindowsJson` and `chargeWindowsText` already have physical
+Events columns. Other proposed fields need a separately defined additive sink
+contract; being present in an internal plan is not a guaranteed Sheets column.
 
 `plannerMode`  
 Selected planner mode, such as `continuous`, `multi-window`, or `fallback`.

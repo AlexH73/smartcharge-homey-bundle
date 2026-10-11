@@ -37,6 +37,20 @@ assert.equal(
   true,
 );
 assert.equal(call(`isVehicleConnectedStatus('Charge break')`), true);
+assert.equal(
+  call(`evaluateTelemetryFreshness(new Date(60000), new Date(0))`),
+  'STALE',
+);
+for (const freshness of ['STALE', 'UNKNOWN']) {
+  assert.equal(
+    call(`hasTrustworthyConnectionEvidence({
+    sessionActive: false, vehicleStatus: 'Charge break', vehicleTelemetryHealth: 'HEALTHY',
+    vehicleTelemetryFreshness: 'STALE', vehicleCharging: false,
+    vehicleChargingPowerW: 2600, vehicleChargingPowerFreshness: '${freshness}'
+  })`),
+    false,
+  );
+}
 assert.equal(call(`isVehicleConnectedStatus('Charging ends')`), false);
 assert.equal(
   call(`hasTrustworthyConnectionEvidence({
@@ -50,7 +64,8 @@ assert.equal(
   call(`hasTrustworthyConnectionEvidence({
     vehicleTelemetryHealth: 'HEALTHY', vehicleTelemetryFreshness: 'STALE',
     vehicleStatus: 'Charge break', vehicleCharging: false,
-    vehicleChargingFreshness: 'UNKNOWN', vehicleChargingPowerW: 2600
+    vehicleChargingFreshness: 'UNKNOWN', vehicleChargingPowerW: 2600,
+    vehicleChargingPowerFreshness: 'FRESH'
   })`),
   true,
 );
@@ -68,7 +83,15 @@ assert.equal(
     manualOverride: false, plannerShouldCharge: false,
     preconditioningActive: true, plugOn: true
   }).desiredPlugOn`),
-  true,
+  false,
+);
+assert.equal(
+  call(`deriveDesiredPlugState({
+    sessionActive: true, batteryPct: 50, targetBatteryPct: 100,
+    manualOverride: false, plannerShouldCharge: false,
+    preconditioningActive: true, plugOn: false
+  }).desiredPlugOn`),
+  false,
 );
 assert.equal(
   call(`evaluateCompletionEvidence({

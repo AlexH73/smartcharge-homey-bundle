@@ -8,7 +8,9 @@ const { SimulatorRuntime } = require('./runtime/simulator-runtime');
 const ROOT_DIR = path.resolve(__dirname, '..');
 const SCENARIO_DIR = path.join(__dirname, 'scenarios');
 const EXPECTED_LOG_DIR = path.join(__dirname, 'fixtures', 'expected-logs');
-const LOG_DIR = path.join(__dirname, 'logs');
+const LOG_DIR = process.env.SMARTCHARGE_SIMULATOR_LOG_DIR
+  ? path.resolve(process.env.SMARTCHARGE_SIMULATOR_LOG_DIR)
+  : path.join(__dirname, 'logs');
 const DYNAMIC_ENGINE_VERSION = '__ENGINE_VERSION__';
 
 function loadScenarios() {
@@ -611,9 +613,12 @@ async function main() {
   console.log(`HTML log  : ${path.relative(ROOT_DIR, logWriter.htmlPath)}`);
 }
 
-main().catch((error) => {
-  console.error('');
-  console.error('SmartCharge Simulator failed');
-  console.error(error && error.stack ? error.stack : error);
-  process.exitCode = 1;
-});
+if (require.main === module)
+  main().catch((error) => {
+    console.error('');
+    console.error('SmartCharge Simulator failed');
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  });
+
+module.exports = { runScenarioWithExpectedFailure, loadScenarios };

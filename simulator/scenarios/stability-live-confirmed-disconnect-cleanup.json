@@ -16,13 +16,22 @@
           "text_charging_status": "Charge"
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
     {
       "flow": "run-decision",
-      "expect": { "result": { "stabilityDecision": "INITIAL_ACCEPT" } }
+      "expect": {
+        "result": {
+          "stabilityDecision": "INITIAL_ACCEPT"
+        }
+      }
     },
     {
       "flow": "runtime-controller",
@@ -39,18 +48,28 @@
                 "lastUpdated": "2026-07-07T16:20:00.000Z"
               }
             }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": true
+            }
           }
         }
       },
       "expect": {
-        "result": { "action": "switched_off", "sessionActive": false },
+        "result": {
+          "action": "switched_off",
+          "sessionActive": false
+        },
         "logic": {
           "ChargeConnectedAt": "null",
           "SmartChargeAcceptedStrategy": "null"
         },
-        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 2 },
+        "logicUpdateCounts": {
+          "SmartChargeAcceptedStrategy": 2
+        },
         "plugOn": false,
-        "plugCommandCount": 1
+        "plugCommandCount": 2
       }
     }
   ]

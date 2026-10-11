@@ -1,5 +1,35 @@
 # Data Model
 
+## Persisted manual intent and automatic permission
+
+`SmartChargeManualState` is a versioned JSON Logic value. It records manual
+identity, state, activation time, first high-power sample, confirmation time,
+last accepted power timestamp, LOW_POWER start, completion time, stop reason,
+and command/persistence error. Timestamps use UTC ISO 8601 and survive separate
+HomeyScript executions. Automatic `ChargeConnectedAt` remains independent.
+
+`SmartChargeAutoStartBlocked` persists automatic permission denial after
+every manual terminal reason; manual=false does not mean automatic permission=true.
+`activationStopToken` binds a manual activation to the saved stop token.
+`autoGrant={at, stopToken}` inside the existing manual JSON records explicit
+Auto Mode permission for that record. Older terminal records without a matching
+grant remain effectively blocked even with Boolean block=false. Manual ON
+does not clear the Boolean block and creates a new record without an auto grant.
+`SmartChargeUserStopToken` detects stop requests racing activation/Auto Mode.
+`SmartChargeRuntimeLock` is best-effort execution ownership, not an atomic mutex.
+All four are required safety variables; see Installation for initial values.
+
+COMPLETED means LOW_POWER or fresh BATTERY_FULL; STOPPED means USER_STOP,
+MAX_DURATION_REACHED, or reconciled control failure. ERROR never implies
+successful power removal. The deadline is derived from the original activation
+time, not the last invocation. No separate automatic session is fabricated.
+
+Manual event identity uses `manual:<activation ISO timestamp>` and
+`decisionSource=manual`, separate from automatic session identity. Existing
+Events/Sessions column names remain unchanged. Request diagnostics remain
+Events-only; the materializer preserves completed/stopped outcomes after the
+manual-disabled event. Consumers should distinguish manual and automatic rows.
+
 SmartCharge stores telemetry in Google Sheets as a small analytical pipeline.
 The model is intentionally simple enough to run inside Apps Script, but strict
 enough to support a public dashboard and future learning features.
@@ -51,7 +81,9 @@ must not be published directly.
 ## Sessions
 
 `Sessions` is a materialized view over Events. One row represents one charging
-session from cable connection until session reset.
+automatic Session or independent manual activation, including its in-progress state.
+Automatic identity comes from `ChargeConnectedAt`; manual identity is
+`manual:<activation ISO timestamp>`. A row is not necessarily completed.
 
 The `sessionId` is the stable key. Apps Script or a future processor should
 update the same Sessions row when more Events arrive for that `sessionId`.
@@ -145,7 +177,8 @@ values. It should not import raw private sheets.
 
 Events are the source of truth. Sessions and Statistics are derived data.
 
-Recovery flow:
+Proposed operator recovery flow (no general rebuild command exists in the
+current template):
 
 1. Preserve the private `Events` sheet.
 2. Sort Events by `sessionId` and `loggedAt`.

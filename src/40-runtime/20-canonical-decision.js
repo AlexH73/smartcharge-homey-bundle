@@ -337,6 +337,17 @@ async function runCanonicalDecision(options = {}) {
   }
 
   if (liveStabilityEnabled && stabilityResult) {
+    const diagnosticsWrite = await writeStabilityDiagnostics({
+      now,
+      sessionId,
+      productionShouldCharge: shouldChargeNow,
+      stabilityResult,
+    });
+    stabilityResult.diagnosticsPersistenceStatus = diagnosticsWrite.status;
+    stabilityResult.diagnosticsPersistenceError = diagnosticsWrite.error;
+  }
+
+  if (liveStabilityEnabled && stabilityResult) {
     log(
       `Plan stability   : ${stabilityResult.stabilityDecision || 'ERROR'}/${stabilityResult.stabilityReasonCode || stabilityResult.stabilityError || 'UNKNOWN'}; revision=${stabilityResult.acceptedStrategyRevision ?? 'null'}; persistence=${stabilityResult.persistenceStatus || 'none'}`,
     );
@@ -483,8 +494,18 @@ async function runCanonicalDecision(options = {}) {
     chargeSlots > 0 &&
     battery < CONFIG.batteryFullPercentage
   ) {
-    await setDeviceOn(plug);
-    log('SmartCharge action: plug turned ON');
+    const actuatorAction = await executeRuntimePlugCommand(
+      {
+        plug,
+        batteryPct: battery,
+        sessionId,
+        chargeConnectedAt: connectedAtRaw,
+        plannerShouldCharge: shouldChargeNow,
+      },
+      true,
+      'AUTOMATIC_RECONCILIATION',
+    );
+    log(`SmartCharge action: ${actuatorAction}`);
   } else {
     log('SmartCharge action: no action');
   }

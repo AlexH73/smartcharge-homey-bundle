@@ -6,7 +6,7 @@
       "ChargeConnectedAt": "2026-07-07 17:00:00",
       "SmartChargeRuntimeMode": "active",
       "SmartChargeShouldCharge": true,
-      "SmartChargeManualMode": true,
+      "SmartChargeManualMode": false,
       "SmartChargeDisconnectObservedAt": "2026-07-07T15:44:00.000Z"
     },
     "devices": {
@@ -17,7 +17,10 @@
         }
       },
       "plug": {
-        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 0
+        }
       }
     }
   },
@@ -38,7 +41,11 @@
           "SmartChargeSessionStatus": "disconnected",
           "SmartChargeDisconnectObservedAt": "null"
         },
-        "events": ["smartcharge_off", "charger_disconnected"],
+        "events": [
+          "actuator_request",
+          "smartcharge_off",
+          "charger_disconnected"
+        ],
         "plugOn": false,
         "plugCommandCount": 1
       }
@@ -59,8 +66,14 @@
     }
   ],
   "expect": {
-    "logic": { "ChargeConnectedAt": "null" },
-    "eventTypes": ["smartcharge_off", "charger_disconnected"],
+    "logic": {
+      "ChargeConnectedAt": "null"
+    },
+    "eventTypes": [
+      "actuator_request",
+      "smartcharge_off",
+      "charger_disconnected"
+    ],
     "plugOn": false,
     "plugCommandCount": 1
   }

@@ -2,6 +2,13 @@
 
 Status: Draft
 
+Historical proposal retained for architectural context. In 0.6.4+build.17 the pure
+policy, simulator shadow and persistent live shadow are implemented and locally
+tested. They do not select production plans or control the Actuator. See
+[current policy](../plan-stability-policy.md) and [live shadow](../plan-stability-live-shadow.md).
+Active hysteresis, window penalties and learning remain proposed; comparator
+tie-breaking already prefers fewer windows.
+
 ---
 
 ## Problem
@@ -117,9 +124,10 @@ Cons
 
 ## Initial Decision
 
-No implementation yet.
+Historical decision: no active stability implementation at the time of this RFC.
 
-Planner remains price-only until enough real charging data has been collected.
+The production comparator remains tariff-first with fewer-window tie-breaking;
+current stability recommendations are diagnostic only.
 
 This RFC defines the direction for future development.
 

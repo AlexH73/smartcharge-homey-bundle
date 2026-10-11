@@ -32,7 +32,7 @@
           "estimatedSavingsEur": 0,
           "estimatedSavingsPct": 0
         },
-        "events": ["smartcharge_decision"]
+        "events": ["smartcharge_decision", "actuator_request", "smartcharge_on"]
       }
     }
   ]

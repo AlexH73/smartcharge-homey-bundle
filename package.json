@@ -1,6 +1,6 @@
 {
   "name": "smartcharge-homey-bundle",
-  "version": "0.6.1",
+  "version": "0.6.4",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -12,8 +12,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "verify": "npm run lint && npm run format:check && npm test && npm run build:homey -- --reuse-version",
-    "test": "node tests/estimated-cost-engine.test.js && node tests/plan-stability-primitives.test.js && node tests/plan-stability-policy.test.js && node tests/stability-debug.test.js && node tests/apps-script-session-materializer.test.js && node tests/runtime-controller.test.js && npm run simulate:all",
+    "verify": "npm run check:public && npm run lint && npm run format:check && npm test && npm run build:homey -- --reuse-version --check && node tests/release-deployment.test.js && npm run test:deployment",
+    "test:deployment": "node tests/homey-deployment.test.js && node tests/release-source.test.js && node tests/public-safety.test.js && node tests/runtime-lock-race.test.js && node tests/artifact-compatibility.test.js",
+    "test": "node tests/estimated-cost-engine.test.js && node tests/plan-stability-primitives.test.js && node tests/plan-stability-policy.test.js && node tests/stability-debug.test.js && node tests/apps-script-session-materializer.test.js && node tests/runtime-controller.test.js && node tests/manual-runtime.test.js && node tests/manual-terminal.test.js && node tests/actuator-compensation.test.js && npm run simulate:all",
     "test:cost": "node tests/estimated-cost-engine.test.js",
     "simulate": "node simulator/runner.js",
     "simulate:all": "node simulator/runner.js all",
@@ -60,7 +61,9 @@
     "build:state-sync": "node scripts/build-homey.js state-sync",
     "build:manual-on": "node scripts/build-homey.js manual-on",
     "build:manual-off": "node scripts/build-homey.js manual-off",
-    "build:homey": "node scripts/build-homey.js all"
+    "build:homey": "node scripts/build-homey.js all",
+    "build:auto-mode": "node scripts/build-homey.js auto-mode",
+    "check:public": "node scripts/public-safety.js"
   },
   "keywords": [],
   "author": "",

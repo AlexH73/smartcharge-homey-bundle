@@ -30,7 +30,7 @@
           "hasActiveSession": false,
           "battery": null
         },
-        "events": [],
+        "events": ["actuator_request", "smartcharge_off"],
         "plugOn": false,
         "plugCommandCount": 1,
         "tibberCallsDelta": 0
@@ -40,7 +40,7 @@
   "expect": {
     "plugOn": false,
     "plugCommandCount": 1,
-    "eventTypes": [],
+    "eventTypes": ["actuator_request", "smartcharge_off"],
     "tibberCalls": 0
   }
 }

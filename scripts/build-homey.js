@@ -6,6 +6,9 @@ const releaseArgumentIndex = process.argv.indexOf('--release');
 const releaseVersion =
   releaseArgumentIndex >= 0 ? process.argv[releaseArgumentIndex + 1] : null;
 const reuseVersion = process.argv.includes('--reuse-version');
+const checkOnly = process.argv.includes('--check');
+if (checkOnly && !reuseVersion)
+  throw new Error('--check requires --reuse-version');
 
 if (releaseVersion && reuseVersion) {
   throw new Error('--release and --reuse-version cannot be used together');
@@ -62,6 +65,10 @@ const TARGETS = {
 };
 
 const BUILD_ALL_TARGET = 'all';
+TARGETS['auto-mode'] = {
+  entry: 'src/90-flows/auto-mode.entry.js',
+  out: 'SMARTCHARGE - Auto Mode.js',
+};
 const DEFAULT_BUILD_ORDER = [
   'connection-evidence',
   'runtime-controller',
@@ -73,6 +80,7 @@ const DEFAULT_BUILD_ORDER = [
   'state-sync',
   'manual-on',
   'manual-off',
+  'auto-mode',
   'stability-debug',
 ];
 
@@ -98,11 +106,20 @@ function writeBuildInfo() {
 
   if (reuseVersion) {
     const version = `${state.major}.${state.minor}.${state.patch}`;
+    const metadata = fs.readFileSync(BUILD_INFO_FILE, 'utf8');
+    const timestamp = /builtAt: '([^']+)'/.exec(metadata)?.[1];
+    const builtAt = new Date(timestamp);
+    if (
+      !metadata.includes(`fullVersion: '${version}+build.${state.build}'`) ||
+      Number.isNaN(builtAt.getTime())
+    ) {
+      throw new Error('Build metadata does not match saved release version');
+    }
 
     return {
       version,
       fullVersion: `${version}+build.${state.build}`,
-      builtAt: now,
+      builtAt,
     };
   }
 
@@ -191,10 +208,20 @@ function buildTarget(targetName, buildInfo) {
     output += `// Source file: ${relativePath}\n`;
     output +=
       '// -----------------------------------------------------------------------------\n\n';
-    output += fs.readFileSync(file, 'utf8');
+    output += fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
     output += '\n\n';
   }
 
+  if (checkOnly) {
+    const AsyncFunction = Object.getPrototypeOf(
+      async function () {},
+    ).constructor;
+    new AsyncFunction('Homey', 'fetch', 'log', output);
+    console.log(
+      `CHECK ${targetName}: source candidate syntax; no artifact written`,
+    );
+    return;
+  }
   fs.mkdirSync(DIST_DIR, { recursive: true });
   fs.writeFileSync(outFile, output, 'utf8');
 

@@ -1,12 +1,12 @@
 {
   "name": "runtime-actuator-failure",
   "description": "Runtime fails loudly when Homey rejects an active-mode plug command.",
-  "now": "2026-07-07T18:05:00+02:00",
+  "now": "2026-07-08T02:05:00+02:00",
   "initial": {
     "logic": {
       "ChargeConnectedAt": "2026-07-07 17:00:00",
       "SmartChargeRuntimeMode": "active",
-      "SmartChargeManualMode": true
+      "SmartChargeManualMode": false
     },
     "devices": {
       "mercedes": {
@@ -17,7 +17,10 @@
       },
       "plug": {
         "failSetCapabilityValue": true,
-        "capabilitiesObj": { "onoff": false, "measure_power": 0 }
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
       }
     }
   },
@@ -30,5 +33,9 @@
       }
     }
   ],
-  "expect": { "plugOn": false, "plugCommandCount": 0 }
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0
+  },
+  "fixture": "cheap-night"
 }

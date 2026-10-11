@@ -52,6 +52,6 @@ between the accepted continuation and candidate. They are distinct from the
 planner's existing dynamic `estimatedSavingsEur` and `estimatedSavingsPct`,
 whose semantics are unchanged.
 
-`evaluatePlanStability()` is the pure composition entry point for future shadow
+`evaluatePlanStability()` is the pure composition entry point for current shadow
 evaluation. It invokes Phase 1 projection, equivalence, and replacement-cost
 primitives, then applies `decidePlanStability()` without external side effects.

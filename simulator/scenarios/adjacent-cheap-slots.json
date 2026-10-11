@@ -49,7 +49,10 @@
         "result": {
           "shouldChargeNow": true
         },
-        "eventPayload": { "plannerMode": "continuous", "windowCount": 1 },
+        "eventPayload": {
+          "plannerMode": "continuous",
+          "windowCount": 1
+        },
         "plugOn": true,
         "plugCommandCount": 1,
         "tibberCallsDelta": 1
@@ -62,19 +65,24 @@
         "result": {
           "shouldChargeNow": true
         },
-        "eventPayload": { "plannerMode": "continuous", "windowCount": 1 },
+        "eventPayload": {
+          "plannerMode": "continuous",
+          "windowCount": 1
+        },
         "plugOn": true,
-        "plugCommandCount": 2,
+        "plugCommandCount": 1,
         "tibberCallsDelta": 1
       }
     }
   ],
   "expect": {
     "plugOn": true,
-    "plugCommandCount": 2,
+    "plugCommandCount": 1,
     "eventTypes": [
       "smartcharge_decision",
       "smartcharge_decision",
+      "actuator_request",
+      "smartcharge_on",
       "smartcharge_decision"
     ],
     "tibberCalls": 3

@@ -1,6 +1,6 @@
 {
   "name": "runtime-mercedes-preconditioning",
-  "description": "Real Mercedes onoff_precond keeps an already-on plug available without changing planner semantics.",
+  "description": "Preconditioning cannot keep the plug on while the production planner requests waiting.",
   "now": "2026-07-07T18:05:00+02:00",
   "initial": {
     "logic": {
@@ -18,7 +18,12 @@
           "onoff_precond": true
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
@@ -29,13 +34,43 @@
           "preconditioningCapability": "onoff_precond",
           "preconditioningRawValue": true,
           "plannerShouldCharge": false,
-          "desiredPlugState": true,
+          "desiredPlugState": false,
           "action": "none"
         },
-        "plugOn": true,
+        "events": ["smartcharge_decision"],
+        "plugOn": false,
         "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "onoff": true
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "plannerShouldCharge": false,
+          "desiredPlugState": false,
+          "action": "switched_off"
+        },
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_off"
+        ],
+        "plugOn": false,
+        "plugCommandCount": 1
       }
     }
   ],
-  "expect": { "plugOn": true, "plugCommandCount": 0 }
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 1
+  }
 }

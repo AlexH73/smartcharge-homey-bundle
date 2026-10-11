@@ -1,5 +1,6 @@
 const assert = require('assert/strict');
 const path = require('path');
+const buildState = require('../.smartcharge-build.json');
 const { ScriptLoader } = require('../simulator/runtime/script-loader');
 
 const root = path.resolve(__dirname, '..');
@@ -33,29 +34,79 @@ async function failWrite() {
   throw new Error('read-only debug attempted a write');
 }
 
-(async () => {
-  const report = await loader.executeFlow({
+function diagnostics(overrides = {}) {
+  return JSON.stringify({
+    schemaVersion: 1,
+    loggedAt: '2026-07-07T16:15:00.000Z',
+    sessionId: '2026-07-07 18:00:00',
+    productionShouldCharge: false,
+    stabilityDecision: 'CONTINUE',
+    shadowEffectiveShouldCharge: true,
+    transition: 'OFF_TO_ON',
+    acceptedRevision: 1,
+    continuationCostEur: 0.5,
+    candidateCostEur: 0.4,
+    savingEur: 0.1,
+    savingPct: 20,
+    persistenceStatus: 'PRESERVED',
+    reason: 'REPLACEMENT_BENEFIT_INSUFFICIENT',
+    ...overrides,
+  });
+}
+
+async function executeDebug(diagnosticsValue) {
+  const scenarioValues = structuredClone(values);
+  if (diagnosticsValue !== undefined) {
+    scenarioValues.diagnostics = {
+      name: 'SmartChargeStabilityDiagnostics',
+      value: diagnosticsValue,
+    };
+  }
+  return loader.executeFlow({
     flow: 'stability-debug',
     homey: {
-      logic: { getVariables: async () => values, updateVariable: failWrite },
-      devices: {
-        getDevices: failWrite,
-        setCapabilityValue: failWrite,
+      logic: {
+        getVariables: async () => scenarioValues,
+        updateVariable: failWrite,
       },
+      devices: { getDevices: failWrite, setCapabilityValue: failWrite },
     },
     fetch: failWrite,
     log: (message) => logs.push(message),
     now: new Date('2026-07-07T16:15:00.000Z'),
   });
+}
 
-  assert.match(report, /Build: 0\.6\.1\+build\.13/);
+(async () => {
+  const report = await executeDebug(diagnostics());
+
+  const expectedBuild = `${buildState.major}.${buildState.minor}.${buildState.patch}+build.${buildState.build}`;
+  assert.equal(report.split('\n')[1], `Build: ${expectedBuild}`);
   assert.match(report, /Runtime Mode: active/);
   assert.match(report, /Live Shadow: ENABLED/);
   assert.match(report, /Status: RESTORED/);
   assert.match(report, /Revision: 1/);
   assert.match(report, /- 2026-07-07T21:00:00\.000Z/);
-  assert.match(report, /Last Stability Decision: NOT PERSISTED/);
-  assert.equal(logs.length, 1);
+  assert.match(report, /Last Stability Diagnostics:/);
+  assert.match(report, /Status: RESTORED/);
+  assert.match(report, /Session Match: YES/);
+  assert.match(report, /Stability Decision: CONTINUE/);
+  assert.match(report, /Production Should Charge: false/);
+  assert.match(report, /Shadow Effective ShouldCharge: true/);
+
+  assert.match(await executeDebug('null'), /Status: EMPTY/);
+  assert.match(await executeDebug('  '), /Status: EMPTY/);
+  assert.match(await executeDebug('{bad'), /Status: CORRUPT/);
+  assert.match(
+    await executeDebug(diagnostics({ schemaVersion: 2 })),
+    /Status: INVALID/,
+  );
+  assert.match(
+    await executeDebug(diagnostics({ sessionId: 'stale-session' })),
+    /Session Match: NO/,
+  );
+  assert.match(await executeDebug(undefined), /Status: MISSING/);
+  assert.equal(logs.length, 7);
 
   console.log('Stability debug read-only test passed');
 })().catch((error) => {

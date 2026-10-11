@@ -1,0 +1,164 @@
+name: Private SmartCharge controlled deployment
+
+# Writes require typed confirmation, configured reviewers and operator maintenance.
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful trusted SmartCharge CI run ID
+        required: true
+        type: string
+      artifact_id:
+        description: Immutable artifact ID from that CI run
+        required: true
+        type: string
+      mode:
+        description: Operation; dry-run never writes Homey
+        type: choice
+        options: [dry-run, deploy, rollback]
+        default: dry-run
+      confirmation:
+        description: For writes type INSTALL or ROLLBACK SmartCharge <approved version>
+        required: false
+        type: string
+      backup_id:
+        description: For rollback use the existing private backup folder name
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: homey-production
+  cancel-in-progress: false
+
+jobs:
+  approve-artifact:
+    if: github.ref == 'refs/heads/main' && github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      manifest_asset_id: ${{ steps.approve.outputs.manifest_asset_id }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Check trusted successful CI provenance
+        id: approve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          ARTIFACT_ID: ${{ inputs.artifact_id }}
+          SOURCE_READ_TOKEN: ${{ secrets.SOURCE_READ_TOKEN }}
+          SOURCE_REPOSITORY: AlexH73/smartcharge-homey-bundle
+          SOURCE_COMMIT_SHA: ${{ vars.SOURCE_COMMIT_SHA }}
+          SOURCE_RELEASE_TAG: ${{ vars.SOURCE_RELEASE_TAG }}
+          SOURCE_MANIFEST_SHA256: ${{ vars.SOURCE_MANIFEST_SHA256 }}
+          DEPLOY_MODE: ${{ inputs.mode }}
+          WRITE_CONFIRMATION: ${{ inputs.confirmation }}
+          BACKUP_ID: ${{ inputs.backup_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ && "$ARTIFACT_ID" =~ ^[0-9]+$ ]]
+          case "$DEPLOY_MODE" in
+            dry-run) ;;
+            deploy) [[ "$WRITE_CONFIRMATION" == "INSTALL SmartCharge ${SOURCE_RELEASE_TAG#v}" ]] ;;
+            rollback) [[ "$WRITE_CONFIRMATION" == "ROLLBACK SmartCharge ${SOURCE_RELEASE_TAG#v}" && "$BACKUP_ID" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] ;;
+            *) exit 1 ;;
+          esac
+          # A named environment alone does not enable approval protection.
+          environment=$(gh api "repos/$REPOSITORY/environments/homey-production")
+          jq -e 'any(.protection_rules[]?; .type == "required_reviewers" and (.reviewers | length) > 0 and .prevent_self_review == true)' <<< "$environment" >/dev/null
+          [[ "$(gh api "repos/$REPOSITORY" --jq .private)" == true ]]
+          node scripts/verify-release-source.js source provenance.json
+          GH_TOKEN="$SOURCE_READ_TOKEN" gh api "repos/$SOURCE_REPOSITORY/releases/assets/$(jq -r .manifestAssetId provenance.json)" -H 'Accept: application/octet-stream' > smartcharge-manifest.json
+          [[ "$(sha256sum smartcharge-manifest.json | cut -d ' ' -f1)" == "$SOURCE_MANIFEST_SHA256" ]]
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: approved-provenance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            provenance.json
+            smartcharge-manifest.json
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    needs: approve-artifact
+    environment: homey-production
+    runs-on: [self-hosted, Windows, X64, smartcharge-homey]
+    timeout-minutes: 15
+    steps:
+      # Use trusted default-branch tooling, never code from the artifact or a PR.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          clean: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ inputs.artifact_id }}
+          merge-multiple: true
+          run-id: ${{ inputs.ci_run_id }}
+          repository: AlexH73/smartcharge-homey-bundle
+          github-token: ${{ secrets.SOURCE_READ_TOKEN }}
+          path: verified-artifact
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: approved-provenance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: approved-provenance
+      - name: Verify hashes without rebuilding
+        run: |
+          node scripts/verify-release-source.js manifest verified-artifact approved-provenance/provenance.json approved-provenance/smartcharge-manifest.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskProvenance = Get-Content -LiteralPath approved-provenance/provenance.json -Raw | ConvertFrom-Json
+          node scripts/release-artifact.js verify verified-artifact $taskProvenance.manifestSha256 $taskProvenance.tag
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        shell: pwsh
+      - name: Controlled operation with immutable artifact and private backup
+        env:
+          HOMEY_URL: ${{ vars.HOMEY_URL }}
+          HOMEY_API_TOKEN: ${{ secrets.HOMEY_API_TOKEN }}
+          HOMEY_BACKUP_ROOT: ${{ vars.HOMEY_BACKUP_ROOT }}
+          HOMEY_PLUG_ID: ${{ vars.HOMEY_PLUG_ID }}
+          HOMEY_MAINTENANCE_FILE: ${{ vars.HOMEY_MAINTENANCE_FILE }}
+          HOMEY_ARTIFACT_DIR: verified-artifact
+          DEPLOY_MODE: ${{ inputs.mode }}
+          SMARTCHARGE_WRITE_CONFIRMATION: ${{ inputs.confirmation }}
+          BACKUP_ID: ${{ inputs.backup_id }}
+        shell: pwsh
+        run: |
+          if (-not $env:HOMEY_BACKUP_ROOT -or -not [IO.Path]::IsPathFullyQualified($env:HOMEY_BACKUP_ROOT)) { throw 'Set an absolute private backup directory outside the checkout' }
+          $taskRoot = [IO.Path]::GetFullPath($env:HOMEY_BACKUP_ROOT).TrimEnd('\','/')
+          $taskCheckout = [IO.Path]::GetFullPath($env:GITHUB_WORKSPACE).TrimEnd('\','/')
+          if ($taskRoot.Equals($taskCheckout, [StringComparison]::OrdinalIgnoreCase) -or $taskRoot.StartsWith($taskCheckout + '\', [StringComparison]::OrdinalIgnoreCase) -or $taskCheckout.StartsWith($taskRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Backups must be outside the checkout and its parents' }
+          New-Item -ItemType Directory -Path $taskRoot -Force | Out-Null
+          if ((Get-Item -LiteralPath $taskRoot).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Backup root cannot be a junction/symlink' }
+          if ($env:DEPLOY_MODE -in @('deploy','rollback')) {
+            if (-not $env:HOMEY_MAINTENANCE_FILE -or -not [IO.Path]::IsPathFullyQualified($env:HOMEY_MAINTENANCE_FILE)) { throw 'Set an absolute operator maintenance attestation file' }
+            $taskProof = [IO.Path]::GetFullPath($env:HOMEY_MAINTENANCE_FILE)
+            if ($taskProof.StartsWith($taskCheckout + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Maintenance attestation must be outside the checkout' }
+            if ((Get-Item -LiteralPath $taskProof).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Maintenance attestation cannot be a symlink' }
+          }
+          if ($env:DEPLOY_MODE -eq 'rollback') {
+            if ($env:BACKUP_ID -notmatch '^[a-zA-Z0-9][a-zA-Z0-9.-]*$') { throw 'Invalid backup folder name' }
+            $taskBackup = Join-Path $taskRoot $env:BACKUP_ID
+            if ((Get-Item -LiteralPath $taskBackup).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Backup cannot be a junction/symlink' }
+            node scripts/homey-deployment.js rollback $taskBackup
+          } elseif ($env:DEPLOY_MODE -in @('dry-run','deploy')) {
+            if ($env:DEPLOY_MODE -eq 'deploy') {
+              node scripts/homey-deployment.js preflight verified-artifact
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+            node scripts/homey-deployment.js $env:DEPLOY_MODE verified-artifact
+          } else { throw 'Unknown operation' }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -1,54 +1,24 @@
-# Public Dashboard
+# Public dashboard publishing
 
-Public dashboard:
-[SmartCharge Google Sheets dashboard](https://docs.google.com/spreadsheets/d/1LueN5IylHuwcnuLIB12EAuqa7fByK7iZOU74kFAOX6c/edit?usp=sharing)
+This page owns publishing guidance; [Dashboard](Dashboard.md) owns display/KPI
+design and [Data model](DataModel.md) owns telemetry layers. Live workbook URLs
+and raw installation data are deliberately absent. Dashboard availability/formulas
+have not been verified by the current release or documentation audit.
 
-The public dashboard should expose only filtered or aggregated SmartCharge
-metrics. It must not expose raw event logs, exact session timestamps, Homey
-device identifiers, Google Sheet IDs, webhook URLs, or tokens.
+Use a private workbook for Events -> Sessions -> Statistics. Publish only copied,
+sanitized aggregate Statistics values to a separate public workbook, or a filtered
+dashboard that does not grant access to private sheets. Publishing a chart and
+granting access to its source workbook have different privacy effects; verify the
+anonymous view and sharing settings before deliberately publishing.
 
-## Recommended Publishing Model
+Public-safe examples: total/completed session counts, planned hours, estimated
+monthly costs/savings, average selected tariff, multi-window share, broad time
+buckets and a coarsely rounded update date. Manual and automatic rows should be
+distinguished where they affect aggregates. Savings are estimates from nominal
+power/planned minutes, not metered realized savings.
 
-Use a private workbook for raw data and a separate public workbook or filtered
-dashboard sheet for public data.
-
-Private workbook:
-
-- `Events`
-- `Sessions`
-- `Statistics`
-
-Public workbook or public sheet:
-
-- `Public Dashboard`
-
-Only copy values that are safe to share publicly. Prefer aggregate metrics over
-session-level rows.
-
-## Safe Public Metrics
-
-- Number of charging sessions.
-- Total planned charging hours.
-- Estimated average charging price.
-- Estimated cost by month.
-- Share of charging that happened in low-price hours.
-- Last updated date rounded to a day or broader period.
-
-## Data To Exclude
-
-- Raw event rows.
-- Session IDs.
-- Exact `connectedAt`, `plannedStart`, `plannedEnd`, or departure timestamps.
-- Home arrival and departure patterns.
-- Homey device IDs.
-- Google Sheet IDs.
-- Apps Script webhook URLs.
-- Tibber or Homey tokens.
-
-## Placeholder
-
-Current public dashboard:
-
-```text
-https://docs.google.com/spreadsheets/d/1LueN5IylHuwcnuLIB12EAuqa7fByK7iZOU74kFAOX6c/edit?usp=sharing
-```
+Never publish raw Events, private Sessions, exact connection/departure/window
+timestamps, session IDs, household routines, Homey device identifiers, private
+Sheet IDs, Apps Script URLs or credentials. A public workbook URL is itself a
+deliberate publication decision; use `YOUR_PUBLIC_DASHBOARD_URL` in examples
+instead of copying an installation's identifier. See [Privacy](Privacy.md).

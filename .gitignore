@@ -18,3 +18,27 @@ dist/*
 !dist/
 !dist/README.md
 /docs/linkedin/
+
+# Local diagnostics, deployment data and operator-specific Homey reports.
+/diagnostics/*
+!/diagnostics/fixtures/
+!/diagnostics/tests/
+!/diagnostics/README.md
+/verified-artifact/
+/approved-provenance/
+/maintenance*.json
+/provenance.json
+/smartcharge-manifest.json
+/smartcharge-release.zip
+/docs/HomeyDeploymentApi.ru.md
+/docs/HomeyFlowAudit-0.6.4.ru.md
+/docs/SmartChargeCICD-0.6.4.ru.md
+/docs/FirstLocalDeployment-0.6.4.ru.md
+
+# Temporary operator output; permanent tests and fixtures stay publishable.
+/reports/
+/local-output/
+/review/
+/patches/
+/*.patch
+/*.diff

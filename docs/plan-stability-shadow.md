@@ -9,8 +9,8 @@ only.
 The canonical hook is optional. Normal Homey execution supplies no shadow
 input, so the existing result contract and behavior are unchanged. Phase 3A
 does not add a Homey Logic variable or modify the Events schema. Phase 3B adds
-an explicitly disabled persistent live-shadow adapter; its separate contract is
-documented in `plan-stability-live-shadow.md`.
+a persistent live-shadow adapter, enabled in current 0.6.4 source; its separate
+contract is documented in [Persistent live shadow](plan-stability-live-shadow.md).
 
 ## Simulator state
 

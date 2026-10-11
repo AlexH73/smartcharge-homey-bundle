@@ -6,7 +6,8 @@
     "logic": {
       "ChargeConnectedAt": "2026-07-07 17:00:00",
       "SmartChargeRuntimeMode": "active",
-      "SmartChargeManualMode": true
+      "SmartChargeManualMode": true,
+      "SmartChargeManualState": "{\"version\":1,\"status\":\"STARTING\",\"id\":\"manual:2026-07-07T16:05:00.000Z\",\"startedAt\":\"2026-07-07T16:05:00.000Z\",\"confirmedAt\":null,\"highPowerAt\":null,\"lastPowerAt\":null,\"lowPowerSince\":null,\"endedAt\":null,\"stopReason\":null,\"error\":null}"
     },
     "devices": {
       "mercedes": {
@@ -16,15 +17,23 @@
           "preconditioning": false
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
     {
       "flow": "runtime-controller",
       "expect": {
-        "result": { "action": "switched_on", "desiredPlugState": true },
-        "events": ["smartcharge_decision", "smartcharge_on"],
+        "result": {
+          "action": "switched_on",
+          "desiredPlugState": true
+        },
+        "events": ["actuator_request", "smartcharge_on"],
         "plugOn": true,
         "plugCommandCount": 1
       }
@@ -32,17 +41,32 @@
     {
       "flow": "runtime-controller",
       "expect": {
-        "result": { "action": "none", "desiredPlugState": true },
-        "events": ["smartcharge_decision"],
+        "result": {
+          "action": "none",
+          "desiredPlugState": true
+        },
+        "events": [],
         "plugCommandCount": 1
       }
     },
     {
       "flow": "runtime-controller",
-      "set": { "logic": { "SmartChargeManualMode": false } },
+      "set": {
+        "logic": {
+          "SmartChargeManualMode": false
+        }
+      },
       "expect": {
-        "result": { "action": "switched_off", "desiredPlugState": false },
-        "events": ["smartcharge_off"],
+        "result": {
+          "action": "switched_off",
+          "desiredPlugState": false
+        },
+        "events": [
+          "actuator_request",
+          "smartcharge_off",
+          "manual_charging_completed",
+          "manual_override_disabled"
+        ],
         "plugOn": false,
         "plugCommandCount": 2
       }
@@ -50,10 +74,12 @@
   ],
   "expect": {
     "eventTypes": [
-      "smartcharge_decision",
+      "actuator_request",
       "smartcharge_on",
-      "smartcharge_decision",
-      "smartcharge_off"
+      "actuator_request",
+      "smartcharge_off",
+      "manual_charging_completed",
+      "manual_override_disabled"
     ],
     "plugOn": false,
     "plugCommandCount": 2

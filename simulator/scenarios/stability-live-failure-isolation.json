@@ -43,7 +43,18 @@
           "stabilityDecision": null,
           "persistenceStatus": "EVALUATION_FAILED"
         },
-        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 }
+        "logicJson": {
+          "SmartChargeStabilityDiagnostics": {
+            "productionShouldCharge": true,
+            "stabilityDecision": "NO_DECISION",
+            "acceptedRevision": null,
+            "persistenceStatus": "EVALUATION_FAILED"
+          }
+        },
+        "logicUpdateCounts": {
+          "SmartChargeAcceptedStrategy": 1,
+          "SmartChargeStabilityDiagnostics": 3
+        }
       }
     }
   ]

@@ -18,7 +18,15 @@
       "expect": {
         "result": {
           "stabilityDecision": "INITIAL_ACCEPT",
-          "acceptedStrategyRevision": 1
+          "acceptedStrategyRevision": 1,
+          "diagnosticsPersistenceStatus": "WRITTEN"
+        },
+        "logicJson": {
+          "SmartChargeStabilityDiagnostics": {
+            "stabilityDecision": "INITIAL_ACCEPT",
+            "acceptedRevision": 1,
+            "persistenceStatus": "WRITTEN"
+          }
         }
       }
     },
@@ -42,9 +50,18 @@
           "SmartChargeAcceptedStrategy": {
             "revision": 2,
             "selectedSlotStarts": ["2026-07-08T00:00:00.000Z"]
+          },
+          "SmartChargeStabilityDiagnostics": {
+            "productionShouldCharge": false,
+            "stabilityDecision": "REPLACE",
+            "acceptedRevision": 2,
+            "persistenceStatus": "WRITTEN"
           }
         },
-        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 2 }
+        "logicUpdateCounts": {
+          "SmartChargeAcceptedStrategy": 2,
+          "SmartChargeStabilityDiagnostics": 2
+        }
       }
     },
     {
@@ -58,7 +75,17 @@
           "acceptedStrategyRevision": 2,
           "persistenceStatus": "PRESERVED"
         },
-        "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 2 }
+        "logicJson": {
+          "SmartChargeStabilityDiagnostics": {
+            "stabilityDecision": "CONTINUE",
+            "acceptedRevision": 2,
+            "persistenceStatus": "PRESERVED"
+          }
+        },
+        "logicUpdateCounts": {
+          "SmartChargeAcceptedStrategy": 2,
+          "SmartChargeStabilityDiagnostics": 3
+        }
       }
     }
   ],

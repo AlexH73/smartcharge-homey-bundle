@@ -7,7 +7,7 @@
       "ChargeConnectedAt": "2026-07-07 17:00:00",
       "SmartChargeRuntimeMode": "active",
       "SmartChargeShouldCharge": true,
-      "SmartChargeManualMode": true,
+      "SmartChargeManualMode": false,
       "SmartChargeDisconnectObservedAt": "null"
     },
     "devices": {
@@ -30,7 +30,10 @@
         }
       },
       "plug": {
-        "capabilitiesObj": { "onoff": true, "measure_power": 0 }
+        "capabilitiesObj": {
+          "onoff": true,
+          "measure_power": 0
+        }
       }
     }
   },
@@ -47,7 +50,7 @@
           "action": "switched_off",
           "sessionActive": true
         },
-        "events": ["smartcharge_off"],
+        "events": ["actuator_request", "smartcharge_off"],
         "plugOn": false,
         "plugCommandCount": 1,
         "logic": {
@@ -78,14 +81,15 @@
     },
     {
       "flow": "runtime-controller",
-      "now": "2026-07-07T18:06:00+02:00",
+      "now": "2026-07-08T02:05:00+02:00",
+      "fixture": "cheap-night",
       "set": {
         "devices": {
           "mercedes": {
             "capabilitiesObj": {
               "text_charging_status": {
                 "value": "Charge",
-                "lastUpdated": "2026-07-07T16:06:00.000Z"
+                "lastUpdated": "2026-07-08T00:05:00.000Z"
               }
             }
           }
@@ -98,7 +102,11 @@
           "action": "switched_on",
           "sessionActive": true
         },
-        "events": ["smartcharge_decision", "smartcharge_on"],
+        "events": [
+          "smartcharge_decision",
+          "actuator_request",
+          "smartcharge_on"
+        ],
         "plugOn": true,
         "plugCommandCount": 2,
         "logic": {
@@ -113,7 +121,13 @@
       "ChargeConnectedAt": "2026-07-07 17:00:00",
       "SmartChargeDisconnectObservedAt": "null"
     },
-    "eventTypes": ["smartcharge_off", "smartcharge_decision", "smartcharge_on"],
+    "eventTypes": [
+      "actuator_request",
+      "smartcharge_off",
+      "smartcharge_decision",
+      "actuator_request",
+      "smartcharge_on"
+    ],
     "plugOn": true,
     "plugCommandCount": 2
   }

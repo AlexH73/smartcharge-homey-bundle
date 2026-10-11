@@ -769,4 +769,57 @@ runDualSessionHeaderRegression();
 runMissingSessionHeaderRegression();
 runReusableSessionHeaderMigration();
 
+// Request diagnostics must not create or overwrite an automatic Session row.
+upsertSessionFromEvent(
+  {
+    getSheetByName() {
+      throw new Error('Unexpected materialization');
+    },
+  },
+  {
+    eventType: 'actuator_request',
+    sessionId: 'automatic-session',
+  },
+);
+let manualSession = applyEvent(
+  {},
+  {
+    eventType: 'manual_override_enabled',
+    decisionSource: 'manual',
+    sessionId: 'manual:test',
+  },
+);
+assert.equal(manualSession.status, 'ready_to_charge');
+manualSession = applyEvent(manualSession, {
+  eventType: 'smartcharge_on',
+  decisionSource: 'manual',
+  sessionId: 'manual:test',
+  loggedAt: '2026-10-11T10:00:00Z',
+});
+assert.equal(manualSession.status, 'ready_to_charge');
+assert.equal(manualSession.chargeStartedAt, undefined);
+manualSession = applyEvent(manualSession, {
+  eventType: 'manual_charging_started',
+  sessionId: 'manual:test',
+});
+assert.equal(manualSession.status, 'charging');
+manualSession = applyEvent(manualSession, {
+  eventType: 'manual_charging_completed',
+  reasonCode: 'USER_STOP',
+  sessionId: 'manual:test',
+});
+assert.equal(manualSession.status, 'stopped');
+manualSession = applyEvent(manualSession, {
+  eventType: 'manual_override_disabled',
+  sessionId: 'manual:test',
+});
+assert.equal(manualSession.status, 'stopped');
+assert.equal(
+  applyEvent(
+    {},
+    { eventType: 'manual_charging_completed', reasonCode: 'LOW_POWER' },
+  ).status,
+  'completed',
+);
+
 console.log('PASS apps-script-session-materializer');

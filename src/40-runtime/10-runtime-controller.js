@@ -88,7 +88,13 @@ function selectConnectionEvidence(statusObservedAt, logicEvidenceAt) {
 
 async function collectRuntimeSnapshot() {
   const now = new Date();
-  const mercedes = await getDeviceByNamePart(CONFIG.mercedesDeviceNameIncludes);
+  let mercedes;
+  try {
+    mercedes = await getDeviceByNamePart(CONFIG.mercedesDeviceNameIncludes);
+  } catch (error) {
+    mercedes = { capabilitiesObj: {} };
+    log(`Vehicle unavailable: ${error.message}`);
+  }
   const plug = await getDeviceByNamePart(CONFIG.plugDeviceNameIncludes);
   const chargeConnectedAt = await getVariableValue(
     CONFIG.chargeConnectedAtVariableName,
@@ -157,6 +163,10 @@ async function collectRuntimeSnapshot() {
     vehicleChargingPowerRawValue: chargingPower.value,
     vehicleChargingPowerUnits: chargingPower.units,
     vehicleChargingPowerObservedAt: chargingPower.observedAt,
+    vehicleChargingPowerFreshness: evaluateTelemetryFreshness(
+      chargingPower.observedAt,
+      now,
+    ),
     manualOverride: runtimeBoolean(
       await getVariableValue(CONFIG.smartChargeManualModeVariableName),
     ),
@@ -310,28 +320,11 @@ async function applyRuntimeActions(snapshot, desiredPlugOn, activeMode) {
   if (desiredPlugOn === snapshot.plugOn) return 'none';
   if (!activeMode)
     return desiredPlugOn ? 'would_switch_on' : 'would_switch_off';
-  if (desiredPlugOn) {
-    await setDeviceOn(snapshot.plug);
-    if (snapshot.sessionActive) {
-      await SmartChargeLogger.logLifecycleEvent({
-        eventType: SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ON,
-        reason: 'Runtime reconciled plug to desired ON state',
-        source: 'smartcharge-runtime-controller',
-        shouldChargeNow: snapshot.plannerShouldCharge,
-      });
-    }
-    return 'switched_on';
-  }
-  await setDeviceOff(snapshot.plug);
-  if (snapshot.sessionActive) {
-    await SmartChargeLogger.logLifecycleEvent({
-      eventType: SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_OFF,
-      reason: 'Runtime reconciled plug to desired OFF state',
-      source: 'smartcharge-runtime-controller',
-      shouldChargeNow: snapshot.plannerShouldCharge,
-    });
-  }
-  return 'switched_off';
+  return executeRuntimePlugCommand(
+    snapshot,
+    desiredPlugOn,
+    'AUTOMATIC_RECONCILIATION',
+  );
 }
 
 function proposedLifecycleAction(snapshot) {
@@ -345,7 +338,7 @@ function proposedLifecycleAction(snapshot) {
   return 'none';
 }
 
-async function runRuntimeController() {
+async function runAutomaticRuntimeController() {
   if (runtimeControllerRunning)
     return { skipped: true, reason: 'Runtime controller already running' };
   runtimeControllerRunning = true;
@@ -424,6 +417,8 @@ async function runRuntimeController() {
       );
     }
     const result = {
+      ...(snapshot.plannerDecision || {}),
+      ...(snapshot.plannerDecision || {}),
       mode: activeMode ? 'active' : 'shadow',
       runtimeState: deriveRuntimeState(snapshot, desired.desiredPlugOn),
       sessionId: snapshot.sessionId,
@@ -484,6 +479,10 @@ async function runRuntimeController() {
             persistenceStatus:
               snapshot.plannerDecision.persistenceStatus || null,
             persistenceError: snapshot.plannerDecision.persistenceError || null,
+            diagnosticsPersistenceStatus:
+              snapshot.plannerDecision.diagnosticsPersistenceStatus || null,
+            diagnosticsPersistenceError:
+              snapshot.plannerDecision.diagnosticsPersistenceError || null,
           }
         : {}),
     };
