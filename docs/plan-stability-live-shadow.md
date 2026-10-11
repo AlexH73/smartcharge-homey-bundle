@@ -7,13 +7,14 @@ authoritative and unchanged.
 
 ## Enablement
 
-The experiment is disabled by default with
-`CONFIG.planStabilityLiveShadowEnabled = false`. Before an experimental build is
-enabled, manually create the Homey Logic Text variable
+In 0.6.4+build.17 the experiment is enabled in source with
+`CONFIG.planStabilityLiveShadowEnabled = true`. It still cannot change canonical
+decisions or Actuator commands. Manually create the Homey Logic Text variable
 `SmartChargeAcceptedStrategy` with value `null`. The adapter never creates
 Logic variables automatically. A missing or unreadable variable fails open:
 charging decisions continue and the persistence error is reported only in
-shadow diagnostics.
+shadow diagnostics. Disable observation only in a future separately approved build
+by changing the flag to false, not by mutating an installed approved artifact.
 
 The experimental policy is declared separately in
 `CONFIG.planStabilityShadowExperimentPolicy`:

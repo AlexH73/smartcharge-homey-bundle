@@ -103,11 +103,20 @@ function writeBuildInfo() {
 
   if (reuseVersion) {
     const version = `${state.major}.${state.minor}.${state.patch}`;
+    const metadata = fs.readFileSync(BUILD_INFO_FILE, 'utf8');
+    const timestamp = /builtAt: '([^']+)'/.exec(metadata)?.[1];
+    const builtAt = new Date(timestamp);
+    if (
+      !metadata.includes(`fullVersion: '${version}+build.${state.build}'`) ||
+      Number.isNaN(builtAt.getTime())
+    ) {
+      throw new Error('Build metadata does not match saved release version');
+    }
 
     return {
       version,
       fullVersion: `${version}+build.${state.build}`,
-      builtAt: now,
+      builtAt,
     };
   }
 
@@ -196,7 +205,7 @@ function buildTarget(targetName, buildInfo) {
     output += `// Source file: ${relativePath}\n`;
     output +=
       '// -----------------------------------------------------------------------------\n\n';
-    output += fs.readFileSync(file, 'utf8');
+    output += fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
     output += '\n\n';
   }
 

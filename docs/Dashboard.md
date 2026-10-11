@@ -1,5 +1,10 @@
 # Dashboard
 
+Status: design/setup guidance. The repository implements Events/Sessions producers
+and a workbook template, not an automatically configured public dashboard. Live
+availability/formulas are not validated by this release. Use [Public dashboard](PublicDashboard.md)
+for publishing and [Privacy](Privacy.md) for data boundaries.
+
 The SmartCharge Dashboard is a public project showcase. It should communicate
 what the charging engine achieves without exposing private operational data.
 
@@ -109,8 +114,8 @@ Show project maturity and operational state:
 - latest successful update;
 - public dashboard refresh status.
 
-This block is useful for GitHub visitors because it explains that SmartCharge is
-tested and running in a real Homey workflow.
+This block should distinguish local tests, code installation and actual operational
+acceptance; installing bundles alone does not prove charging readiness.
 
 ### Engine Health
 

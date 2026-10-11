@@ -14,9 +14,10 @@ options for one charging plug; it does not certify deployed Homey topology.
   `runScript` call, executes an async wrapper and awaits its result; no shared
   execution queue surrounds that path. Its Flow action directly calls
   `runScript`. This is source-level evidence for that published implementation,
-  not verification of the user's installed version.
-  [HomeyScript app.js](https://github.com/athombv/com.athom.homeyscript/blob/master/app.js),
-  [RunAction](https://github.com/athombv/com.athom.homeyscript/blob/master/lib/flow/actions/RunAction.js).
+  not a measurement of live execution exclusion. The subsequent installed API discovery
+  identified HomeyScript 3.6.3; no strict execution queue was added to SmartCharge.
+  [HomeyScript app.js](https://github.com/athombv/com.athom.homeyscript/blob/ca51e962b49ec03a1be069191df997b1775fc7ad/app.js),
+  [RunAction](https://github.com/athombv/com.athom.homeyscript/blob/ca51e962b49ec03a1be069191df997b1775fc7ad/lib/flow/actions/RunAction.js).
 - That implementation exposes cross-script `global.get/set` through Homey app
   settings. This does not share a script's lexical `let` variables. Settings
   are persistent values; the documented methods do not promise a distributed
@@ -97,5 +98,7 @@ required permissions and third-party plug API. Prototype one App-owned queue;
 assert maximum concurrent device requests is one for scheduler, legacy clients,
 Manual ON, Auto and Stop. Test unknown ACKs, process/Homey restart, Stop priority,
 late completions, journal recovery and failure to save denial. Audit actual Flows
-and all device writers. No real topology, installed version or runtime scheduling
-was inspected in this research.
+and all device writers. At the research stage no real topology, installed version or runtime scheduling
+was inspected. Later read-only discovery and controlled code installation are
+recorded separately in [Homey deployment](HomeyDeployment.md); those do not prove
+strict exclusion or resolve the mock race. Historical evidence is retained privately.

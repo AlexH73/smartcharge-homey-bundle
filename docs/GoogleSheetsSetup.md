@@ -4,6 +4,11 @@ SmartCharge can write lifecycle and decision events to a Google Apps Script web
 app. The public repository contains only a template. You must provide your own
 spreadsheet ID and deploy your own webhook.
 
+Status: template IMPLEMENTED / TESTED LOCALLY. This audit does not establish a
+deployed Apps Script version, working dashboard or live webhook delivery. The
+template appends Events and updates Sessions. Statistics formulas/dashboard
+publishing require operator configuration, not an automatic analytics service.
+
 ## Spreadsheet Structure
 
 Create one private workbook with these sheets:
@@ -117,6 +122,17 @@ Important event types:
 - `smartcharge_off`
 - `session_reset`
 - `session_expired`
+- `actuator_request` (Events only; never creates/updates a Session)
+- `manual_override_enabled` / `manual_override_disabled`
+- `manual_charging_started` / `manual_charging_completed`
+
+Manual rows use `manual:<activation ISO timestamp>` with `decisionSource=manual`.
+Manual `smartcharge_on` means `ready_to_charge`; `chargeStartedAt`/`charging` requires
+`manual_charging_started`. LOW_POWER/BATTERY_FULL becomes `completed`; USER_STOP,
+MAX_DURATION and control termination become `stopped`. The disabled event preserves
+the preceding outcome. Manual and automatic identities are separate. Pre-0.6.3
+migration needs the updated materializer; correctly migrated 0.6.3 needs no Apps
+Script/schema change solely for 0.6.4.
 
 Events telemetry v2 headers:
 
@@ -198,7 +214,13 @@ Recommended public fields:
 Avoid public fields with exact connection timestamps, exact departure patterns,
 session IDs, or device identifiers.
 
-## Live Dashboard Link
+## Public dashboard and webhook limits
 
-Public dashboard:
-[SmartCharge Google Sheets dashboard](https://docs.google.com/spreadsheets/d/1LueN5IylHuwcnuLIB12EAuqa7fByK7iZOU74kFAOX6c/edit?usp=sharing)
+Use [Public dashboard](PublicDashboard.md) and [Dashboard design](Dashboard.md)
+for sanitized publishing. No installation-specific workbook URL is included here.
+
+The template does not implement signed payloads, shared-secret fields or Homey
+identity verification. A URL alone is not strong sender authentication. Inspect
+Google deployment access and test that Homey can post under the selected mode;
+do not assume Google-login-only access works with this logger. Keep the URL/raw
+data private, monitor unsolicited writes, and use a workbook copy for setup/tests.

@@ -52,6 +52,20 @@ node simulator/runner.js --list
 
 `npm test` runs `npm run simulate:all`.
 
+## Current regression coverage (0.6.4+build.17)
+
+There are 94 simulator scenarios; the list below is an illustrative subset, not
+the full inventory. `node simulator/runner.js --list` is authoritative. Coverage
+includes runtime provider freshness, reconnect/disconnect, command/telemetry failures,
+preconditioning while waiting and Plan Stability shadow characterization.
+
+Additional test suites are not counted as scenario JSON files: 52 manual lifecycle
+and 112 terminal regression cases, planner/cost/persistence tests, Apps Script
+materialization tests, release reproduction checks, 22 deployment mock scenarios
+and 10 authenticated-provenance cases. Run them with `npm run verify`; isolate
+deployment/provenance suites with `npm run test:deployment`. Mock deployment tests
+do not send real Homey requests. Local passing tests are not hardware acceptance.
+
 ## Logs
 
 The simulator never calls the real Google Sheets webhook. Any POST request that

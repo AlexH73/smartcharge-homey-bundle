@@ -1,8 +1,10 @@
 /**
  * SmartCharge manual helper template.
  *
- * Prefer the generated `dist/SMARTCHARGE - Start Session.js` script for the
- * normal production flow. Use this helper only when you need a tiny standalone
+ * Legacy compatibility helper; do not run alongside active Runtime Controller.
+ * Normal active setup uses trustworthy event -> Connection Evidence and runtime,
+ * not synthetic connection timestamps. Use this helper only for reviewed legacy
+ * setup when you need a tiny standalone
  * HomeyScript that stores the current connection timestamp.
  *
  * Replace all YOUR_* placeholders before using this in Homey.

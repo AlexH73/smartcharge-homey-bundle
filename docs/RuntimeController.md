@@ -1,5 +1,17 @@
 # Runtime State Controller
 
+Baseline: SmartCharge 0.6.4+build.17. This page owns runtime semantics, not Flow
+installation or deployment status. Use [Homey Flows](HomeyFlows.md) for the current
+five-minute topology and [Homey deployment](HomeyDeployment.md) for status.
+
+## AUTO / MANUAL / BLOCKED
+
+These are conceptual permission/ownership labels, not a new Logic enum. MANUAL
+means valid independent Manual Charging intent. BLOCKED means Automatic Charging
+is denied by block/terminal/token/grant checks; it can coexist with Manual Charging.
+AUTO means permission is available, not plug ON: Session/evidence, battery, planner
+and Actuator gates still apply. `SmartChargeRuntimeMode=active|shadow` is separate.
+
 ## Independent manual charging
 
 Manual ON and Auto Mode require `SmartChargeRuntimeMode=active`; explicit USER_STOP
@@ -46,8 +58,8 @@ MAX_DURATION_REACHED, COMMAND_FAILED) denies automatic ON across restarts.
 Manual ON starts only a new manual lifecycle and keeps the automatic block.
 Ordinary runtime/planner/reset execution cannot clear it. Only explicit Auto
 Mode can grant automatic permission, after stopping manual work, checking a
-clear runtime lease and verified plug OFF, and validating fresh trustworthy
-Mercedes connection evidence plus fresh SOC below 100 under the existing
+clear runtime lease and cached plug OFF, and validating fresh trustworthy
+vehicle connection evidence plus fresh SOC below 100 under the existing
 30-minute policy. Stale vehicle power cannot create an automatic session.
 
 The existing manual JSON adds `activationStopToken` and `autoGrant` (UTC `at`
@@ -69,6 +81,7 @@ atomic compare-and-swap in the current adapter: this is **not** a strict mutex
 between independent script instances. Serialize deployed runtime triggers.
 After a crash leaves a lease, verify all executions have ended and power is OFF
 before an operator resets the lease to `null`; preserve manual timestamps.
+The lease's 60-second age check is not a command timeout or cancellation mechanism.
 
 Thresholds run on the next runtime invocation with qualifying samples. They
 are not hard real-time cutoffs or proof of continuous power between samples.
@@ -131,6 +144,12 @@ The capability names are configurable fallbacks, not claims about the real
 Mercedes device. Shadow diagnostics report the capability actually found and
 its raw value for vehicle status and preconditioning.
 
+Other providers need compatible capabilities/events/units and timestamp validation;
+the current adapter still uses the `mercedes` object/configuration identifiers.
+The 30-minute freshness checks gate connection/session creation and explicit Auto
+Mode; they are not a blanket promise that every decision for an existing Session
+rejects stale SOC. An existing Session remains local authority during provider outage.
+
 The verified Mercedes mapping is `text_charging_status`, `onoff_charging`,
 `measure_battery`, `measure_charge_power`, and `onoff_precond`. `Charge break`
 is normalized as connected but not actively charging. It can create a Session
@@ -157,8 +176,9 @@ immediately reconciles the plug to OFF in the same execution. The Session is
 preserved before the configured timeout. After `disconnectConfirmationMinutes`,
 the disconnect becomes confirmed; active mode emits
 `charger_disconnected` and clears the Session through the runtime lifecycle
-reset path, but only after the desired OFF state has been physically
-reconciled. A failed OFF command aborts the execution before actuator telemetry,
+reset path, but only after the desired OFF state is already observed or the OFF
+command is acknowledged. ACK alone does not verify electrical OFF. A failed OFF
+command aborts the execution before actuator telemetry,
 the terminal event, and Session cleanup, preserving the Session for a safe
 retry. Charging power or trustworthy connected evidence cancels the
 pending observation. This observation-before-action order prevents the
@@ -188,41 +208,22 @@ inside one HomeyScript instance. HomeyScript provides no atomic cross-process
 lock in the current architecture, so separate instances are not strictly
 serialized; state reconciliation and idempotent actuator checks limit effects.
 
-## Rollout
+## Rollout and deployment boundary
 
-The recommended Homey topology is intentionally trigger-only:
+Use the single current [Flow topology](HomeyFlows.md): one five-minute Runtime
+Controller watchdog, a trustworthy event -> Connection Evidence, explicit Manual
+ON / USER_STOP / Auto Mode, and optional supervised Startup Recovery. No duplicate
+price/power/decision timers or direct Actuator cards. Connection Evidence writes
+the event before invoking runtime; the runtime may skip busy work, leaving evidence
+for a later tick. Recording an external event is distinct from shadow runtime.
 
-1. Event-driven Flow:
-   - **WHEN:** Mercedes-Benz -> `Ladegerät wurde angeschlossen`
-   - **THEN:** HomeyScript -> `SMARTCHARGE - Connection Evidence`
-2. Fallback/reconciliation Flow:
-   - **WHEN:** Every 15 minutes
-   - **THEN:** HomeyScript -> `SMARTCHARGE - Runtime Controller`
+Shadow mode is for observation, not a global kill switch: legacy compatibility
+scripts and explicit USER_STOP can command the device. Do not run competing legacy
+and active lifecycle/Actuator owners. Prepare under disabled writers and independent
+physical OFF. Follow [deployment](HomeyDeployment.md) and separately authorized
+[operational acceptance](HomeyDeploymentReadiness.md); keep Flows disabled after
+code installation. Never reset saved safety state merely because Homey restarted.
 
-The event Flow contains no lifecycle, planner, or power-control decisions. The
-15-minute Flow reconciles retained state but does not generate connection
-evidence. Runtime Controller remains the sole business-logic owner for both
-paths. In shadow mode, the event entry is allowed to record the external
-observation, while the subsequent Runtime execution remains side-effect-free
-and leaves that evidence available for inspection.
-
-1. Keep legacy Advanced Flows active and deploy the Runtime Controller in
-`shadow` mode, triggered every 15 minutes and optionally by fast events.
-2. Compare proposed actions, capability diagnostics, and planner decisions for
-   several days.
-3. Disable the corresponding legacy lifecycle/power-control branches, then
-   switch `SmartChargeRuntimeMode` to `active`.
-4. After validation, remove obsolete business logic from Advanced Flows so
-   remaining Flows are triggers only.
-
-Never run the legacy and runtime lifecycle/actuator owners active at the same
-time. Shadow mode never consumes connection evidence, persists disconnect
-state, updates planner Logic variables, switches the plug, or emits lifecycle or
-decision telemetry. Telemetry v2 schema remains unchanged during this hardening
-pass.
-
-After a device command ACK, runtime command and following lifecycle events
-publish null plugOn/plugPower rather than pre-command or synthetic values.
-The actuator request message contains the pre-command snapshot; the success
-message identifies ACK and physicalStateVerified=false. Event columns and
-session materialization are unchanged. ACK is not proof of physical OFF.
+After ACK, command and following lifecycle events publish null plugOn/plugPower,
+not old or synthetic values. The request message contains the pre-command snapshot;
+the ACK message includes physicalStateVerified=false. Event columns are unchanged.

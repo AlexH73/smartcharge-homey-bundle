@@ -81,7 +81,9 @@ must not be published directly.
 ## Sessions
 
 `Sessions` is a materialized view over Events. One row represents one charging
-session from cable connection until session reset.
+automatic Session or independent manual activation, including its in-progress state.
+Automatic identity comes from `ChargeConnectedAt`; manual identity is
+`manual:<activation ISO timestamp>`. A row is not necessarily completed.
 
 The `sessionId` is the stable key. Apps Script or a future processor should
 update the same Sessions row when more Events arrive for that `sessionId`.
@@ -175,7 +177,8 @@ values. It should not import raw private sheets.
 
 Events are the source of truth. Sessions and Statistics are derived data.
 
-Recovery flow:
+Proposed operator recovery flow (no general rebuild command exists in the
+current template):
 
 1. Preserve the private `Events` sheet.
 2. Sort Events by `sessionId` and `loggedAt`.

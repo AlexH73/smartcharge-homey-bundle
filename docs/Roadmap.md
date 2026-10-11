@@ -1,81 +1,51 @@
 # Roadmap
 
-This roadmap captures planned SmartCharge work. Items may move between releases
-as simulator coverage, Homey testing, and production risk become clearer.
+Baseline: SmartCharge 0.6.4+build.17. IMPLEMENTED describes source; TESTED LOCALLY
+describes offline evidence; DEPLOYED describes code installation, not physical
+charging certification. [Deployment status](HomeyDeployment.md) is the status owner.
 
-## Completed
+## Implemented and locally tested
 
-### Multi-Window Charging
+- Continuous/multi-window planning, adjacent-slot merging, latest-safe-start fallback.
+- Estimated costs/savings from exact allocated minutes and nominal charging power;
+  backward-compatible tariff score fields. No metered actual-energy/cost model.
+- Runtime Controller lifecycle/reconciliation and trustworthy Connection Evidence.
+- Independent durable Manual Charging, explicit Auto Mode and Durable Auto Block,
+  corrected five-minute observation and ACK telemetry.
+- Pure Plan Stability policy, simulator shadow and persistent live shadow/diagnostics;
+  these recommendations do not change production charging decisions.
+- Events/Sessions Apps Script materialization, including manual events and immutable
+  initial estimates. Statistics formulas/dashboard publishing remain operator setup.
+- 94 simulator scenarios plus unit/manual/deployment regression suites.
+- Immutable release validation, guarded local API client, public workflow definitions
+  and private deployment repository scaffold.
 
-- ChargePlan and ChargeWindow model introduced.
-- Continuous and multi-window planner candidates are evaluated.
-- The plan comparator selects between continuous and multi-window plans.
-- Adjacent selected slots are merged into charging windows.
-- Multi-window simulator scenarios now pass as normal coverage.
-- Safety fallback remains covered when not enough usable slots remain.
+All twelve corrective bundles were installed/read back in one controlled Homey
+installation. Supervised operational testing remains pending.
 
-## Near Term
+## Next validation and infrastructure work
 
-### Planner Stability
+- Separately supervise real Stop, restart/block persistence, sample cadence/driver
+  timestamps, Manual Charging completion and Auto Mode acceptance.
+- Obtain successful GitHub CI evidence after an authorized push/PR.
+- Create/configure/test the private deployment repository, Windows runner and enforced
+  Environment approvals; approve source SHA/tag/manifest/artifact provenance.
+- Publish a GitHub Release only after separate authorization; do not treat scaffold
+  preparation as an operational pipeline.
+- Design and validate a true single-owner executor with durable intent, Stop priority
+  and unknown-outcome recovery. [Research](HomeyExecutionSerialization.md) compares
+  a Homey App queue with Flow and external coordinator options.
 
-- Add anti-replanning rules for small savings.
-- Add maximum replans per session.
-- Add minimum interval between meaningful plan revisions.
-- Add maximum window count configuration.
+## Planned product/engineering work
 
-### Simulator
-
-- Keep scenario coverage as the first step for planner changes.
-- Add exact payload fixtures for new logger events when payload shape changes.
-- Keep generated `events.html` as the primary human-readable simulator report.
-
-### Release Readiness
-
-- Keep `develop` buildable and simulator-green.
-- Run HomeyScript build verification before merging feature work into
-  `develop`.
-- Keep generated and local-only files out of commits unless they are intended
-  release artifacts.
-
-### Energy And Cost Model
-
-- Calculate actual estimated energy per window.
-- Calculate estimated session cost from price and energy.
-- Preserve backward-compatible price-score fields while adding real cost
-  fields.
-
-## Mid Term
-
-### Dashboard
-
-- Add a local or hosted view for charging plans, decisions, and historical
-  sessions.
-- Show selected windows, prices, reason text, and current Homey state.
-- Add a Sessions sheet or dashboard view for session history.
-- Show planner revisions and what changed between revisions.
-
-### Analytics
-
-- Track energy cost, avoided high-price charging, and charging session history.
-- Add summaries that can be exported or reviewed outside Homey.
-- Plan Telemetry v2 fields after enough production data has been collected:
-  [Telemetry v2 Milestone](milestones/TelemetryV2.md).
-
-### Logger Improvements
-
-- Version logger payloads.
-- Keep a strict simulator fixture for the Google Sheets payload contract.
-- Add migration guidance when payload fields change.
-
-## Long Term
-
-### SmartCharge Core
-
-- Extract planner logic into a clearer core module with deterministic tests.
-- Keep HomeyScript integration thin around the core decision engine.
-- Make future integrations possible without rewriting the planner.
-
-### Stability
-
-- Improve handling of missing prices, partial Tibber data, and timezone edges.
-- Add release smoke-test checklists for real Homey validation.
+- Active stability/hysteresis, meaningful revision counters, maximum replans/windows
+  and minimum revision intervals, calibrated from operational data.
+- Actual energy, actual charging duration and actual cost, weather/battery-temperature
+  context, quality scoring and learning; preserve privacy and existing columns.
+  [Historical telemetry extension proposal](milestones/TelemetryV2.md) remains useful.
+- Dashboard plan/revision visualization and safe aggregate analytics/history.
+- Missing-price, partial-Tibber, multi-home selection and timezone-edge hardening.
+- Additional provider integrations with validated capabilities/units/timestamps.
+- Maintain exact logger fixtures and scenario-first regression coverage; keep
+  generated HTML reports, raw logs and fault-injection evidence private.
+- Keep core deterministic and integration adapters thin as new requirements emerge.

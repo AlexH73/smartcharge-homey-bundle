@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "verify": "npm run lint && npm run format:check && npm test && npm run build:homey -- --reuse-version",
+    "verify": "npm run check:public && npm run lint && npm run format:check && npm test && npm run build:homey -- --reuse-version && node tests/release-deployment.test.js && npm run test:deployment",
+    "test:deployment": "node tests/homey-deployment.test.js && node tests/release-source.test.js && node tests/public-safety.test.js && node tests/runtime-lock-race.test.js",
     "test": "node tests/estimated-cost-engine.test.js && node tests/plan-stability-primitives.test.js && node tests/plan-stability-policy.test.js && node tests/stability-debug.test.js && node tests/apps-script-session-materializer.test.js && node tests/runtime-controller.test.js && node tests/manual-runtime.test.js && node tests/manual-terminal.test.js && npm run simulate:all",
     "test:cost": "node tests/estimated-cost-engine.test.js",
     "simulate": "node simulator/runner.js",
@@ -61,7 +62,8 @@
     "build:manual-on": "node scripts/build-homey.js manual-on",
     "build:manual-off": "node scripts/build-homey.js manual-off",
     "build:homey": "node scripts/build-homey.js all",
-    "build:auto-mode": "node scripts/build-homey.js auto-mode"
+    "build:auto-mode": "node scripts/build-homey.js auto-mode",
+    "check:public": "node scripts/public-safety.js"
   },
   "keywords": [],
   "author": "",

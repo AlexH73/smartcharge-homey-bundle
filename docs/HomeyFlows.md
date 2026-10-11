@@ -1,239 +1,86 @@
 # Homey Flow Setup
 
-## Migration to independent manual charging
-
-This section supersedes legacy power-control instructions below when runtime
-mode is active. Do not change deployed Flows until the local change is reviewed.
-
-1. Initialize the safety Logic variables described in `Installation.md`, with
-   manual OFF and the plug OFF. Never seed an active manual flag without its
-   real activation record.
-2. The Manual ON button invokes `SMARTCHARGE - Manual Override On` only. Remove
-   separate ON cards and writes of `SmartChargeShouldCharge`/manual flags.
-   This grants manual charging only; it does not clear the automatic block.
-3. The Stop button invokes `SMARTCHARGE - Manual Override Off` only. This is
-   USER_STOP. All manual terminal reasons block automatic starts across restarts.
-4. Add a separate Auto Mode button invoking `SMARTCHARGE - Auto Mode`. It clears
-   the block only after verified OFF, completed manual work, a clear lease,
-   fresh Mercedes connection evidence and fresh SOC below 100. Re-running
-   the planner is not an Auto Mode action.
-5. Remove legacy actuator/lifecycle branches and external plug ON/OFF cards;
-   leave event/scheduled trigger cards that invoke runtime. Active-mode legacy
-   State Sync and Run Decision now delegate to the same runtime owner.
-6. Keep trustworthy connection events pointed at Connection Evidence. Do not
-   generate fresh evidence from a timer or a retained status value.
-7. Keep the existing five-minute watchdog and startup recovery. Version 0.6.4
-   accepts independent observations at most 360 seconds apart while each power
-   sample must still be at most 60 seconds old. LOW_POWER requires samples at
-   or below 5 W spanning at least 180 seconds, usually detected on the next
-   five-minute tick. Recovery between ticks can be missed; this does not prove
-   continuously low power. Do not add parallel power-event runtime writers.
-   Separate activations can still overlap and the Logic lease is not a mutex.
-   User Stop must remain callable promptly, independently of vehicle events.
-8. Disable duplicate legacy Log On/Log Off branches for runtime-owned commands;
-   runtime logs successful transitions itself, including without auto sessions.
-
-A saved manual activation resumes its original deadline and confirmations.
-Corrupt/missing activation state or abandoned runtime ownership prevents
-automatic re-energization. See `RuntimeController.md` for recovery and the
-limitations of cross-instance concurrency. No real Flows are migrated by builds.
-
-Use [the deployment checklist](HomeyDeploymentReadiness.ru.md) to inventory
-actual Flows and reduce duplicate triggers before enabling the active runtime.
-
-SmartCharge expects Homey Flows to provide lifecycle triggers. The generated
-HomeyScripts contain the decision and logging logic; the flows decide when each
-script runs.
-
-Use your own device names and Homey condition cards. The examples below use
-placeholder names such as `YOUR_CHARGER_DEVICE`, `YOUR_VEHICLE_DEVICE`, and
-`YOUR_LADESTATUS_VARIABLE`.
-
-## Flow: Start Session
-
-Purpose: create a SmartCharge session when the charging cable is connected.
-
-Trigger:
-
-- Charger or vehicle status changes to connected, plugged in, or charging.
-- If you track a Homey Logic status variable, use: `YOUR_LADESTATUS_VARIABLE`
-  changed.
-
-Conditions:
-
-- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`.
-- `ChargeConnectedAt` is `null`.
-- Vehicle battery is below `100`.
-
-Actions:
-
-- Run HomeyScript `SMARTCHARGE - Start Session`.
-- Optional: wait 5 to 30 seconds.
-- Run HomeyScript `SMARTCHARGE - Run Decision`.
-
-## Flow: Run Decision
-
-Purpose: recalculate the charging plan and turn the plug on when the selected
-plan or safety fallback requires charging.
-
-Triggers:
-
-- After `Start Session`.
-- On a schedule, for example every 15 minutes while connected.
-- After a Tibber price update, if you have a separate price update trigger.
-- From the watchdog/session recovery flow.
-
-Conditions:
-
-- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`.
-- `ChargeConnectedAt` is not `null`.
-- Vehicle battery is below `100`.
-
-Actions:
-
-- Run HomeyScript `SMARTCHARGE - Run Decision`.
-
-The script writes `SmartChargeShouldCharge`, `SmartChargePlannedStart`,
-`SmartChargePlannedEnd`, `SmartChargeTargetDeparture`, and
-`SmartChargeReason`. It also turns the configured plug on when charging should
-start. It does not turn the plug off.
-
-## Flow: State Synchronization
-
-Purpose: keep the physical plug state aligned with the latest SmartCharge
-decision.
-
-Trigger:
-
-- Every minute.
-
-Conditions:
-
-- None required for the simple scheduled flow.
-
-Actions:
-
-- Run HomeyScript `SMARTCHARGE - State Sync`.
-
-The script does not recalculate the plan or call Tibber. It only synchronizes
-the plug with `SmartChargeShouldCharge`. Lifecycle logging remains the
-responsibility of the existing `Log On` and `Log Off` flows triggered by the
-plug state change.
-
-The script internally checks `SmartChargeShouldCharge`, plug state, active
-session state, and vehicle battery before switching the plug on. The off path is
-intentionally independent from active session and vehicle battery telemetry, so
-it can turn the plug off even after a missed reset or vehicle integration
-outage.
-
-If you build this as an Advanced Flow, split the on and off paths into separate
-branches:
-
-- Off branch: `SmartChargeShouldCharge = false` and plug is on, then run
-  `SMARTCHARGE - State Sync`. Do not require `ChargeConnectedAt` or battery
-  telemetry on this branch.
-- On branch: `SmartChargeShouldCharge = true`, plug is off,
-  `ChargeConnectedAt` is not `null`, `YOUR_LADESTATUS_VARIABLE` is not
-  `Unplugged`, and vehicle battery is below `100`, then run
-  `SMARTCHARGE - State Sync`.
-
-Do not combine `SmartChargeShouldCharge = true` and
-`SmartChargeShouldCharge = false` as conditions in one regular Homey Flow.
-
-## Flow: Log On
-
-Purpose: write a lifecycle event when SmartCharge charging starts.
-
-Triggers:
-
-- Charging plug turns on.
-- Or plug power rises above your charging threshold.
-
-Conditions:
-
-- `ChargeConnectedAt` is not `null`.
-- `SmartChargeShouldCharge` is `true`, if you want to log only SmartCharge
-  starts.
-
-Actions:
-
-- Run HomeyScript `SMARTCHARGE - Log On`.
-
-## Flow: Log Off
-
-Purpose: write a lifecycle event when SmartCharge charging stops.
-
-Triggers:
-
-- Charging plug turns off.
-- Or plug power stays below your charging threshold for a short debounce period.
-
-Conditions:
-
-- `ChargeConnectedAt` is not `null`.
-
-Actions:
-
-- Run HomeyScript `SMARTCHARGE - Log Off`.
-- If the battery is full or the charger is disconnected, run
-  `SMARTCHARGE - Reset Session`.
-
-## Flow: Reset Session
-
-Purpose: clear the active SmartCharge session after completion, disconnect, or
-manual reset.
-
-Triggers:
-
-- Vehicle battery reaches `100`.
-- Charger or cable status changes to `Unplugged`.
-- Manual Homey Flow button or maintenance flow.
-
-Conditions:
-
-- `ChargeConnectedAt` is not `null`.
-
-Actions:
-
-- Optional: turn `YOUR_CHARGER_DEVICE` off.
-- Run HomeyScript `SMARTCHARGE - Reset Session`.
-
-The reset script logs `session_reset`, clears `ChargeConnectedAt`, clears the
-planned window variables, sets `SmartChargeShouldCharge` to `false`, and writes
-the reset reason.
-
-## Flow: Watchdog / Session Recovery
-
-Purpose: recover from missed Homey triggers. This is useful after Homey
-restarts, device reconnects, or a vehicle integration misses the original cable
-connection event.
-
-Trigger:
-
-- Every 5 to 15 minutes.
-- Or after Homey starts.
-
-Conditions:
-
-- `YOUR_LADESTATUS_VARIABLE` is not `Unplugged`.
-- `ChargeConnectedAt` is `null`.
-- Vehicle battery is below `100`.
-
-Actions:
-
-- Run HomeyScript `SMARTCHARGE - Start Session`.
-- Wait 5 to 30 seconds.
-- Run HomeyScript `SMARTCHARGE - Run Decision`.
-
-This watchdog must not start a session when the vehicle is unplugged. Keep the
-`Ladestatus is not Unplugged` condition first so the recovery flow only creates
-sessions for a real connected charging cable.
-
-## Suggested Debounce Rules
-
-- Do not run `Start Session` repeatedly when `ChargeConnectedAt` already has a
-  timestamp.
-- Debounce low-power `Log Off` triggers so short power dips do not end a
-  charging session.
-- Keep `Reset Session` separate from `Log Off` so a temporary stop can be
-  logged without clearing the session unless the car is full or disconnected.
+This is the target topology for SmartCharge **0.6.4+build.17** in `active` mode.
+It replaces legacy parallel Start Session / Run Decision / State Sync / Log On /
+Log Off / Reset Session chains. These compatibility scripts remain in the release
+but are not additional scheduled owners. Builds and the deployment client do not
+create, edit or enable real Flows.
+
+## Controls and ordinary ingress
+
+Use the installation's actual device cards and names; roles below are not discovered
+Flow IDs. The five ordinary maintenance roles are Watchdog, Connection Evidence,
+Manual ON, USER_STOP and Auto Mode. Startup Recovery, when configured, is an
+additional ingress to audit and quiesce.
+
+| Role | Trigger | Only SmartCharge action | Restrictions |
+| --- | --- | --- | --- |
+| Runtime Watchdog | Every five minutes | `SMARTCHARGE - Runtime Controller` | One periodic caller; no vehicle availability, automatic Session or SOC condition. Manual deadlines/recovery still need ticks. |
+| Connection Evidence | Real trustworthy charger-connected event | `SMARTCHARGE - Connection Evidence` | Records UTC evidence and invokes Runtime Controller itself. No timer, retained-status polling or second Runtime action. |
+| Manual ON | Explicit operator button | `SMARTCHARGE - Manual Override On` | No direct plug ON, flag writes or block clearing. Starts Manual Charging only. |
+| USER_STOP | Explicit operator stop button | `SMARTCHARGE - Manual Override Off` | No vehicle, Session or busy condition; no Delay/logger before the action. |
+| Auto Mode | Separate explicit operator button | `SMARTCHARGE - Auto Mode` | Never timer/startup/connection; requires safe state and fresh telemetry; may immediately request ON. |
+| Startup Recovery (optional) | Homey startup after Logic/devices are available | `SMARTCHARGE - Runtime Controller` | Never reset persisted state/block/token/lock or call Auto Mode. Enable watchdog after supervised recovery. |
+
+For the observed Mercedes-Benz integration the connected-event card is
+`Ladegerät wurde angeschlossen`; preserve its exact UI name. Other integrations
+need an equivalent verified event. A general status-change card is not sufficient
+unless its semantics establish a new connection. Connection Evidence must lead
+directly to the dedicated script, rather than directly to Runtime Controller.
+Inspect Homey Advanced Flows connections, not only the presence of a script card:
+an unconnected action does not run. The audit conservatively includes disconnected
+cards for maintenance because their existence cannot prove safe execution state.
+
+## Manual Charging and Durable Auto Block
+
+Manual ON and Auto Mode require `SmartChargeRuntimeMode=active`. Explicit USER_STOP
+remains available in shadow mode. Manual Charging does not depend on an automatic
+Session or Tibber. Stop denies Automatic Charging even after manual=false/restart.
+Planner, startup, connection events and automatic reset cannot grant permission.
+
+Keep the five-minute watchdog. START_CONFIRMED requires two fresh, independently
+timestamped plug samples >500 W, >=30 seconds apart. LOW_POWER only applies
+afterwards: independent samples <=5 W spanning >=180 seconds. Samples must be
+<=60 seconds old with gaps <=360 seconds. Missing/invalid/stale/future values are
+not 0 W. Recovery between ticks can be missed; continuously low power is not proved.
+MAX_DURATION (360 minutes from activation) is checked on invocation.
+See [Runtime Controller](RuntimeController.md).
+
+## Writers to disable or remove manually
+
+- Separate periodic Run Decision/State Sync and extra watchdog/price/power timers.
+- Direct plug ON/OFF cards and automatic commands based on `SmartChargeShouldCharge`.
+- Manual flag toggles, manual ON followed by old planner, permission grants on
+  startup, and legacy `SESSION - Save ConnectedAt` helper.
+- Legacy Start Session/Reset Session chains competing with Runtime Controller.
+- Duplicate Log On/Log Off for runtime-owned commands; plug ON is not manual
+  START_CONFIRMED and Runtime Controller emits its own events.
+- Inline scripts, delegated Flows, voice/UI actions, other Apps and external APIs
+  capable of changing the plug or safety Logic.
+
+Do not add runtime calls on every power/status update. Observations may feed
+telemetry without becoming an independent Actuator writer. Unknown command
+outcomes go to operator inspection, not automatic retry or Auto Mode loops.
+
+## Maintenance and activation
+
+Before replacement disable all candidate writers/triggers, independently confirm
+physical OFF, drain known/pending executions and quiesce external writers. During
+installation all five controlling Flows are disabled, including USER_STOP; use
+the independent physical stop while scripts are unavailable. During operation
+USER_STOP must remain promptly reachable. Do not reset saved safety records or
+clear a lease while an old request may still be in flight.
+
+After installation leave Flows disabled until separately supervised acceptance.
+Use [deployment/rollback](HomeyDeployment.md) and
+[migration/acceptance](HomeyDeploymentReadiness.md). Never automatically restore
+an old Flow's enabled state from backup.
+
+## Concurrency boundary
+
+Ordered Homey Advanced Flows cards sequence one invocation, not an exclusive queue
+across activations. Connection Evidence, controls, startup and third-party writers
+can overlap even with one watchdog. RuntimeLock and pre-/post-ON intent checks are
+best effort. They cannot cancel a sent ON or guarantee compensating OFF before
+electrical energization. [Serialization research](HomeyExecutionSerialization.md)
+preserves evidence and future executor options.

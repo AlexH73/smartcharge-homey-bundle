@@ -1,0 +1,68 @@
+name: SmartCharge approved public release
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful approved CI run ID
+        required: true
+        type: string
+      artifact_id:
+        description: Immutable approved CI artifact ID
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && github.repository == 'AlexH73/smartcharge-homey-bundle'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify approved CI and existing tag before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          ARTIFACT_ID: ${{ inputs.artifact_id }}
+          APPROVED_SHA: ${{ vars.SOURCE_COMMIT_SHA }}
+          RELEASE_TAG: ${{ vars.SOURCE_RELEASE_TAG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ && "$ARTIFACT_ID" =~ ^[0-9]+$ && "$APPROVED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$RELEASE_TAG" == 'v0.6.4+build.17' || "$RELEASE_TAG" == '0.6.4+build.17' ]]
+          [[ "$(gh api "repos/$REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$APPROVED_SHA" ]]
+          workflow_id=$(gh api "repos/$REPOSITORY/actions/workflows/smartcharge-ci.yml" --jq .id)
+          run=$(gh api "repos/$REPOSITORY/actions/runs/$CI_RUN_ID")
+          jq -e --arg sha "$APPROVED_SHA" --arg repo "$REPOSITORY" --argjson workflow "$workflow_id" '.status == "completed" and .conclusion == "success" and .head_sha == $sha and .head_repository.full_name == $repo and .workflow_id == $workflow and (.event == "push" or .event == "workflow_dispatch")' <<< "$run" >/dev/null
+          artifact=$(gh api "repos/$REPOSITORY/actions/artifacts/$ARTIFACT_ID")
+          jq -e --argjson run "$CI_RUN_ID" --arg sha "$APPROVED_SHA" '.expired == false and .workflow_run.id == $run and .workflow_run.head_sha == $sha' <<< "$artifact" >/dev/null
+          [[ "$(jq -r .name <<< "$artifact")" == "smartcharge-$APPROVED_SHA-$CI_RUN_ID-$(jq -r .run_attempt <<< "$run")" ]]
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ inputs.artifact_id }}
+          merge-multiple: true
+          run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ github.token }}
+          path: verified-artifact
+      - name: Publish existing verified bytes without rebuilding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ vars.SOURCE_RELEASE_TAG }}
+          MANIFEST_SHA256: ${{ vars.SOURCE_MANIFEST_SHA256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release-artifact.js verify verified-artifact
+          [[ "$MANIFEST_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$(sha256sum verified-artifact/manifest.json | cut -d ' ' -f1)" == "$MANIFEST_SHA256" ]]
+          cp verified-artifact/manifest.json smartcharge-manifest.json
+          (cd verified-artifact && zip -q ../smartcharge-release.zip *)
+          gh release create "$RELEASE_TAG" smartcharge-release.zip smartcharge-manifest.json --verify-tag --title 'SmartCharge 0.6.4+build.17' --notes 'Approved immutable CI artifact; SHA-256 manifest included. No deployment is performed.'
