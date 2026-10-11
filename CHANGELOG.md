@@ -7,6 +7,19 @@ The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 
 ## Unreleased
 
+## 0.6.3 - 2026-10-11
+
+### Added
+
+- Russian deployment checklist, rollback plan and concurrency entry-point audit.
+- Final local release validation for all twelve `0.6.3+build.16` bundles.
+
+### Changed
+
+- Clarify ordinary Flow trigger consolidation and the limits of Logic leases.
+- This release prepares the existing manual fix for supervised deployment;
+  Homey, deployed Flows and Google Sheets have not been changed.
+
 ## 0.6.2 - 2026-10-11
 
 ### Added

@@ -24,7 +24,8 @@ mode is active. Do not change deployed Flows until the local change is reviewed.
    generate fresh evidence from a timer or a retained status value.
 7. Invoke runtime on actual plug power updates, on Homey startup, and with a
    frequent watchdog. Prefer a supported 30-second schedule; sample gaps above
-   60 seconds invalidate LOW_POWER evidence. Serialize ordinary runtime triggers.
+   60 seconds invalidate LOW_POWER evidence. Consolidate ordinary triggers;
+   separate activations can still overlap and the Logic lease is not a mutex.
    User Stop must remain callable promptly, independently of vehicle events.
 8. Disable duplicate legacy Log On/Log Off branches for runtime-owned commands;
    runtime logs successful transitions itself, including without auto sessions.
@@ -33,6 +34,9 @@ A saved manual activation resumes its original deadline and confirmations.
 Corrupt/missing activation state or abandoned runtime ownership prevents
 automatic re-energization. See `RuntimeController.md` for recovery and the
 limitations of cross-instance concurrency. No real Flows are migrated by builds.
+
+Use [the deployment checklist](HomeyDeploymentReadiness.ru.md) to inventory
+actual Flows and reduce duplicate triggers before enabling the active runtime.
 
 SmartCharge expects Homey Flows to provide lifecycle triggers. The generated
 HomeyScripts contain the decision and logging logic; the flows decide when each

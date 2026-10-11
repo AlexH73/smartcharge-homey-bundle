@@ -2,6 +2,9 @@
 
 ## Manual reliability migration (local build awaiting review)
 
+For the complete staged release and rollback procedure, use
+[HomeyDeploymentReadiness.ru.md](HomeyDeploymentReadiness.ru.md).
+
 Before enabling the new active runtime, add these Homey Logic variables:
 
 | Name                        | Type    | Initial value         |
