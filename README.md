@@ -1,34 +1,56 @@
 # SmartCharge Homey Bundle
 
+<p align="center">
+  <img src="assets/images/hero.png" alt="SmartCharge Homey Bundle" width="100%">
+</p>
+
+<p align="center">
+  <sub>Historical illustration. Its “19 scenarios”, “Fully Tested” and “guaranteed” labels are not current validation or hardware safety claims. Current simulator coverage is 94 scenarios; supervised operational acceptance is pending.</sub>
+</p>
+
+[![SmartCharge](https://img.shields.io/badge/SmartCharge-0.6.5-blue)](docs/Release-0.6.5.md)
+[![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![HomeyScript](https://img.shields.io/badge/HomeyScript-runtime-00C7B7)](https://homey.app/en-us/app/com.athom.homeyscript/HomeyScript/)
+[![Tibber](https://img.shields.io/badge/Tibber-price%20API-FF5A5F)](https://developer.tibber.com/)
+[![Google Sheets](https://img.shields.io/badge/Google%20Sheets-analytics-34A853?logo=googlesheets&logoColor=white)](docs/GoogleSheetsSetup.md)
+[![Simulator](https://img.shields.io/badge/Simulator-94%20scenarios-6F42C1)](docs/Simulator.md)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 SmartCharge is an open-source HomeyScript charging controller that combines Homey
 device telemetry with Tibber prices. It compares continuous and multi-window plans,
 controls a charging plug, and optionally logs events to Google Sheets.
 Manual Charging has an independent persisted lifecycle and does not require Tibber
 or available vehicle telemetry to start or stop.
 
-Prepared corrective release: **0.6.5+build.18**, containing the Actuator correction
-and release metadata contract merged through PR #1. See the
-[0.6.5 update procedure](docs/Release-0.6.5.md). It has not been deployed.
-Installed release baseline: **0.6.4+build.17**. All twelve baseline bundles have been installed in
-one controlled Homey installation and verified by readback. This proves code
-installation, not unattended charging readiness; supervised operational acceptance
-is still pending. The private GitHub deployment repository/runner has not been
-created or tested. See [release notes](docs/Release-0.6.4.md) and
-[deployment status](docs/HomeyDeployment.md).
+**Smart charging plans · Explicit manual control · Private session analytics**
+
+[Release status](#release-status) · [Capabilities](#capabilities) ·
+[Architecture](#architecture-and-integrations) · [Installation](#install-and-configure) ·
+[Safety](#limits-and-security) · [Tests](#tests-and-development) ·
+[Documentation](#documentation)
+
+## Release status
+
+| Release            | Status                                    | Details                                                                                                                             |
+| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **0.6.5+build.18** | Prepared corrective release; not deployed | Actuator correction and release metadata contract merged through PR #1. [Update procedure](docs/Release-0.6.5.md).                  |
+| **0.6.4+build.17** | Installed baseline                        | All twelve bundles installed in one controlled Homey installation and verified by readback. [Release notes](docs/Release-0.6.4.md). |
+
+Code installation does not establish unattended charging readiness. Supervised
+operational acceptance is still pending. The private GitHub deployment
+repository/runner has not been created or tested. See
+[deployment status and safety gates](docs/HomeyDeployment.md).
 
 ## Capabilities
 
-- Automatic Charging selects continuous or separated low-price windows before departure,
-  with latest-safe-start fallback.
-- Manual Charging persists activation, start confirmation and stop reasons across
-  watchdog invocations and restarts.
-- A Durable Auto Block prevents Automatic Charging after manual termination until
-  the operator explicitly selects Auto Mode.
-- The Runtime Controller reconciles Session lifecycle, decisions and Actuator state.
-- Optional Google Apps Script materializes private Events and Sessions; cost and
-  savings estimates use planned minutes and nominal power, not metered energy.
-- Offline unit tests, regression scenarios and deployment mocks exercise the real
-  source entrypoints without contacting Homey, Tibber or Google Sheets.
+| Capability                      | Behavior                                                                                                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Automatic Charging + Tibber** | Selects continuous or separated low-price windows before departure, with latest-safe-start fallback.                                                        |
+| **Manual Charging**             | Persists activation, start confirmation and stop reasons across watchdog invocations and restarts.                                                          |
+| **Durable Auto Block**          | Prevents Automatic Charging after manual termination until the operator explicitly selects Auto Mode.                                                       |
+| **Runtime Controller**          | Reconciles Session lifecycle, decisions and Actuator state.                                                                                                 |
+| **Google Sheets analytics**     | Optional Google Apps Script materializes private Events and Sessions; cost and savings estimates use planned minutes and nominal power, not metered energy. |
+| **Offline validation**          | Unit tests, regression scenarios and deployment mocks exercise the real source entrypoints without contacting Homey, Tibber or Google Sheets.               |
 
 ## Architecture and integrations
 
@@ -55,6 +77,7 @@ Use Node.js 22 (the CI version), npm, Homey with HomeyScript, a controllable `on
 plug and the Logic variables in [Installation](docs/Installation.md). Fresh plug
 power is required for manual start/LOW_POWER detection. Automatic Charging also
 needs trustworthy vehicle/connection telemetry and Tibber access.
+Stale Mercedes telemetry must not be treated as fresh evidence of vehicle state.
 
 ```powershell
 npm ci
@@ -106,8 +129,8 @@ node simulator/runner.js --list
 
 `verify` runs lint, formatting, unit/regression suites, 94 simulator scenarios,
 all twelve reproducible builds, release checks and deployment/provenance mocks.
-The manual suites cover 52 lifecycle and 112 terminal cases; deployment mocks
-cover 22 cases and provenance tests cover 10 cases. These are local checks, not
+The manual suites cover 52 lifecycle and 112 terminal cases, alongside deployment
+and authenticated provenance tests. These are local checks, not
 hardware acceptance or a completed GitHub deployment pipeline.
 
 See [Development workflow](docs/DevelopmentWorkflow.md),
@@ -115,13 +138,13 @@ See [Development workflow](docs/DevelopmentWorkflow.md),
 
 ## Documentation
 
-- [Installation and configuration](docs/Installation.md)
-- [Homey Flows](docs/HomeyFlows.md)
-- [Runtime Controller](docs/RuntimeController.md)
-- [Deployment and rollback](docs/HomeyDeployment.md)
-- [Migration and operational acceptance](docs/HomeyDeploymentReadiness.md)
-- [Execution serialization research](docs/HomeyExecutionSerialization.md)
-- [Google Sheets setup](docs/GoogleSheetsSetup.md) and [Telemetry contract](docs/TelemetryContract.md)
-- [Data model](docs/DataModel.md), [Dashboard design](docs/Dashboard.md) and [Public dashboard](docs/PublicDashboard.md)
-- [Simulator](docs/Simulator.md), [ChargePlan design](docs/ChargePlan.md) and [Roadmap](docs/Roadmap.md)
-- [Changelog](CHANGELOG.md) and [MIT license](LICENSE)
+| Area                        | Guides                                                                                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Getting started**         | [Installation and configuration](docs/Installation.md) · [Homey Flows](docs/HomeyFlows.md)                                                                                      |
+| **Runtime and safety**      | [Runtime Controller](docs/RuntimeController.md) · [Execution serialization research](docs/HomeyExecutionSerialization.md)                                                       |
+| **Release and deployment**  | [0.6.5 update procedure](docs/Release-0.6.5.md) · [Deployment and rollback](docs/HomeyDeployment.md) · [Migration and operational acceptance](docs/HomeyDeploymentReadiness.md) |
+| **Telemetry and analytics** | [Google Sheets setup](docs/GoogleSheetsSetup.md) · [Telemetry contract](docs/TelemetryContract.md) · [Data model](docs/DataModel.md)                                            |
+| **Dashboard and privacy**   | [Dashboard design](docs/Dashboard.md) · [Public dashboard](docs/PublicDashboard.md) · [Privacy guidance](docs/Privacy.md)                                                       |
+| **Planning and validation** | [Simulator](docs/Simulator.md) · [ChargePlan design](docs/ChargePlan.md) · [Roadmap](docs/Roadmap.md)                                                                           |
+| **Contributing**            | [Development workflow](docs/DevelopmentWorkflow.md) · [Coding standards](docs/CodingStandards.md) · [Project structure](PROJECT_STRUCTURE.md)                                   |
+| **Project history**         | [Changelog](CHANGELOG.md) · [MIT license](LICENSE)                                                                                                                              |

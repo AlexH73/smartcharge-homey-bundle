@@ -354,7 +354,12 @@ async function deploy(directory, backupRoot, client, proof, approval) {
     'Explicit deployment confirmation required',
   );
   verifyArtifact(directory, proof);
-  const report = await discover(directory, backupRoot, client.get);
+  const report = await discover(
+    directory,
+    backupRoot,
+    client.get,
+    proof.scriptSelection || null,
+  );
   const snapshot = verifyBackup(report.backupDir);
   assert.equal(snapshot.origin, client.origin);
   checkApprovedIds(snapshot, proof);
@@ -397,7 +402,12 @@ async function deploy(directory, backupRoot, client, proof, approval) {
 
 async function preflight(directory, backupRoot, client, proof) {
   verifyArtifact(directory, proof);
-  const report = await discover(directory, backupRoot, client.get);
+  const report = await discover(
+    directory,
+    backupRoot,
+    client.get,
+    proof.scriptSelection || null,
+  );
   const snapshot = verifyBackup(report.backupDir);
   assert.equal(snapshot.origin, client.origin);
   assert.ok(
@@ -529,10 +539,16 @@ if (require.main === module) {
       }
       const backupRoot = process.env.HOMEY_BACKUP_ROOT || 'backup/homey';
       if (mode === 'dry-run') {
+        const scriptSelection = process.env.HOMEY_SCRIPT_SELECTION_FILE
+          ? JSON.parse(
+              fs.readFileSync(process.env.HOMEY_SCRIPT_SELECTION_FILE, 'utf8'),
+            )
+          : null;
         const report = await discover(
           path.resolve(process.argv[3] || 'dist/release'),
           backupRoot,
           client.get,
+          scriptSelection,
         );
         verifyBackup(report.backupDir);
         const audit = auditFlows(
@@ -549,6 +565,7 @@ if (require.main === module) {
               scriptIds: Object.fromEntries(
                 report.plan.map((item) => [item.file, item.id]),
               ),
+              ...(scriptSelection ? { scriptSelection } : {}),
               tag: report.version,
               manifestSha256: verifyBackup(report.backupDir)
                 .artifactManifestSha256,
