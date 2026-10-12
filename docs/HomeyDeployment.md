@@ -166,9 +166,26 @@ run. Leave maintenance in place before separately supervised operational tests.
 
 Update order is the [manifest order](Release-0.6.4.md); already identical code is
 skipped, with the full selected set still verified. Approved Script IDs must match
-the dry-run plan. All duplicate name mappings fail closed, including old release
-copies; the client never selects a script by release ranking. Resolve ambiguities
-manually before maintenance. No new scripts are created and no names/compatibility modes are changed.
+the dry-run plan. Without an explicit-ID mapping, duplicate names fail closed,
+including old release copies; the client never selects a script by release ranking.
+No new scripts are created and no names/compatibility modes are changed.
+
+To resolve duplicate names, independently review a private JSON mapping and set
+`HOMEY_SCRIPT_SELECTION_FILE` before `dry-run`. It must cover exactly the twelve
+manifest filenames. Each entry requires `id`, `name`, `apiCompatibilityVersion`
+and `currentSha256` for the installed script. The ID must exist and match the
+returned identity; the name must match both the approved name and bundle target;
+the compatibility mode and installed code SHA-256 must match the approval.
+Missing entries, unknown IDs or changed names, modes or hashes stop the operation
+before PUT. Keep operator-specific mappings and installed hashes out of Git.
+
+The dry-run template includes this mapping as `scriptSelection`, alongside the
+approved `scriptIds`. Preserve both in `HOMEY_MAINTENANCE_FILE` for preflight and
+installation. Explicit selection resolves identity only: it does not waive any
+maintenance, artifact or operator-confirmation requirement. Older unselected
+same-name scripts remain unchanged, and inventory guards detect their modification
+during deployment. Per-script readback and final whole-set verification retain
+the ID/name/mode/hash checks.
 
 The local client verifies artifact bytes/metadata but does not itself fetch GitHub
 provenance. Locally approve source commit, source-to-bundle comparison and manifest
@@ -197,6 +214,10 @@ The client rejects corrupted backups/journals, altered identities and unknown
 installed code. It restores only changed scripts whose hashes match a journaled
 installation attempt; already restored scripts are skipped. Recovery snapshots
 and readbacks are saved; Flow/Logic/device state is not automatically restored.
+Rollback uses the selected identities from the verified installation backup and
+journal, not a new name-based selection. Explicit-ID mapping does not weaken
+rollback identity or code-hash checks; older unselected same-name scripts are not
+rollback targets.
 
 Installation is not atomic. RuntimeLock is a best-effort lease, not a strict mutex;
 GET guards cannot eliminate the race before PUT. Cached OFF and command ACK do not

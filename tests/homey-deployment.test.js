@@ -157,6 +157,241 @@ async function main() {
       ),
     };
     const backupRoot = path.join(temporary, 'backup');
+    await test('explicit pinned selection resolves duplicate name without touching old script; readback and rollback preserve both IDs', async () => {
+      const { state, client } = mockApi();
+      const debug = targets().findIndex(
+        (target) => target.target === 'stability-debug',
+      );
+      state.scripts.oldDebug = {
+        ...state.scripts[`id-${debug}`],
+        id: 'oldDebug',
+        code: '// Version: 0.6.1+build.14\n// old debug\n',
+      };
+      const old = clone(state.scripts.oldDebug);
+      const approved = {
+        ...proof(),
+        scriptSelection: Object.fromEntries(
+          targets().map((target, i) => {
+            const script = state.scripts[`id-${i}`];
+            return [
+              target.file,
+              {
+                id: script.id,
+                name: script.name,
+                apiCompatibilityVersion: script.version,
+                currentSha256: sha256(Buffer.from(script.code)),
+              },
+            ];
+          }),
+        ),
+      };
+      await assert.rejects(
+        preflight(artifact, backupRoot, client, proof()),
+        /ambiguous/,
+      );
+      assert.equal(
+        (await preflight(artifact, backupRoot, client, approved)).status,
+        'PREFLIGHT_READY_NO_PUT',
+      );
+      const result = await deploy(
+        artifact,
+        backupRoot,
+        client,
+        approved,
+        confirmation,
+      );
+      assert.equal(result.status, 'VERIFIED');
+      assert.deepEqual(state.scripts.oldDebug, old);
+      assert.equal(state.writes.includes('oldDebug'), false);
+      await rollback(
+        result.backupDir,
+        backupRoot,
+        client,
+        approved,
+        rollbackConfirmation,
+      );
+      assert.deepEqual(state.scripts.oldDebug, old);
+    });
+    await test('explicit selection preserves unselected duplicate guard during sequential updates', async () => {
+      const { state, client } = mockApi();
+      const debug = targets().findIndex(
+        (target) => target.target === 'stability-debug',
+      );
+      state.scripts.oldDebug = {
+        ...state.scripts[`id-${debug}`],
+        id: 'oldDebug',
+        code: '// old debug\n',
+      };
+      const scriptSelection = Object.fromEntries(
+        targets().map((target, i) => {
+          const script = state.scripts[`id-${i}`];
+          return [
+            target.file,
+            {
+              id: script.id,
+              name: script.name,
+              apiCompatibilityVersion: script.version,
+              currentSha256: sha256(Buffer.from(script.code)),
+            },
+          ];
+        }),
+      );
+      const get = client.get;
+      client.get = async (endpoint) => {
+        if (state.writes.length)
+          state.scripts.oldDebug.code = '// unexpected change\n';
+        return get(endpoint);
+      };
+      client.get.origin = client.origin;
+      await assert.rejects(
+        deploy(
+          artifact,
+          backupRoot,
+          client,
+          { ...proof(), scriptSelection },
+          confirmation,
+        ),
+        /stopped/,
+      );
+      assert.equal(state.writes.length, 1);
+      assert.equal(state.writes.includes('oldDebug'), false);
+    });
+    await test('explicit selection fails closed on missing IDs, code/name/mode changes and incomplete mapping', async () => {
+      for (const field of [
+        'id',
+        'name',
+        'apiCompatibilityVersion',
+        'currentSha256',
+        'missing',
+        'null',
+      ]) {
+        const { state, client } = mockApi();
+        const scriptSelection = Object.fromEntries(
+          targets().map((target, i) => {
+            const script = state.scripts[`id-${i}`];
+            return [
+              target.file,
+              {
+                id: script.id,
+                name: script.name,
+                apiCompatibilityVersion: script.version,
+                currentSha256: sha256(Buffer.from(script.code)),
+              },
+            ];
+          }),
+        );
+        const file = targets()[0].file;
+        if (field === 'missing') delete scriptSelection[file];
+        else if (field === 'null') scriptSelection[file] = null;
+        else
+          scriptSelection[file][field] =
+            field === 'currentSha256'
+              ? 'a'.repeat(64)
+              : field === 'apiCompatibilityVersion'
+                ? 1
+                : 'changed';
+        await assert.rejects(
+          deploy(
+            artifact,
+            backupRoot,
+            client,
+            { ...proof(), scriptSelection },
+            confirmation,
+          ),
+        );
+        assert.equal(state.writes.length, 0);
+      }
+    });
+    await test('WAITING preserves Logic when Flows are disabled but retained AUTO grant refuses PUT', async () => {
+      const { state, client } = mockApi();
+      state.logic.SmartChargeAutoStartBlocked.value = false;
+      state.logic.SmartChargeManualState.value = JSON.stringify({
+        status: 'STOPPED',
+        autoGrant: { at: new Date().toISOString(), stopToken: 'stop-1' },
+      });
+      for (const [name, value] of Object.entries({
+        ChargeConnectedAt: '2026-07-07 18:00:00',
+        SmartChargeSessionStatus: 'active',
+        SmartChargeShouldCharge: false,
+        SmartChargeReason: 'Waiting for selected charging plan',
+        SmartChargePlannedStart: '2026-07-08 02:00:00',
+        SmartChargePlannedEnd: '2026-07-08 04:00:00',
+      }))
+        state.logic[name] = { name, value };
+      state.flows.runtime = {
+        id: 'runtime',
+        name: 'Runtime Controller',
+        enabled: true,
+        conditions: [],
+        actions: [
+          {
+            id: 'homey:app:com.athom.homeyscript:run',
+            args: { script: { id: 'id-1' } },
+          },
+        ],
+      };
+      const preserved = clone(state.logic);
+      assert.equal(
+        auditFlows(await inventory(client.get), 'plug-1')
+          .enabledMaintenanceFlows.length,
+        1,
+      );
+      state.flows.runtime.enabled = false; // Mock only; never sends a Flow write.
+      assert.equal(
+        auditFlows(await inventory(client.get), 'plug-1')
+          .enabledMaintenanceFlows.length,
+        0,
+      );
+      await assert.rejects(preflight(artifact, backupRoot, client, proof()));
+      await assert.rejects(
+        deploy(artifact, backupRoot, client, proof(), confirmation),
+      );
+      assert.deepEqual(state.logic, preserved);
+      assert.equal(state.writes.length, 0);
+      // A block alone is insufficient: retained grant remains forbidden.
+      state.logic.SmartChargeAutoStartBlocked.value = true;
+      await assert.rejects(
+        preflight(artifact, backupRoot, client, proof()),
+        /grant must be absent/,
+      );
+      assert.equal(state.writes.length, 0);
+    });
+    await test('inactive automatic session and cached plan can survive compliant maintenance without a grant', async () => {
+      const { state, client } = mockApi();
+      for (const [name, value] of Object.entries({
+        ChargeConnectedAt: '2026-07-07 18:00:00',
+        SmartChargeSessionStatus: 'active',
+        SmartChargeShouldCharge: false,
+        SmartChargePlannedStart: '2026-07-08 02:00:00',
+        SmartChargePlannedEnd: '2026-07-08 04:00:00',
+      }))
+        state.logic[name] = { name, value };
+      const preserved = clone(state.logic);
+      for (const field of [
+        'pendingExecutionsDrained',
+        'externalWritersQuiesced',
+      ]) {
+        await assert.rejects(
+          preflight(artifact, backupRoot, client, {
+            ...proof(),
+            [field]: false,
+          }),
+          /Operator must/,
+        );
+        assert.equal(state.writes.length, 0);
+      }
+      const result = await deploy(
+        artifact,
+        backupRoot,
+        client,
+        proof(),
+        confirmation,
+      );
+      assert.equal(result.status, 'VERIFIED');
+      assert.deepEqual(state.logic, preserved);
+      assert.equal(state.writes.length, 12);
+      assert.ok(state.requests.every((r) => ['GET', 'PUT'].includes(r.method)));
+    });
     await test('successful install preserves IDs/names/API mode; full readback and rollback', async () => {
       const { state, client } = mockApi();
       const original = clone(state.scripts);

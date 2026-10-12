@@ -92,12 +92,46 @@ function selectScript(scripts, expectedName) {
   return matches[0];
 }
 
-function replacementPlan(manifest, scripts, directory) {
+function replacementPlan(manifest, scripts, directory, approvedScripts = null) {
   const values = Object.values(scripts);
+  if (approvedScripts !== null)
+    assert.deepEqual(
+      Object.keys(approvedScripts).sort(),
+      manifest.bundles.map((bundle) => bundle.file).sort(),
+      'Explicit selection must cover exactly the release bundle set',
+    );
   const ids = new Set();
   return manifest.bundles.map((bundle) => {
     const expectedName = bundle.file.replace(/\.js$/, '');
-    const script = selectScript(values, expectedName);
+    const approved = approvedScripts?.[bundle.file];
+    if (approvedScripts !== null)
+      assert.ok(
+        approved && typeof approved.id === 'string' && approved.id,
+        'Missing explicit Script selection',
+      );
+    const script = approved
+      ? scripts[approved.id]
+      : selectScript(values, expectedName);
+    if (approved) {
+      assert.ok(script, 'Approved Script ID not found');
+      assert.equal(script.id, approved.id, 'Approved Script ID mismatch');
+      assert.ok(
+        [expectedName, expectedName + '.js'].includes(script.name),
+        'Approved Script name does not match bundle',
+      );
+      assert.equal(script.name, approved.name, 'Approved Script name changed');
+      assert.equal(
+        script.version,
+        approved.apiCompatibilityVersion,
+        'Approved compatibility mode changed',
+      );
+      assert.match(approved.currentSha256, /^[a-f0-9]{64}$/);
+      assert.equal(
+        sha256(Buffer.from(script.code)),
+        approved.currentSha256,
+        'Approved installed code changed',
+      );
+    }
     assert.ok(
       typeof script.id === 'string' && script.id && !ids.has(script.id),
     );
@@ -179,10 +213,15 @@ async function inventory(get) {
   };
 }
 
-async function discover(directory, backupRoot, get) {
+async function discover(directory, backupRoot, get, approvedScripts = null) {
   const manifest = verifyArtifact(directory);
   const snapshot = await inventory(get);
-  const plan = replacementPlan(manifest, snapshot.scripts, directory);
+  const plan = replacementPlan(
+    manifest,
+    snapshot.scripts,
+    directory,
+    approvedScripts,
+  );
   snapshot.releasePlan = plan;
   snapshot.artifactManifestSha256 = sha256(
     fs.readFileSync(path.join(directory, 'manifest.json')),
