@@ -33,6 +33,22 @@
           "estimatedSavingsPct": 0
         },
         "events": ["smartcharge_decision", "actuator_request", "smartcharge_on"]
+      },
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 70,
+                "lastUpdated": "2026-07-07T18:05:00+02:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-07-07T18:05:00+02:00"
+              }
+            }
+          }
+        }
       }
     }
   ]

@@ -19,7 +19,8 @@
       "expect": {
         "result": {
           "plannerShouldCharge": true,
-          "desiredPlugState": true,
+          "desiredPlugState": false,
+          "continuingExistingCharge": false,
           "stabilityDecision": "INITIAL_ACCEPT",
           "acceptedStrategyRevision": 1,
           "persistenceStatus": "WRITTEN",

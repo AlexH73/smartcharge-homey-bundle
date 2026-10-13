@@ -68,6 +68,22 @@
         },
         "plugOn": true,
         "tibberCallsDelta": 1
+      },
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 62,
+                "lastUpdated": "2026-07-08T02:05:00+02:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-07-08T02:05:00+02:00"
+              }
+            }
+          }
+        }
       }
     },
     {
@@ -79,6 +95,18 @@
             "capabilitiesObj": {
               "onoff": true,
               "measure_power": 3600
+            }
+          },
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 62,
+                "lastUpdated": "2026-07-08T02:06:00+02:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-07-08T02:06:00+02:00"
+              }
             }
           }
         }

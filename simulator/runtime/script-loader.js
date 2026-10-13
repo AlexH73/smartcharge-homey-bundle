@@ -50,6 +50,7 @@ class ScriptLoader {
     const fn = new AsyncFunction(
       'Homey',
       'fetch',
+      'https',
       'log',
       'Date',
       'stabilityShadow',
@@ -61,6 +62,7 @@ class ScriptLoader {
     return fn(
       homey,
       fetch,
+      require('https'),
       log,
       createFixedDate(now),
       stabilityShadow,

@@ -1,3 +1,163 @@
+// A planning horizon is a tariff assumption, never a connection/session event.
+async function runPreliminaryPlanning(snapshot = null, publish = false) {
+  let result;
+  let publicationContext;
+  const contextNames = [
+    CONFIG.chargeConnectedAtVariableName,
+    CONFIG.smartChargeSessionStatusVariableName,
+    CONFIG.autoStartBlockedVariableName,
+    CONFIG.manualStateVariableName,
+    CONFIG.smartChargeManualModeVariableName,
+    CONFIG.userStopTokenVariableName,
+    CONFIG.runtimeModeVariableName,
+    CONFIG.runtimeLockVariableName,
+  ];
+  const contextOf = (variables) =>
+    JSON.stringify(
+      contextNames.map(
+        (name) =>
+          Object.values(variables).find((variable) => variable.name === name)
+            ?.value,
+      ),
+    );
+  try {
+    if (publish)
+      publicationContext = contextOf(await Homey.logic.getVariables());
+    snapshot ||= await collectRuntimeSnapshot();
+    const battery = snapshot.batteryPct;
+    const observedAt = runtimeDateOrNull(snapshot.batteryObservedAt);
+    const ageMinutes = observedAt ? (snapshot.now - observedAt) / 60000 : null;
+    result = {
+      preliminary: true,
+      shouldChargeNow: false,
+      battery,
+      batteryObservedAt: snapshot.batteryObservedAt,
+      batteryAgeMinutes: ageMinutes,
+      batteryFreshness: snapshot.batteryFreshness,
+      confidence:
+        snapshot.batteryFreshness === TELEMETRY_FRESHNESS.FRESH
+          ? 'fresh_soc'
+          : 'last_known_soc',
+      plannedStart: null,
+      plannedEnd: null,
+      plannedWindows: null,
+      targetDeparture: null,
+    };
+    if (battery === null) throw new Error('Battery telemetry unavailable');
+    if (battery < 0 || battery > 100)
+      throw new Error('Battery telemetry invalid');
+    const targetDeparture = getTargetDeparture(snapshot.now);
+    result.targetDeparture = formatLocal(targetDeparture);
+    const factor = toNumberValue(
+      await getVariableValue(CONFIG.chargeFactorVariableName),
+      CONFIG.chargeFactorVariableName,
+    );
+    const reserve = toNumberValue(
+      await getVariableValue(CONFIG.chargeReserveVariableName),
+      CONFIG.chargeReserveVariableName,
+    );
+    const chargeMinutes = calculateChargeMinutes(battery, factor, reserve);
+    result.chargeMinutes = chargeMinutes;
+    result.chargeSlots = calculateChargeSlots(chargeMinutes);
+    if (battery >= CONFIG.batteryFullPercentage) {
+      result.reason = 'Last-known SOC is at target; no charging required';
+    } else {
+      const token = await getVariableValue(
+        CONFIG.tibberAccessTokenVariableName,
+      );
+      if (!token || token === 'null')
+        throw new Error('Tibber access token is missing');
+      const ownedLock = runtimeOwnedLock ? JSON.parse(runtimeOwnedLock) : null;
+      // Reserve 5s of the existing 60s lease for publication and lock release.
+      // node-fetch has separate header/body timers, so budget both phases.
+      const remainingMs = ownedLock
+        ? new Date(ownedLock.at).getTime() + 55000 - new Date().getTime()
+        : 2 * CONFIG.preliminaryTibberTimeoutMs;
+      const timeoutMs = Math.min(
+        CONFIG.preliminaryTibberTimeoutMs,
+        Math.floor(remainingMs / 2),
+      );
+      if (timeoutMs <= 0)
+        throw new Error(
+          'Preliminary Tibber timeout: runtime lease budget exhausted',
+        );
+      const prices = normalizeTibberPrices(
+        await fetchTibberPriceInfo(token, { timeoutMs }),
+      );
+      const options = {
+        now: snapshot.now,
+        targetDeparture,
+        chargeSlots: result.chargeSlots,
+      };
+      const plan = selectBestChargePlan(
+        findCheapestContinuousPlan(prices, options),
+        findCheapestMultiWindowPlan(prices, options),
+      );
+      if (!plan)
+        throw new Error('No tariff plan available before target departure');
+      result.plannedStart = formatLocal(plan.plannedStart);
+      result.plannedEnd = formatLocal(plan.plannedEnd);
+      result.plannedWindows = plan.windows.map((window) => ({
+        plannedStart: formatLocal(window.plannedStart),
+        plannedEnd: formatLocal(window.plannedEnd),
+      }));
+      result.reason = 'Tariff plan calculated';
+    }
+    result.available = true;
+  } catch (error) {
+    result = {
+      ...result,
+      preliminary: true,
+      available: false,
+      shouldChargeNow: false,
+      reason: error.message,
+    };
+  }
+  result.reason = `Preliminary (${result.batteryFreshness || 'UNKNOWN'}, SOC age ${result.batteryAgeMinutes ?? 'unknown'} min): ${result.reason}; physical ON requires explicit AUTO and fresh evidence`;
+  if (publish) {
+    for (const [name, value] of [
+      [CONFIG.smartChargeShouldChargeVariableName, false],
+      [CONFIG.chargeMinutesVariableName, result.chargeMinutes || 0],
+      [CONFIG.chargeSlotsVariableName, result.chargeSlots || 0],
+      [CONFIG.legacyChargeQuartersVariableName, result.chargeSlots || 0],
+      [
+        CONFIG.smartChargePlannedStartVariableName,
+        result.plannedStart || 'null',
+      ],
+      [CONFIG.smartChargePlannedEndVariableName, result.plannedEnd || 'null'],
+      [
+        CONFIG.smartChargeTargetDepartureVariableName,
+        result.targetDeparture || 'null',
+      ],
+      [CONFIG.smartChargeReasonVariableName, result.reason],
+    ]) {
+      const variables = await Homey.logic.getVariables();
+      const current = Object.values(variables);
+      const session = current.find(
+        (variable) => variable.name === CONFIG.chargeConnectedAtVariableName,
+      )?.value;
+      const blocked = current.find(
+        (variable) => variable.name === CONFIG.autoStartBlockedVariableName,
+      )?.value;
+      if (
+        !publicationContext ||
+        contextOf(variables) !== publicationContext ||
+        (runtimeActiveSession(session) && blocked !== true)
+      ) {
+        result.publicationSkipped = true;
+        break;
+      }
+      const variable = current.find((entry) => entry.name === name);
+      if (variable)
+        await Homey.logic.updateVariable({
+          id: variable.id,
+          variable: { value },
+        });
+    }
+  }
+  return result;
+}
+
 /**
  * Main SmartCharge decision runner.
  *

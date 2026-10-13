@@ -19,7 +19,12 @@
           }
         }
       },
-      "plug": { "capabilitiesObj": { "onoff": false, "measure_power": 0 } }
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
     }
   },
   "steps": [
@@ -59,7 +64,7 @@
         "logic": {
           "SmartChargeDisconnectObservedAt": "2026-07-07T16:10:00.000Z"
         },
-        "tibberCallsDelta": 0
+        "tibberCallsDelta": 1
       }
     },
     {
@@ -102,7 +107,10 @@
     }
   ],
   "expect": {
-    "logic": { "ChargeMinutes": 80, "ChargeSlots": 2 },
-    "tibberCalls": 2
+    "logic": {
+      "ChargeMinutes": 80,
+      "ChargeSlots": 2
+    },
+    "tibberCalls": 3
   }
 }

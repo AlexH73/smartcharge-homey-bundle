@@ -42,6 +42,22 @@
         },
         "plugOn": true,
         "plugCommandCount": 0
+      },
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 20,
+                "lastUpdated": "2026-07-07T20:15:00+02:00"
+              },
+              "text_charging_status": {
+                "value": "Charge",
+                "lastUpdated": "2026-07-07T20:15:00+02:00"
+              }
+            }
+          }
+        }
       }
     },
     {
@@ -95,6 +111,22 @@
         },
         "plugOn": true,
         "plugCommandCount": 2
+      },
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 50,
+                "lastUpdated": "2026-07-07T23:15:00+02:00"
+              },
+              "text_charging_status": {
+                "value": "Charge",
+                "lastUpdated": "2026-07-07T23:15:00+02:00"
+              }
+            }
+          }
+        }
       }
     }
   ],

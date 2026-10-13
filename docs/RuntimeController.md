@@ -146,9 +146,62 @@ its raw value for vehicle status and preconditioning.
 
 Other providers need compatible capabilities/events/units and timestamp validation;
 the current adapter still uses the `mercedes` object/configuration identifiers.
-The 30-minute freshness checks gate connection/session creation and explicit Auto
-Mode; they are not a blanket promise that every decision for an existing Session
-rejects stale SOC. An existing Session remains local authority during provider outage.
+The 30-minute freshness checks gate connection/session creation, explicit Auto
+Mode, and every automatic physical ON (including compatibility callers). The
+actuator re-reads the Session, SOC, provider connection evidence, durable block,
+manual ownership and runtime lease before ON. Existing charging and Session
+history remain local authority during provider outage; this does not permit a
+new ON using stale SOC. The global TTL is unchanged.
+
+When AUTO is blocked or no Session can be established, the runtime calculates
+a preliminary tariff plan from last-known SOC and the existing next-day departure
+policy anchored to the current time. This planning horizon is an assumption, not
+a connection timestamp. It does not create a Session or connection evidence, clear
+the block, erase manual history, grant AUTO, or write session events to Sheets.
+Active-mode runs publish the preliminary start/end, target departure, duration and
+reason in existing Logic fields with ShouldCharge=false. Shadow runs only return
+the plan. The returned preliminaryPlan includes the actual SOC timestamp, age,
+FRESH/STALE/UNKNOWN freshness and limited confidence. Missing SOC, configuration
+or tariffs produces an explicit unavailable reason. A stale SOC plan for an
+existing Session is also labelled preliminary in the returned result; the actuator
+still rejects new ON. Safety OFF and terminal cleanup precede optional preliminary
+tariff requests. Publication re-reads Session/AUTO state before each Logic write
+and stops if the context changed; an authorized active Session's plan is preserved.
+
+Preliminary Tibber requests use HomeyScript's node-fetch v2 native timeout: at most
+10 seconds for headers and 10 seconds for body consumption. Both phases share the
+remaining 60-second RuntimeLock lease budget, reserving 5 seconds for publication
+and lock release. An exhausted budget skips the request. Redirects and compression
+are disabled for these bounded requests; a dedicated HTTPS agent closes their
+sockets on completion or failure, and a timed-out body stream is destroyed. No
+detached planner promise can publish a late result. Timeout returns
+preliminaryPlan.available=false with a specific reason; Runtime's existing finally
+releases the owned lock. Canonical requests and Manual/actuator behavior are unchanged.
+
+Without fresh SOC and trustworthy connection evidence, desiredPlugState is false.
+An already powered Session with measured charging power may continue when the
+tariff decision still requests charging and no completion, expiry, disconnect or
+durable stop applies. This is reported as continuingExistingCharge=true with
+action=none and the actual plug state; it never issues a new ON. Preliminary tariff
+metadata remains shouldChargeNow=false and does not overwrite the confirmed plan
+merely to annotate its freshness.
+
+A terminal manual record, including BATTERY_FULL, describes that activation only.
+Fresh provider data alone never clears its durable block. After a trip and real
+reconnection, explicitly select Auto Mode with fresh SOC below target and fresh
+trustworthy connected/charging status. The watchdog can then establish a new
+automatic Session without the Connection Evidence Flow. USER_STOP likewise
+requires an explicit operator decision. All automatic ON paths require a valid
+AUTO grant matching the current stop token, even for IDLE manual history.
+
+If Mercedes does not supply fresh samples while parked, automatic re-entry is
+unavailable safely. Obtain a real provider update (for example through the vehicle
+or its app, if the integration forwards it), verify fresh SOC and connected status
+in Homey, then select Auto Mode. Refresh behavior is not guaranteed by this bundle.
+If fresh connection evidence remains unavailable, use explicit Manual Charging
+with its existing power observations and deadline, or wait for telemetry. Never
+rewrite Mercedes timestamps or trigger a synthetic connection event to bypass
+this boundary.
 
 The verified Mercedes mapping is `text_charging_status`, `onoff_charging`,
 `measure_battery`, `measure_charge_power`, and `onoff_precond`. `Charge break`

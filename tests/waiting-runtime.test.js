@@ -87,6 +87,7 @@ async function main() {
     const bundle = new AsyncFunction(
       'Homey',
       'fetch',
+      'https',
       'log',
       'Date',
       fs.readFileSync(
@@ -96,7 +97,7 @@ async function main() {
     );
     const loader = {
       executeFlow({ homey, fetch, log, now: at }) {
-        return bundle(homey, fetch, log, createFixedDate(at));
+        return bundle(homey, fetch, require('https'), log, createFixedDate(at));
       },
     };
     const before = make(new ScriptLoader(root));

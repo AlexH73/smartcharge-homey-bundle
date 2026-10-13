@@ -37,7 +37,7 @@
         },
         "events": [],
         "logic": { "ChargeConnectedAt": "null" },
-        "tibberCallsDelta": 0,
+        "tibberCallsDelta": 1,
         "plugCommandCount": 0
       }
     }

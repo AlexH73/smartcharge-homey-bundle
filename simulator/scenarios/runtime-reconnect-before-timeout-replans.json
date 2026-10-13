@@ -61,7 +61,7 @@
         "logic": {
           "SmartChargeDisconnectObservedAt": "2026-07-07T16:10:00.000Z"
         },
-        "tibberCallsDelta": 0
+        "tibberCallsDelta": 1
       }
     },
     {
@@ -109,6 +109,6 @@
       "SmartChargeDisconnectObservedAt": "null",
       "ChargeSlots": 3
     },
-    "tibberCalls": 2
+    "tibberCalls": 3
   }
 }

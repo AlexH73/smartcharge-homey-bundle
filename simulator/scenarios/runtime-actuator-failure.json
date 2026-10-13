@@ -30,6 +30,22 @@
       "expect": {
         "errorIncludes": "setCapabilityValue failed",
         "plugCommandCount": 0
+      },
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 70,
+                "lastUpdated": "2026-07-08T02:05:00+02:00"
+              },
+              "charging_status": {
+                "value": "Charge",
+                "lastUpdated": "2026-07-08T02:05:00+02:00"
+              }
+            }
+          }
+        }
       }
     }
   ],

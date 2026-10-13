@@ -66,7 +66,7 @@
           "ChargeConnectedAt": "2026-07-07 18:00:00",
           "SmartChargeDisconnectObservedAt": "2026-07-07T16:10:00.000Z"
         },
-        "tibberCallsDelta": 0
+        "tibberCallsDelta": 1
       }
     },
     {
@@ -83,7 +83,7 @@
           "SmartChargeSessionStatus": "disconnected",
           "SmartChargeDisconnectObservedAt": "null"
         },
-        "tibberCallsDelta": 0
+        "tibberCallsDelta": 1
       }
     },
     {
@@ -126,6 +126,6 @@
       "ChargeMinutes": 140,
       "ChargeSlots": 3
     },
-    "tibberCalls": 2
+    "tibberCalls": 4
   }
 }

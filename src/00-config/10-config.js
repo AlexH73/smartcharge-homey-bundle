@@ -44,6 +44,8 @@ const CONFIG = {
   runtimeDisconnectObservedAtVariableName: 'SmartChargeDisconnectObservedAt',
   runtimeConnectionEvidenceAtVariableName: 'SmartChargeConnectionEvidenceAt',
   runtimeControllerDefaultMode: 'shadow',
+  // node-fetch v2 applies this independently to headers and body consumption.
+  preliminaryTibberTimeoutMs: 10000,
 
   chargingPowerThresholdW: 500,
   idlePowerThresholdW: 50,

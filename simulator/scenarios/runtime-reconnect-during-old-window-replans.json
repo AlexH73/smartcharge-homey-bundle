@@ -66,7 +66,7 @@
         "logic": {
           "SmartChargeDisconnectObservedAt": "2026-07-08T00:20:00.000Z"
         },
-        "tibberCallsDelta": 0
+        "tibberCallsDelta": 1
       }
     },
     {
@@ -76,7 +76,10 @@
         "devices": {
           "mercedes": {
             "capabilitiesObj": {
-              "measure_battery": 42,
+              "measure_battery": {
+                "value": 42,
+                "lastUpdated": "2026-07-08T02:30:00+02:00"
+              },
               "text_charging_status": {
                 "value": "Charge",
                 "lastUpdated": "2026-07-08T00:30:00.000Z"
@@ -125,6 +128,6 @@
     },
     "plugOn": true,
     "plugCommandCount": 1,
-    "tibberCalls": 2
+    "tibberCalls": 3
   }
 }
