@@ -363,6 +363,111 @@ async function preliminaryTimeoutRegressions() {
     'PASS Preliminary native request/body timeout: OFF priority, cancellation, unavailable result, RuntimeLock release and next watchdog',
   );
 }
+async function nullSocRegressions() {
+  function charging() {
+    const r = make('BATTERY_FULL', null, now);
+    authorize(r);
+    r.homeyMock.setLogicValues({ SmartChargeShouldCharge: true });
+    r.homeyMock.setDeviceState('mercedes', {
+      capabilitiesObj: {
+        text_charging_status: { value: 'Charge break', lastUpdated: now },
+      },
+    });
+    r.homeyMock.setDeviceState('plug', {
+      capabilitiesObj: { onoff: true, measure_power: 2600 },
+    });
+    return r;
+  }
+  const r = charging();
+  const session = r.homeyMock.getLogicValue('ChargeConnectedAt');
+  const result = await run(r);
+  assert.equal(result.plannerShouldCharge, true);
+  assert.equal(result.desiredPlugState, false);
+  assert.equal(result.continuingExistingCharge, true);
+  assert.equal(result.actualPlugState, true);
+  assert.equal(result.action, 'none');
+  assert.equal(result.sessionActive, true);
+  assert.equal(result.preliminaryPlan.available, false);
+  assert.match(result.preliminaryPlan.reason, /Battery telemetry unavailable/);
+  assert.equal(r.homeyMock.getLogicValue('SmartChargeShouldCharge'), true);
+  assert.equal(r.homeyMock.getLogicValue('ChargeConnectedAt'), session);
+  assert.equal(r.homeyMock.devices.plug.commands.length, 0);
+  const recovered = await run(r, 'runtime-controller', fresh);
+  assert.equal(recovered.preliminaryPlan, null);
+  assert.equal(recovered.plannerShouldCharge, true);
+  assert.equal(recovered.action, 'none');
+  assert.equal(r.homeyMock.getLogicValue('ChargeConnectedAt'), session);
+  noOn(r);
+
+  const off = charging();
+  off.homeyMock.setDeviceState('plug', {
+    capabilitiesObj: { onoff: false, measure_power: 0 },
+  });
+  const blockedOn = await run(off);
+  assert.equal(blockedOn.desiredPlugState, false);
+  assert.equal(blockedOn.continuingExistingCharge, false);
+  assert.equal(blockedOn.action, 'none');
+  noOn(off);
+
+  for (const safetyCase of [
+    'user-stop',
+    'durable-block',
+    'no-grant',
+    'expired',
+    'waiting',
+    'disconnect',
+    'low-power',
+  ]) {
+    const stopped = charging();
+    if (safetyCase === 'user-stop') {
+      stopped.homeyMock.setLogicValues({
+        SmartChargeManualState: make('USER_STOP').homeyMock.getLogicValue(
+          'SmartChargeManualState',
+        ),
+      });
+    } else if (safetyCase === 'durable-block') {
+      stopped.homeyMock.setLogicValues({ SmartChargeAutoStartBlocked: true });
+    } else if (safetyCase === 'no-grant') {
+      stopped.homeyMock.setLogicValues({
+        SmartChargeManualState: JSON.stringify({
+          ...JSON.parse(DEFAULT_LOGIC_VARIABLES.SmartChargeManualState),
+          autoGrant: null,
+        }),
+      });
+    } else if (safetyCase === 'expired') {
+      stopped.homeyMock.setLogicValues({
+        ChargeConnectedAt: '2026-07-06 18:00:00',
+      });
+    } else if (safetyCase === 'waiting') {
+      stopped.homeyMock.setLogicValues({ SmartChargeShouldCharge: false });
+    } else {
+      stopped.homeyMock.setDeviceState('plug', {
+        capabilitiesObj: { measure_power: 0 },
+      });
+      if (safetyCase === 'disconnect')
+        stopped.homeyMock.setDeviceState('mercedes', {
+          capabilitiesObj: {
+            text_charging_status: { value: 'Unplugged', lastUpdated: now },
+          },
+        });
+    }
+    const denied = await run(stopped);
+    assert.equal(denied.action, 'switched_off', safetyCase);
+    assert.equal(denied.actualPlugState, false, safetyCase);
+    assert.equal(denied.continuingExistingCharge === true, false, safetyCase);
+    if (safetyCase === 'expired') {
+      assert.equal(denied.sessionActive, false);
+      assert.equal(
+        stopped.homeyMock.getLogicValue('SmartChargeSessionStatus'),
+        'expired',
+      );
+    }
+    noOn(stopped);
+  }
+  console.log(
+    'PASS Transient null SOC: preserve measured charging and Session, resume fresh planning, deny new ON and prioritize stop/expiry/disconnect/waiting',
+  );
+}
 async function main() {
   for (const reason of ['BATTERY_FULL', 'USER_STOP']) {
     const r = make(reason);
@@ -473,6 +578,7 @@ async function main() {
   noOn(changed);
   await reviewRegressions();
   await preliminaryTimeoutRegressions();
+  await nullSocRegressions();
   console.log(
     'PASS Automatic lifecycle: preliminary plans, missing inputs, no grant, stale SOC, USER_STOP, provider-only AUTO and pre-ON revalidation',
   );

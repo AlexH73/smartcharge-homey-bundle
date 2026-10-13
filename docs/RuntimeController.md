@@ -186,6 +186,11 @@ action=none and the actual plug state; it never issues a new ON. Preliminary tar
 metadata remains shouldChargeNow=false and does not overwrite the confirmed plan
 merely to annotate its freshness.
 
+A transient null SOC in an active Session retains the previous tariff decision
+for already measured charging only. The Session deadline and all safety stops
+still apply. Null SOC cannot authorize a new ON, even with a fresh capability
+timestamp; fresh SOC restores normal planning for the same Session.
+
 A terminal manual record, including BATTERY_FULL, describes that activation only.
 Fresh provider data alone never clears its durable block. After a trip and real
 reconnection, explicitly select Auto Mode with fresh SOC below target and fresh

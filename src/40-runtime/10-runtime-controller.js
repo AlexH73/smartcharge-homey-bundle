@@ -399,10 +399,20 @@ async function runAutomaticRuntimeController() {
     if (preliminaryPlan && snapshot.plannerDecision) {
       preliminaryPlan.reason = `Preliminary (${preliminaryPlan.batteryFreshness}, SOC age ${preliminaryPlan.batteryAgeMinutes ?? 'unknown'} min): ${preliminaryPlan.reason}; physical ON requires fresh evidence`;
     }
-    if (!snapshot.plannerDecision) snapshot.plannerShouldCharge = false;
+    if (!snapshot.plannerDecision) {
+      if (snapshot.sessionActive && snapshot.batteryPct === null) {
+        // A transient SOC gap preserves the previous tariff decision, never
+        // permission for a new ON. The Session deadline still applies.
+        snapshot.expiredSession =
+          getTargetDeparture(
+            parseDateOrFallback(snapshot.chargeConnectedAt, snapshot.now),
+          ) < snapshot.now;
+      } else snapshot.plannerShouldCharge = false;
+    }
     lifecycleProposal = proposedLifecycleAction(snapshot);
     let desired = deriveDesiredPlugState(snapshot);
     const freshOnEvidence =
+      snapshot.batteryPct !== null &&
       snapshot.batteryFreshness === TELEMETRY_FRESHNESS.FRESH &&
       hasTrustworthyConnectionEvidence(snapshot);
     const continuingExistingCharge =
