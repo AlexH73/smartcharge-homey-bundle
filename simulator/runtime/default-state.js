@@ -32,7 +32,9 @@ const DEFAULT_LOGIC_VARIABLES = Object.freeze({
     stopReason: null,
     error: null,
     activationStopToken: null,
-    autoGrant: null,
+    // Legacy AUTO scenarios start with operator permission; no-grant scenarios
+    // override this record explicitly. This is simulator data only.
+    autoGrant: { at: '2020-01-01T00:00:00Z', stopToken: 'null' },
   }),
   SmartChargeAutoStartBlocked: false,
   SmartChargeRuntimeLock: 'null',

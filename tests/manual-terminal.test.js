@@ -37,7 +37,7 @@ function make(initial) {
         devices: {
           mercedes: {
             capabilitiesObj: {
-              measure_battery: 20,
+              measure_battery: { value: 20, lastUpdated: at(0) },
               text_charging_status: {
                 value: 'Charge break',
                 lastUpdated: at(0),

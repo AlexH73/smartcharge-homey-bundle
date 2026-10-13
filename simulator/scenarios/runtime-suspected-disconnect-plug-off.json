@@ -89,7 +89,11 @@
             "capabilitiesObj": {
               "text_charging_status": {
                 "value": "Charge",
-                "lastUpdated": "2026-07-08T00:05:00.000Z"
+                "lastUpdated": "2026-07-08T02:05:00+02:00"
+              },
+              "measure_battery": {
+                "value": 70,
+                "lastUpdated": "2026-07-08T02:05:00+02:00"
               }
             }
           }

@@ -121,6 +121,7 @@ async function collectRuntimeSnapshot() {
     mercedes,
     CONFIG.vehicleChargingPowerCapabilityNames,
   );
+  const battery = readCapabilityDiagnostic(mercedes, ['measure_battery']);
   const connectionEvidence = selectConnectionEvidence(
     status.observedAt,
     connectionEvidenceAt,
@@ -140,6 +141,8 @@ async function collectRuntimeSnapshot() {
     batteryPct: runtimeNumberOrNull(
       getCapabilityValue(mercedes, 'measure_battery'),
     ),
+    batteryObservedAt: battery.observedAt,
+    batteryFreshness: evaluateTelemetryFreshness(battery.observedAt, now),
     targetBatteryPct: CONFIG.batteryFullPercentage,
     vehicleStatus: status.value,
     vehicleStatusCapability: status.name,
@@ -378,20 +381,56 @@ async function runAutomaticRuntimeController() {
       snapshot.plannerShouldCharge = snapshot.plannerDecision.shouldChargeNow;
       snapshot.expiredSession =
         snapshot.plannerDecision.terminalState === 'expired';
-    } else if (snapshot.batteryPct === null) {
-      snapshot.plannerDecision = {
-        skipped: true,
-        reason: 'Battery telemetry unavailable; preserving previous decision',
-        shouldChargeNow: snapshot.plannerShouldCharge,
-      };
+    }
+    let preliminaryPlan = snapshot.plannerDecision
+      ? snapshot.batteryFreshness === TELEMETRY_FRESHNESS.FRESH
+        ? null
+        : {
+            ...snapshot.plannerDecision,
+            preliminary: true,
+            shouldChargeNow: false,
+            batteryFreshness: snapshot.batteryFreshness,
+            batteryObservedAt: snapshot.batteryObservedAt,
+            batteryAgeMinutes: runtimeDateOrNull(snapshot.batteryObservedAt)
+              ? (snapshot.now - new Date(snapshot.batteryObservedAt)) / 60000
+              : null,
+          }
+      : null;
+    if (preliminaryPlan && snapshot.plannerDecision) {
+      preliminaryPlan.reason = `Preliminary (${preliminaryPlan.batteryFreshness}, SOC age ${preliminaryPlan.batteryAgeMinutes ?? 'unknown'} min): ${preliminaryPlan.reason}; physical ON requires fresh evidence`;
+    }
+    if (!snapshot.plannerDecision) {
+      if (snapshot.sessionActive && snapshot.batteryPct === null) {
+        // A transient SOC gap preserves the previous tariff decision, never
+        // permission for a new ON. The Session deadline still applies.
+        snapshot.expiredSession =
+          getTargetDeparture(
+            parseDateOrFallback(snapshot.chargeConnectedAt, snapshot.now),
+          ) < snapshot.now;
+      } else snapshot.plannerShouldCharge = false;
     }
     lifecycleProposal = proposedLifecycleAction(snapshot);
-    const desired = deriveDesiredPlugState(snapshot);
-    const action = await applyRuntimeActions(
-      snapshot,
-      desired.desiredPlugOn,
-      activeMode,
-    );
+    let desired = deriveDesiredPlugState(snapshot);
+    const freshOnEvidence =
+      snapshot.batteryPct !== null &&
+      snapshot.batteryFreshness === TELEMETRY_FRESHNESS.FRESH &&
+      hasTrustworthyConnectionEvidence(snapshot);
+    const continuingExistingCharge =
+      desired.desiredPlugOn &&
+      !freshOnEvidence &&
+      snapshot.plugOn &&
+      snapshot.plugPowerW >= CONFIG.chargingPowerThresholdW;
+    if (desired.desiredPlugOn && !freshOnEvidence) {
+      desired = {
+        desiredPlugOn: false,
+        reason: continuingExistingCharge
+          ? 'Fresh evidence required for ON; preserving existing charging'
+          : 'Fresh evidence required for automatic ON',
+      };
+    }
+    const action = continuingExistingCharge
+      ? 'none'
+      : await applyRuntimeActions(snapshot, desired.desiredPlugOn, activeMode);
     let lifecycleApplied = false;
     if (activeMode && evaluateCompletionEvidence(snapshot)) {
       lifecycleApplied = await resetRuntimeSession(
@@ -416,6 +455,10 @@ async function runAutomaticRuntimeController() {
         'disconnected',
       );
     }
+    // Physical safety reconciliation and terminal cleanup precede any optional
+    // tariff request, which may never resolve.
+    if (!snapshot.plannerDecision)
+      preliminaryPlan = await runPreliminaryPlanning(null, activeMode);
     const result = {
       ...(snapshot.plannerDecision || {}),
       ...(snapshot.plannerDecision || {}),
@@ -447,6 +490,8 @@ async function runAutomaticRuntimeController() {
       preconditioningRawValue: snapshot.preconditioningRawValue,
       preconditioningLastUpdated: snapshot.preconditioningObservedAt,
       runtimeDecisionReason: desired.reason,
+      preliminaryPlan,
+      continuingExistingCharge,
       proposedLifecycleAction: lifecycleProposal,
       action,
       plannerShouldCharge: snapshot.plannerShouldCharge,

@@ -34,7 +34,7 @@ async function readRuntimeSafety(now = new Date()) {
       ['STOPPING', 'ERROR', 'COMPLETED', 'STOPPED'].includes(state.status),
     ) && !grantValid;
   return {
-    blocked: blocked || terminalBlocked,
+    blocked: blocked || terminalBlocked || (!manual && !grantValid),
     manual,
     state,
     stopToken,
@@ -193,6 +193,26 @@ async function executeRuntimePlugCommand(
           runtimeOwnedLock
       )
         return 'on_blocked';
+      if (desiredOn && !state) {
+        const current = await collectRuntimeSnapshot();
+        const safety = await readRuntimeSafety();
+        if (
+          safety.blocked ||
+          safety.manual ||
+          !current.sessionActive ||
+          current.sessionId !==
+            (snapshot.chargeConnectedAt || snapshot.sessionId) ||
+          current.batteryFreshness !== TELEMETRY_FRESHNESS.FRESH ||
+          current.batteryPct === null ||
+          current.batteryPct < 0 ||
+          current.batteryPct >= current.targetBatteryPct ||
+          !hasTrustworthyConnectionEvidence(current) ||
+          (runtimeOwnedLock &&
+            (await getVariableValue(CONFIG.runtimeLockVariableName)) !==
+              runtimeOwnedLock)
+        )
+          return 'on_blocked';
+      }
       if (desiredOn) await setDeviceOn(snapshot.plug);
       else await setDeviceOff(snapshot.plug);
     } catch (error) {
@@ -602,6 +622,7 @@ async function runRuntimeController() {
       return runManualRuntime(safety, false);
     if (safety.blocked)
       return {
+        preliminaryPlan: await runPreliminaryPlanning(null, false),
         desiredPlugState: false,
         action: 'none',
         autoStartBlocked: true,
@@ -657,7 +678,9 @@ async function runRuntimeController() {
         false,
         safety.state.stopReason || 'AUTOMATIC_BLOCKED',
       );
+      const preliminaryPlan = await runPreliminaryPlanning(null, true);
       return {
+        preliminaryPlan,
         runtimeState: 'STOPPED',
         desiredPlugState: false,
         actualPlugState: getCapabilityValue(snapshot.plug, 'onoff'),

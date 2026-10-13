@@ -87,6 +87,6 @@
   ],
   "expect": {
     "logicUpdateCounts": { "SmartChargeAcceptedStrategy": 1 },
-    "tibberCalls": 2
+    "tibberCalls": 3
   }
 }

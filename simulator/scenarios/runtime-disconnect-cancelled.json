@@ -32,7 +32,8 @@
         "result": {
           "vehicleTelemetryHealth": "CONTRADICTED",
           "sessionActive": true,
-          "desiredPlugState": true,
+          "desiredPlugState": false,
+          "continuingExistingCharge": true,
           "action": "none"
         },
         "logic": {

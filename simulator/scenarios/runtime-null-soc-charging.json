@@ -1,0 +1,80 @@
+{
+  "name": "runtime-null-soc-charging",
+  "description": "A transient null SOC preserves an authorized measured charge and its Session without permitting new ON; fresh SOC resumes normal planning.",
+  "now": "2026-07-07T20:15:00+02:00",
+  "priceAnchor": "2026-07-07T18:00:00+02:00",
+  "fixture": "multi-window-separated",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "SmartChargeSessionStatus": "active",
+      "SmartChargeShouldCharge": true,
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": {
+            "value": null,
+            "lastUpdated": "2026-07-07T20:15:00+02:00"
+          },
+          "text_charging_status": {
+            "value": "Charge break",
+            "lastUpdated": "2026-07-07T20:15:00+02:00"
+          }
+        }
+      },
+      "plug": { "capabilitiesObj": { "onoff": true, "measure_power": 2600 } }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "result": {
+          "plannerShouldCharge": true,
+          "desiredPlugState": false,
+          "actualPlugState": true,
+          "continuingExistingCharge": true,
+          "action": "none",
+          "sessionActive": true
+        },
+        "logic": {
+          "ChargeConnectedAt": "2026-07-07 18:00:00",
+          "SmartChargeShouldCharge": true
+        },
+        "events": [],
+        "tibberCallsDelta": 0,
+        "plugCommandCount": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 20,
+                "lastUpdated": "2026-07-07T20:15:00+02:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "preliminaryPlan": null,
+          "plannerShouldCharge": true,
+          "sessionActive": true,
+          "actualPlugState": true,
+          "action": "none"
+        },
+        "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
+        "tibberCallsDelta": 1,
+        "plugCommandCount": 0
+      }
+    }
+  ],
+  "expect": { "plugOn": true, "plugCommandCount": 0 }
+}

@@ -35,7 +35,8 @@
         "result": {
           "runtimeState": "DEGRADED",
           "vehicleTelemetryHealth": "CONTRADICTED",
-          "desiredPlugState": true,
+          "desiredPlugState": false,
+          "continuingExistingCharge": true,
           "action": "none"
         },
         "plugCommandCount": 0

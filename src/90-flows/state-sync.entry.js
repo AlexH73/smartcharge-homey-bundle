@@ -68,7 +68,7 @@ async function main() {
         reason = 'State sync skipped plug on: battery is full';
       } else {
         action = await executeRuntimePlugCommand(
-          { plug, batteryPct: battery },
+          { plug, batteryPct: battery, sessionId: connectedAtRaw },
           true,
           'AUTOMATIC_RECONCILIATION',
         );

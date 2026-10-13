@@ -6,8 +6,16 @@
   "fixture": "shadow-current-horizon",
   "initial": {
     "missingLogicVariables": ["SmartChargeAcceptedStrategy"],
-    "logic": { "ChargeConnectedAt": "2026-07-07 18:00:00" },
-    "devices": { "mercedes": { "capabilitiesObj": { "measure_battery": 80 } } }
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 80
+        }
+      }
+    }
   },
   "steps": [
     {
@@ -19,6 +27,22 @@
           "persistenceStatus": "READ_FAILED"
         },
         "plugOn": true
+      },
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 80,
+                "lastUpdated": "2026-07-07T18:00:00+02:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-07-07T18:00:00+02:00"
+              }
+            }
+          }
+        }
       }
     }
   ]
