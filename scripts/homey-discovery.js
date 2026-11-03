@@ -189,6 +189,11 @@ async function inventory(get) {
     schemaVersion: 1,
     recordedAt: new Date().toISOString(),
     homeyScriptVersion: app.version,
+    homeyScriptApp: {
+      enabled: app.enabled,
+      crashed: app.crashed,
+      state: app.state,
+    },
     origin: get.origin || null,
     scripts,
     system,
@@ -206,6 +211,10 @@ async function inventory(get) {
         {
           id,
           name: device.name,
+          driverId: device.driverId,
+          available: device.available,
+          warningMessage: device.warningMessage,
+          lastSeenAt: device.lastSeenAt,
           capabilitiesObj: device.capabilitiesObj,
         },
       ]),

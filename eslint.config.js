@@ -102,6 +102,7 @@ const sharedBundleGlobals = {
   runtimeNumberOrNull: 'readonly',
   runtimeDateOrNull: 'readonly',
   readCapabilityDiagnostic: 'readonly',
+  readVehicleCapabilityDiagnostic: 'readonly',
   collectRuntimeSnapshot: 'readonly',
   runAutomaticRuntimeController: 'readonly',
   executeRuntimePlugCommand: 'readonly',

@@ -62,6 +62,22 @@ clear runtime lease and cached plug OFF, and validating fresh trustworthy
 vehicle connection evidence plus fresh SOC below 100 under the existing
 30-minute policy. Stale vehicle power cannot create an automatic session.
 
+Automatic SOC and connection-status checks also accept a fresh `lastSeenAt`
+heartbeat from the installed `com.mercedes.mbapi:mercedes-vehicle` integration
+when the device is available, has no warning, and the capability has a nonempty
+value and a valid, non-future change timestamp. This prevents unchanged parked-car
+values being rejected solely because they last changed hours ago. Unknown
+providers, missing/future/stale heartbeats and unavailable/warning devices do not
+receive this fallback. Manual SOC completion and plug power sampling continue to
+use their per-capability timestamps.
+
+Diagnostics distinguish `device_last_seen` from `capability_timestamp`, preserving
+both the original change timestamp and the device observation timestamp. A device
+heartbeat establishes integration responsiveness, not an independent measurement
+of every retained attribute. A partial update may leave other values cached; this
+depends on the Mercedes integration's data delivery. See the
+[Homey device heartbeat contract](https://apps-sdk-v3.developer.homey.app/Device.html#setLastSeenAt).
+
 The existing manual JSON adds `activationStopToken` and `autoGrant` (UTC `at`
 and matching `stopToken`); no additional Logic variable is required. A grant
 belongs to that saved record and is invalidated by a new activation or stop.

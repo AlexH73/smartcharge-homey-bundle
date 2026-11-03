@@ -8,7 +8,7 @@
   <sub>Historical illustration. Its “19 scenarios”, “Fully Tested” and “guaranteed” labels are not current validation or hardware safety claims. Current simulator coverage is 94 scenarios; supervised operational acceptance is pending.</sub>
 </p>
 
-[![SmartCharge](https://img.shields.io/badge/SmartCharge-0.6.5-blue)](docs/Release-0.6.5.md)
+[![SmartCharge](https://img.shields.io/badge/SmartCharge-0.6.7-blue)](docs/Release-0.6.7.md)
 [![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![HomeyScript](https://img.shields.io/badge/HomeyScript-runtime-00C7B7)](https://homey.app/en-us/app/com.athom.homeyscript/HomeyScript/)
 [![Tibber](https://img.shields.io/badge/Tibber-price%20API-FF5A5F)](https://developer.tibber.com/)
@@ -31,10 +31,12 @@ or available vehicle telemetry to start or stop.
 
 ## Release status
 
-| Release            | Status                                    | Details                                                                                                                             |
-| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **0.6.5+build.18** | Prepared corrective release; not deployed | Actuator correction and release metadata contract merged through PR #1. [Update procedure](docs/Release-0.6.5.md).                  |
-| **0.6.4+build.17** | Installed baseline                        | All twelve bundles installed in one controlled Homey installation and verified by readback. [Release notes](docs/Release-0.6.4.md). |
+| Release            | Status                                                 | Details                                                                                    |
+| ------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| **0.6.7+build.20** | Installed; automatic Session and waiting plan verified | Parked-vehicle heartbeat correction. [Recovery status](docs/Release-0.6.7.md).             |
+| **0.6.6+build.19** | Superseded recovery installation                       | [Release notes](docs/Release-0.6.6.md).                                                    |
+| **0.6.5+build.18** | Previous installed baseline                            | Actuator correction and release metadata contract. [Release notes](docs/Release-0.6.5.md). |
+| **0.6.4+build.17** | Historical installation                                | [Release notes](docs/Release-0.6.4.md).                                                    |
 
 Code installation does not establish unattended charging readiness. Supervised
 operational acceptance is still pending. The private GitHub deployment

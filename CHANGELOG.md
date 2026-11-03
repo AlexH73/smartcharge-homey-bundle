@@ -5,6 +5,44 @@ All notable SmartCharge Homey Bundle changes should be documented here.
 The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 `v1.0.0`.
 
+## 0.6.7 - 2026-11-03
+
+Installed **0.6.7+build.20**, with all twelve scripts verified by SHA-256 readback.
+Explicit AUTO created a real Session and the runtime entered its waiting plan.
+Scheduled physical charging remains unverified. See [recovery status](docs/Release-0.6.7.md).
+
+### Fixed
+
+- Automatic SOC/connection checks distinguish unchanged capability values from
+  an unresponsive Mercedes integration. A fresh lastSeenAt from the available,
+  warning-free Mercedes device can support retained nonempty SOC/status values.
+  Original capability timestamps remain visible separately in diagnostics.
+- Reject missing, stale or future heartbeat timestamps, unknown providers and
+  unavailable/warning devices as heartbeat evidence. Manual power/SOC confirmation
+  still uses the original per-capability timestamps.
+- Add a parked-vehicle AUTO regression and heartbeat boundary/failure cases.
+
+## 0.6.6 - 2026-11-03
+
+Local recovery release **0.6.6+build.19** from merged automatic-lifecycle changes on
+develop. All twelve scripts were installed and verified by SHA-256 readback on
+2026-11-03. Automatic Session creation and hardware acceptance remain pending
+fresh Mercedes telemetry. See [recovery status](docs/Release-0.6.6.md).
+
+### Fixed
+
+- Calculate preliminary tariff plans while automatic charging is blocked, without
+  granting permission, creating a Session or energizing the plug.
+- Require explicit AUTO authorization and fresh vehicle evidence for a new ON;
+  preserve an existing charging Session during transient missing SOC.
+- Bound Tibber requests and preserve safety OFF handling during planning failures.
+
+### Changed
+
+- Include controlled-maintenance deployment checks with explicit physical isolation
+  and operator evidence; retain strict maintenance as the default.
+- Rebuild all twelve scripts together; preserve existing Script IDs and API modes.
+
 ## 0.6.5 - 2026-10-12
 
 Corrective release **0.6.5+build.18**, prepared from merged PR #1. All twelve

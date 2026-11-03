@@ -792,7 +792,7 @@ async function requestManualModeSafely(action) {
       if (getCapabilityValue(snapshot.plug, 'onoff') !== false)
         throw new Error('Auto Mode requires verified OFF');
     }
-    const battery = readCapabilityDiagnostic(snapshot.mercedes, [
+    const battery = readVehicleCapabilityDiagnostic(snapshot.mercedes, [
       'measure_battery',
     ]);
     if (

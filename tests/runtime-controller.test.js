@@ -8,6 +8,8 @@ const context = vm.createContext({});
 for (const file of [
   'src/00-config/10-config.js',
   'src/10-core/runtime/10-runtime-model.js',
+  'src/20-adapters/20-homey-devices.js',
+  'src/40-runtime/10-runtime-controller.js',
 ]) {
   vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, {
     filename: file,
@@ -15,6 +17,49 @@ for (const file of [
 }
 
 const call = (expression) => vm.runInContext(expression, context);
+
+const observationNow = '2026-11-03T19:00:00Z';
+const parkedVehicle = {
+  driverId: 'homey:app:com.mercedes.mbapi:mercedes-vehicle',
+  available: true,
+  warningMessage: null,
+  lastSeenAt: observationNow,
+  capabilitiesObj: {
+    measure_battery: { value: 23, lastUpdated: '2026-11-03T16:00:00Z' },
+  },
+};
+const observe = (device) =>
+  call(`readVehicleCapabilityDiagnostic(${JSON.stringify(device)},
+    ['measure_battery'], new Date('${observationNow}'))`);
+assert.equal(observe(parkedVehicle).source, 'device_last_seen');
+assert.equal(observe(parkedVehicle).observedAt, observationNow);
+assert.equal(observe(parkedVehicle).lastChangedAt, '2026-11-03T16:00:00Z');
+assert.equal(
+  observe({ ...parkedVehicle, lastSeenAt: '2026-11-03T18:30:00Z' }).source,
+  'device_last_seen',
+);
+for (const patch of [
+  { lastSeenAt: null },
+  { lastSeenAt: 'invalid' },
+  { lastSeenAt: '2026-11-03T16:00:00Z' },
+  { lastSeenAt: '2026-11-03T18:29:59.999Z' },
+  { lastSeenAt: '2026-11-03T19:01:00Z' },
+  { available: false },
+  { warningMessage: 'Vehicle updates unavailable' },
+  { driverId: 'another-provider' },
+  { capabilitiesObj: { measure_battery: { value: null } } },
+  { capabilitiesObj: { measure_battery: { value: 23 } } },
+  {
+    capabilitiesObj: {
+      measure_battery: { value: 23, lastUpdated: '2026-11-03T19:01:00Z' },
+    },
+  },
+]) {
+  assert.equal(
+    observe({ ...parkedVehicle, ...patch }).source,
+    'capability_timestamp',
+  );
+}
 
 assert.equal(
   call(`evaluateTelemetryHealth({

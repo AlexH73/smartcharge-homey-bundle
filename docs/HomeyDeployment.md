@@ -1,8 +1,10 @@
 # Controlled HomeyScript deployment
 
 SmartCharge deployment tooling supports the official HomeyScript **3.6.3** custom API.
-The prepared [0.6.5+build.18 update](Release-0.6.5.md) has not been deployed;
-the installed baseline remains 0.6.4+build.17.
+The installed baseline is [0.6.7+build.20](Release-0.6.7.md), verified by SHA-256
+readback on 2026-11-03. The previous installed set was 0.6.5+build.18. Automatic
+Session creation and waiting-plan reconciliation have been verified. Physical
+charging at the scheduled window remains unverified.
 The client reads installed scripts and updates existing IDs using only
 `PUT /api/app/com.athom.homeyscript/script/:id` with `{code}`. Names and API
 compatibility mode 1/2 are preserved. Create, delete and run endpoints are not used.
@@ -10,12 +12,12 @@ Other installed HomeyScript versions stop the operation before writes.
 
 ## Implementation and operational status
 
-Status recorded 2026-10-11; installation is distinct from charging acceptance.
+Status updated 2026-11-03; installation is distinct from charging acceptance.
 
 | Component | Status | Evidence/boundary |
 | --- | --- | --- |
 | Local client, release validation, provenance checks, Flow audit | IMPLEMENTED / TESTED LOCALLY | Offline regression suites; no exhaustive external-writer detection. |
-| Twelve 0.6.4+build.17 bundles from release commit `5fcff0e` | DEPLOYED | One controlled installation with per-PUT/full-set hashes, preserved IDs/names/modes/Flow references and SmartCharge Logic; Flows left disabled. |
+| Twelve 0.6.7+build.20 bundles based on develop `5b29b00` plus heartbeat correction | DEPLOYED | Local working-tree installation with per-PUT/full-set hashes and preserved IDs/names/modes/Logic. Runtime/manual controls restored; Connection Evidence repaired to use the real connector event. |
 | Operational charging / hardware acceptance | PLANNED | Separate supervised tests; installation is not unattended readiness. |
 | Public CI/release workflows | IMPLEMENTED / VALIDATED LOCALLY | Definitions/artifact tests exist; branch not yet pushed or checked by GitHub Actions. No GitHub Release published for this work. |
 | Private repository, Windows runner and Environment approval | PLANNED | Allowlisted scaffold/template only; repository not created, end-to-end deployment not tested. |
@@ -150,6 +152,51 @@ The CLI does not fill operator confirmations. Point `HOMEY_MAINTENANCE_FILE` to
 your privately completed template before preflight. Renew confirmations if older
 than 15 minutes or if live guards/state change; elapsed time is not consent.
 The API cannot prove pending executions drained or external writers stopped.
+
+### Strict and controlled maintenance
+
+`maintenanceMode` defaults to `strict` for existing proofs. Strict mode still
+requires `pendingExecutionsDrained=true` and `externalWritersQuiesced=true`, based
+on truthful operator evidence. Unknown modes fail closed.
+
+`controlled-maintenance` is a separate policy for installations where complete
+execution/device-command drain cannot be proved. It must explicitly retain
+`pendingExecutionsDrained=false`. It requires all of these operator attestations:
+
+| Field | Required evidence |
+| --- | --- |
+| `independentStopVerified` | Independently verified physical OFF. |
+| `physicalIsolationVerified` | Charging outlet supply independently disconnected and kept isolated throughout installation or rollback. Software OFF is insufficient. |
+| `chargingInactiveVerified` | No active charging, independently confirmed. |
+| `emergencyPowerCutAvailable` | An operator can independently remove power. |
+| `knownWritersStopped` | All known external actuator writers and manual script callers stopped. |
+| `noKnownUnresolvedCommands` | No known unfinished command with an unknown outcome. A known uncertain PUT cannot be relabeled as accepted residual risk. |
+| `unknownCommandsRiskAccepted` | Explicit acceptance of residual risk from unknown old device commands. This is not proof of drain. |
+| `homeyScriptRestartVerified` | Supported HomeyScript App restart and successful recovery verified. |
+
+Record actual `homeyScriptRestartedAt` and `homeyScriptRecoveredAt` timestamps in
+chronological order, before `confirmedAt`. The confirmation itself must be less
+than 15 minutes old. Current inventory must show HomeyScript 3.6.3 enabled,
+running and not crashed. A recovered App does not prove cancellation of commands
+already accepted by Homey, device drivers or delayed Flow actions. Reconfirm
+conditions after any intervening scripts, writers or maintenance state changes.
+The CLI never fills physical confirmations or accepts risk on the operator's behalf.
+
+Both modes require all candidate/legacy writer Flows disabled, API plug OFF,
+AutoStartBlocked=true, absent AUTO grant, empty RuntimeLock and inactive manual
+lifecycle. Artifact approval, exact identity/hash checks, backup, per-PUT live
+guards, readback and rollback identity checks remain unchanged. Preflight and the
+private write journal identify controlled maintenance without claiming proven
+drain. Physical isolation prevents outlet energization while isolated; tooling
+does not guarantee cancellation of unknown commands after power is restored.
+
+Keep isolation and maintenance after deployment. Restoring selected control Flows
+requires separate authorization and a verified installation, block=true and no
+AUTO grant. Leave Connection Evidence cron and legacy writers disabled. Never run
+AUTO MODE or restore physical power automatically. Supervised power restoration
+and AUTO recovery require a separate operator decision and fresh evidence.
+Rollback also uses the selected maintenance mode and requires renewed confirmations;
+it is not automatic and cannot resolve an unknown command outcome by accepting risk.
 
 After separate explicit authorization, set `SMARTCHARGE_WRITE_CONFIRMATION` to
 `INSTALL SmartCharge 0.6.4+build.17` and run:

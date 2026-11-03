@@ -32,10 +32,26 @@ const proof = () => ({
   pendingExecutionsDrained: true,
   externalWritersQuiesced: true,
 });
+const controlledProof = () => ({
+  ...proof(),
+  maintenanceMode: 'controlled-maintenance',
+  pendingExecutionsDrained: false,
+  externalWritersQuiesced: false,
+  physicalIsolationVerified: true,
+  chargingInactiveVerified: true,
+  emergencyPowerCutAvailable: true,
+  knownWritersStopped: true,
+  noKnownUnresolvedCommands: true,
+  unknownCommandsRiskAccepted: true,
+  homeyScriptRestartVerified: true,
+  homeyScriptRestartedAt: new Date(Date.now() - 2000).toISOString(),
+  homeyScriptRecoveredAt: new Date(Date.now() - 1000).toISOString(),
+});
 
 function mockApi(options = {}) {
   const state = {
     appVersion: '3.6.3',
+    appStatus: { enabled: true, crashed: false, state: 'running' },
     scripts: Object.fromEntries(
       targets().map((target, i) => [
         `id-${i}`,
@@ -112,7 +128,7 @@ function mockApi(options = {}) {
     assert.equal(request.method, 'GET');
     let result;
     if (endpoint === '/api/manager/apps/app/com.athom.homeyscript')
-      result = { version: state.appVersion };
+      result = { version: state.appVersion, ...state.appStatus };
     else if (endpoint === scriptPath)
       result = Object.fromEntries(
         Object.entries(state.scripts).map(([id, script]) => [
@@ -157,6 +173,230 @@ async function main() {
       ),
     };
     const backupRoot = path.join(temporary, 'backup');
+    await test('strict remains default and refuses unconfirmed drain; unknown mode fails closed', async () => {
+      for (const maintenanceMode of [undefined, 'strict', 'unreviewed']) {
+        const { state, client } = mockApi();
+        await assert.rejects(
+          deploy(
+            artifact,
+            backupRoot,
+            client,
+            {
+              ...controlledProof(),
+              maintenanceMode,
+            },
+            confirmation,
+          ),
+        );
+        assert.equal(state.writes.length, 0);
+      }
+    });
+    await test('controlled maintenance requires every independent confirmation and valid restart evidence', async () => {
+      for (const field of [
+        'independentStopVerified',
+        'physicalIsolationVerified',
+        'chargingInactiveVerified',
+        'emergencyPowerCutAvailable',
+        'knownWritersStopped',
+        'noKnownUnresolvedCommands',
+        'unknownCommandsRiskAccepted',
+        'homeyScriptRestartVerified',
+        'homeyScriptRestartedAt',
+        'homeyScriptRecoveredAt',
+        'pendingExecutionsDrained',
+        'confirmedAt',
+      ]) {
+        const { state, client } = mockApi();
+        const approved = controlledProof();
+        approved[field] =
+          field === 'pendingExecutionsDrained'
+            ? true
+            : field === 'confirmedAt'
+              ? new Date(Date.now() - 16 * 60 * 1000).toISOString()
+              : false;
+        await assert.rejects(
+          deploy(artifact, backupRoot, client, approved, confirmation),
+        );
+        assert.equal(state.writes.length, 0, field);
+      }
+      for (const change of [
+        { state: 'starting' },
+        { enabled: false },
+        { crashed: true },
+      ]) {
+        const { state, client } = mockApi();
+        Object.assign(state.appStatus, change);
+        await assert.rejects(
+          deploy(artifact, backupRoot, client, controlledProof(), confirmation),
+        );
+        assert.equal(state.writes.length, 0);
+      }
+      for (const evidence of [
+        {
+          homeyScriptRestartedAt: new Date(Date.now() + 1000).toISOString(),
+        },
+        { homeyScriptRecoveredAt: new Date(Date.now() + 1000).toISOString() },
+      ]) {
+        const { state, client } = mockApi();
+        await assert.rejects(
+          deploy(
+            artifact,
+            backupRoot,
+            client,
+            { ...controlledProof(), ...evidence },
+            confirmation,
+          ),
+        );
+        assert.equal(state.writes.length, 0);
+      }
+    });
+    await test('controlled maintenance preserves Flow, block, grant, identity and hash guards', async () => {
+      for (const change of [
+        (state) => {
+          state.flows.writer = {
+            id: 'writer',
+            enabled: true,
+            actions: [
+              {
+                id: 'homey:app:com.athom.homeyscript:run',
+                args: { script: { id: 'id-1' } },
+              },
+            ],
+          };
+        },
+        (state) => {
+          state.logic.SmartChargeManualState.value = JSON.stringify({
+            status: 'STOPPED',
+            autoGrant: { stopToken: 'stop' },
+          });
+        },
+        (state) => {
+          state.logic.SmartChargeAutoStartBlocked.value = false;
+        },
+        (state) => {
+          state.logic.SmartChargeRuntimeLock.value = 'active';
+        },
+        (state) => {
+          state.logic.SmartChargeManualMode.value = true;
+        },
+        (state) => {
+          state.devices['plug-1'].capabilitiesObj.onoff.value = true;
+        },
+      ]) {
+        const { state, client } = mockApi();
+        change(state);
+        await assert.rejects(
+          deploy(artifact, backupRoot, client, controlledProof(), confirmation),
+        );
+        assert.equal(state.writes.length, 0);
+      }
+      for (const field of ['id', 'currentSha256']) {
+        const { state, client } = mockApi();
+        const scriptSelection = Object.fromEntries(
+          targets().map((target, i) => {
+            const script = state.scripts[`id-${i}`];
+            return [
+              target.file,
+              {
+                id: script.id,
+                name: script.name,
+                apiCompatibilityVersion: script.version,
+                currentSha256: sha256(Buffer.from(script.code)),
+              },
+            ];
+          }),
+        );
+        scriptSelection[targets()[0].file][field] =
+          field === 'id' ? 'unknown' : 'a'.repeat(64);
+        await assert.rejects(
+          deploy(
+            artifact,
+            backupRoot,
+            client,
+            { ...controlledProof(), scriptSelection },
+            confirmation,
+          ),
+        );
+        assert.equal(state.writes.length, 0);
+      }
+    });
+    await test('controlled maintenance preflight reports unproven drain and rechecks before PUT', async () => {
+      const { state, client } = mockApi();
+      const approved = controlledProof();
+      const result = await preflight(artifact, backupRoot, client, approved);
+      assert.equal(result.status, 'PREFLIGHT_READY_NO_PUT');
+      assert.equal(result.maintenanceMode, 'controlled-maintenance');
+      assert.match(result.executionEvidence, /NOT proven/);
+      assert.equal(state.writes.length, 0);
+      state.logic.SmartChargeAutoStartBlocked.value = false;
+      await assert.rejects(
+        deploy(artifact, backupRoot, client, approved, confirmation),
+      );
+      assert.equal(state.writes.length, 0);
+    });
+    await test('controlled install preserves old duplicate and never issues device commands or automatic rollback', async () => {
+      const { state, client } = mockApi();
+      const debug = targets().findIndex((t) => t.target === 'stability-debug');
+      state.scripts.oldDebug = {
+        ...state.scripts[`id-${debug}`],
+        id: 'oldDebug',
+        code: '// old debug\n',
+      };
+      const old = clone(state.scripts.oldDebug);
+      const scriptSelection = Object.fromEntries(
+        targets().map((target, i) => {
+          const script = state.scripts[`id-${i}`];
+          return [
+            target.file,
+            {
+              id: script.id,
+              name: script.name,
+              apiCompatibilityVersion: script.version,
+              currentSha256: sha256(Buffer.from(script.code)),
+            },
+          ];
+        }),
+      );
+      const approved = { ...controlledProof(), scriptSelection };
+      const result = await deploy(
+        artifact,
+        backupRoot,
+        client,
+        approved,
+        confirmation,
+      );
+      assert.equal(result.status, 'VERIFIED');
+      assert.deepEqual(state.scripts.oldDebug, old);
+      assert.equal(state.writes.includes('oldDebug'), false);
+      assert.ok(
+        state.requests.every(
+          (r) =>
+            r.method === 'GET' ||
+            (r.method === 'PUT' && r.endpoint.startsWith(scriptPath + '/')),
+        ),
+      );
+      await rollback(
+        result.backupDir,
+        backupRoot,
+        client,
+        approved,
+        rollbackConfirmation,
+      );
+      assert.deepEqual(state.scripts.oldDebug, old);
+      const failed = mockApi({ failAt: 2, applyBeforeTimeout: true });
+      await assert.rejects(
+        deploy(
+          artifact,
+          backupRoot,
+          failed.client,
+          controlledProof(),
+          confirmation,
+        ),
+        /no automatic retry or rollback/,
+      );
+      assert.equal(failed.state.writes.length, 2);
+      assert.ok(failed.state.scripts['id-0'].code.includes(manifest.version));
+    });
     await test('explicit pinned selection resolves duplicate name without touching old script; readback and rollback preserve both IDs', async () => {
       const { state, client } = mockApi();
       const debug = targets().findIndex(

@@ -469,6 +469,34 @@ async function nullSocRegressions() {
   );
 }
 async function main() {
+  // A stationary car can keep reporting unchanged SOC/status. Homey retains
+  // their change timestamps while updating the responding device's heartbeat.
+  const parked = make('BATTERY_FULL', 23, old);
+  const parkedDevice = parked.homeyMock.devices.mercedes;
+  Object.assign(parkedDevice, {
+    driverId: 'homey:app:com.mercedes.mbapi:mercedes-vehicle',
+    available: true,
+    warningMessage: null,
+    lastSeenAt: now,
+  });
+  parked.homeyMock.setDeviceState('mercedes', {
+    capabilitiesObj: {
+      text_charging_status: { value: 'Charge break', lastUpdated: old },
+    },
+  });
+  const parkedResult = await run(parked, 'auto-mode');
+  assert.equal(parkedResult.sessionActive, true);
+  assert.equal(parkedResult.action, 'switched_on');
+  assert.equal(parkedDevice.capabilitiesObj.measure_battery.lastUpdated, old);
+  parked.homeyMock.setDeviceState('plug', {
+    capabilitiesObj: { onoff: false, measure_power: 0 },
+  });
+  parkedDevice.lastSeenAt = old;
+  const unresponsive = await run(parked);
+  assert.equal(unresponsive.desiredPlugState, false);
+  assert.equal(unresponsive.action, 'none');
+  assert.equal(parked.homeyMock.devices.plug.commands.length, 1);
+
   for (const reason of ['BATTERY_FULL', 'USER_STOP']) {
     const r = make(reason);
     const saved = r.homeyMock.getLogicValue('SmartChargeManualState');

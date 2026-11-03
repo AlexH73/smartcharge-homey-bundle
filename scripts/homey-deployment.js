@@ -127,16 +127,56 @@ function safeMaintenance(snapshot, proof) {
     true,
     'Independent stop must be verified by operator',
   );
-  assert.equal(
-    proof.pendingExecutionsDrained,
-    true,
-    'Operator must drain pending/in-flight executions',
+  const mode = proof.maintenanceMode ?? 'strict';
+  assert.ok(
+    ['strict', 'controlled-maintenance'].includes(mode),
+    'Unknown maintenance mode',
   );
-  assert.equal(
-    proof.externalWritersQuiesced,
-    true,
-    'Operator must inspect/quiesce external Apps and manual executions',
-  );
+  if (mode === 'strict') {
+    assert.equal(
+      proof.pendingExecutionsDrained,
+      true,
+      'Operator must drain pending/in-flight executions',
+    );
+    assert.equal(
+      proof.externalWritersQuiesced,
+      true,
+      'Operator must inspect/quiesce external Apps and manual executions',
+    );
+  } else {
+    assert.equal(
+      proof.pendingExecutionsDrained,
+      false,
+      'Controlled maintenance must not claim execution drain',
+    );
+    for (const field of [
+      'physicalIsolationVerified',
+      'chargingInactiveVerified',
+      'emergencyPowerCutAvailable',
+      'knownWritersStopped',
+      'noKnownUnresolvedCommands',
+      'unknownCommandsRiskAccepted',
+      'homeyScriptRestartVerified',
+    ])
+      assert.equal(
+        proof[field],
+        true,
+        'Operator confirmation required: ' + field,
+      );
+    const restartedAt = Date.parse(proof.homeyScriptRestartedAt);
+    const recoveredAt = Date.parse(proof.homeyScriptRecoveredAt);
+    const confirmedAt = Date.parse(proof.confirmedAt);
+    assert.ok(
+      Number.isFinite(restartedAt) &&
+        Number.isFinite(recoveredAt) &&
+        restartedAt <= recoveredAt &&
+        recoveredAt <= confirmedAt,
+      'Restart and recovery evidence must precede operator confirmation',
+    );
+    assert.equal(snapshot.homeyScriptApp?.enabled, true);
+    assert.equal(snapshot.homeyScriptApp?.crashed, false);
+    assert.equal(snapshot.homeyScriptApp?.state, 'running');
+  }
   const audit = auditFlows(snapshot, proof.plugId);
   assert.equal(
     audit.enabledMaintenanceFlows.length,
@@ -260,6 +300,10 @@ async function writeBatch(
   const journal = {
     schemaVersion: 1,
     mode,
+    maintenanceMode: proof.maintenanceMode ?? 'strict',
+    executionDrainClaimed: proof.pendingExecutionsDrained === true,
+    physicalIsolationVerified: proof.physicalIsolationVerified === true,
+    unknownCommandsRiskAccepted: proof.unknownCommandsRiskAccepted === true,
     origin: client.origin,
     snapshotSha256: sha256(
       fs.readFileSync(path.join(backupDir, 'snapshot.json')),
@@ -425,7 +469,10 @@ async function preflight(directory, backupRoot, client, proof) {
     enabledCandidateFlows: audit.enabledMaintenanceFlows.length,
     rollbackBackupVerified: true,
     executionEvidence:
-      'Operator attestation; official API has no supported active-execution inventory',
+      proof.maintenanceMode === 'controlled-maintenance'
+        ? 'Physical isolation and explicit residual-risk acceptance; execution/device-command drain is NOT proven'
+        : 'Operator attestation; official API has no supported active-execution inventory',
+    maintenanceMode: proof.maintenanceMode ?? 'strict',
     putPerformed: false,
   };
 }
@@ -571,6 +618,7 @@ if (require.main === module) {
                 .artifactManifestSha256,
               confirmedAt: null,
               independentStopVerified: false,
+              maintenanceMode: 'strict',
               pendingExecutionsDrained: false,
               externalWritersQuiesced: false,
             },

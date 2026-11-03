@@ -33,6 +33,33 @@ function readCapabilityDiagnostic(device, names) {
   );
 }
 
+// Homey's capability timestamp can remain unchanged while a parked vehicle keeps
+// reporting the same value. The Mercedes device heartbeat is a separate signal
+// that its integration is responding; retain both timestamps for diagnostics.
+function readVehicleCapabilityDiagnostic(device, names, now = new Date()) {
+  const diagnostic = readCapabilityDiagnostic(device, names);
+  const lastChangedAt = runtimeDateOrNull(diagnostic.observedAt);
+  const lastSeenAt = runtimeDateOrNull(device.lastSeenAt);
+  const usableHeartbeat =
+    device.driverId === 'homey:app:com.mercedes.mbapi:mercedes-vehicle' &&
+    device.available === true &&
+    !device.warningMessage &&
+    diagnostic.value !== null &&
+    diagnostic.value !== undefined &&
+    diagnostic.value !== '' &&
+    lastChangedAt &&
+    lastChangedAt <= now &&
+    lastSeenAt &&
+    lastSeenAt > lastChangedAt &&
+    evaluateTelemetryFreshness(lastSeenAt, now) === TELEMETRY_FRESHNESS.FRESH;
+  return {
+    ...diagnostic,
+    lastChangedAt: diagnostic.observedAt,
+    observedAt: usableHeartbeat ? device.lastSeenAt : diagnostic.observedAt,
+    source: usableHeartbeat ? 'device_last_seen' : 'capability_timestamp',
+  };
+}
+
 function runtimeNumberOrNull(value) {
   if (value === null || value === undefined || String(value).trim() === '')
     return null;
@@ -105,7 +132,7 @@ async function collectRuntimeSnapshot() {
   const disconnectObservedRaw = await getVariableValue(
     CONFIG.runtimeDisconnectObservedAtVariableName,
   );
-  const status = readCapabilityDiagnostic(
+  const status = readVehicleCapabilityDiagnostic(
     mercedes,
     CONFIG.vehicleStatusCapabilityNames,
   );
@@ -121,7 +148,9 @@ async function collectRuntimeSnapshot() {
     mercedes,
     CONFIG.vehicleChargingPowerCapabilityNames,
   );
-  const battery = readCapabilityDiagnostic(mercedes, ['measure_battery']);
+  const battery = readVehicleCapabilityDiagnostic(mercedes, [
+    'measure_battery',
+  ]);
   const connectionEvidence = selectConnectionEvidence(
     status.observedAt,
     connectionEvidenceAt,
@@ -142,13 +171,18 @@ async function collectRuntimeSnapshot() {
       getCapabilityValue(mercedes, 'measure_battery'),
     ),
     batteryObservedAt: battery.observedAt,
+    batteryLastChangedAt: battery.lastChangedAt,
+    batteryEvidenceSource: battery.source,
     batteryFreshness: evaluateTelemetryFreshness(battery.observedAt, now),
     targetBatteryPct: CONFIG.batteryFullPercentage,
     vehicleStatus: status.value,
     vehicleStatusCapability: status.name,
     vehicleStatusObservedAt: evidenceObservedAt,
-    vehicleStatusCapabilityLastUpdated: status.observedAt,
-    connectionEvidenceSource: connectionEvidence.source,
+    vehicleStatusCapabilityLastUpdated: status.lastChangedAt,
+    connectionEvidenceSource:
+      connectionEvidence.source === 'capability_timestamp'
+        ? status.source
+        : connectionEvidence.source,
     vehicleConnectedSignal: isVehicleConnectedStatus(status.value),
     vehicleCharging: runtimeBoolean(charging.value),
     vehicleChargingCapability: charging.name,
@@ -475,6 +509,11 @@ async function runAutomaticRuntimeController() {
             : snapshot.plugOn,
       vehicleTelemetryHealth: snapshot.vehicleTelemetryHealth,
       vehicleTelemetryFreshness: snapshot.vehicleTelemetryFreshness,
+      batteryEvidenceSource: snapshot.batteryEvidenceSource,
+      batteryLastChangedAt: snapshot.batteryLastChangedAt,
+      batteryObservedAt: snapshot.batteryObservedAt,
+      connectionEvidenceSource: snapshot.connectionEvidenceSource,
+      vehicleStatusObservedAt: snapshot.vehicleStatusObservedAt,
       vehicleStatusCapability: snapshot.vehicleStatusCapability,
       vehicleStatusRawValue: snapshot.vehicleStatus,
       vehicleStatusLastUpdated: snapshot.vehicleStatusCapabilityLastUpdated,
