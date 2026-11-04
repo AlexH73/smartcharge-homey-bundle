@@ -151,6 +151,7 @@ async function collectRuntimeSnapshot() {
   const battery = readVehicleCapabilityDiagnostic(mercedes, [
     'measure_battery',
   ]);
+  const connector = readCapabilityDiagnostic(mercedes, ['onoff_connector']);
   const connectionEvidence = selectConnectionEvidence(
     status.observedAt,
     connectionEvidenceAt,
@@ -184,6 +185,13 @@ async function collectRuntimeSnapshot() {
         ? status.source
         : connectionEvidence.source,
     vehicleConnectedSignal: isVehicleConnectedStatus(status.value),
+    vehicleConnectorConnected:
+      typeof connector.value === 'boolean' ? connector.value : null,
+    vehicleConnectorObservedAt: connector.observedAt,
+    vehicleConnectorFreshness: evaluateTelemetryFreshness(
+      connector.observedAt,
+      now,
+    ),
     vehicleCharging: runtimeBoolean(charging.value),
     vehicleChargingCapability: charging.name,
     vehicleChargingRawValue: charging.value,
@@ -232,10 +240,10 @@ async function collectRuntimeSnapshot() {
 
 async function reconcileDisconnectObservation(snapshot, activeMode) {
   const recovered =
-    hasTrustworthyConnectionEvidence(snapshot) ||
-    snapshot.vehicleCharging ||
-    snapshot.vehicleChargingPowerW >= CONFIG.chargingPowerThresholdW ||
-    snapshot.plugPowerW >= CONFIG.chargingPowerThresholdW;
+    !hasFreshConnectorDisconnect(snapshot) &&
+    (hasTrustworthyConnectionEvidence(snapshot) ||
+      hasFreshVehicleChargingEvidence(snapshot) ||
+      snapshot.plugPowerW >= CONFIG.chargingPowerThresholdW);
   if (recovered && snapshot.disconnectObservedAt) {
     if (activeMode)
       await tryUpdateVariableByName(
@@ -514,6 +522,9 @@ async function runAutomaticRuntimeController() {
       batteryObservedAt: snapshot.batteryObservedAt,
       connectionEvidenceSource: snapshot.connectionEvidenceSource,
       vehicleStatusObservedAt: snapshot.vehicleStatusObservedAt,
+      vehicleConnectorConnected: snapshot.vehicleConnectorConnected,
+      vehicleConnectorObservedAt: snapshot.vehicleConnectorObservedAt,
+      vehicleConnectorFreshness: snapshot.vehicleConnectorFreshness,
       vehicleStatusCapability: snapshot.vehicleStatusCapability,
       vehicleStatusRawValue: snapshot.vehicleStatus,
       vehicleStatusLastUpdated: snapshot.vehicleStatusCapabilityLastUpdated,

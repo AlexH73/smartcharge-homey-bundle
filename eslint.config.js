@@ -92,6 +92,8 @@ const sharedBundleGlobals = {
   evaluateDisconnectEvidence: 'readonly',
   runtimeActiveSession: 'readonly',
   hasTrustworthyConnectionEvidence: 'readonly',
+  hasFreshConnectorDisconnect: 'readonly',
+  hasFreshVehicleChargingEvidence: 'readonly',
   isSuspectedDisconnect: 'readonly',
   isVehicleConnectedStatus: 'readonly',
   runRuntimeController: 'readonly',

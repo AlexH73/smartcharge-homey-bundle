@@ -167,7 +167,7 @@ function createDateFromLocalParts(localParts, timeZone) {
 }
 
 /**
- * Calculates the target departure based on connection date and configured schedule.
+ * Returns the next configured departure strictly after the connection time.
  *
  * @param {Date} anchorDate
  * @returns {Date}
@@ -175,41 +175,25 @@ function createDateFromLocalParts(localParts, timeZone) {
 function getTargetDeparture(anchorDate) {
   const day = getLocalDayOfWeek(anchorDate, CONFIG.timeZone);
   const localAnchor = getLocalParts(anchorDate, CONFIG.timeZone);
-  const targetDate = addDaysToLocalDate(localAnchor, 1);
-
-  if (day >= 1 && day <= 4) {
+  const departureForOffset = (offset) => {
+    const targetDay = (day + offset) % 7;
+    const weekend = targetDay === 0 || targetDay === 6;
     return createDateFromLocalParts(
       {
-        ...targetDate,
-        hour: CONFIG.workdayDepartureHour,
-        minute: CONFIG.workdayDepartureMinute,
+        ...addDaysToLocalDate(localAnchor, offset),
+        hour: weekend
+          ? CONFIG.weekendDepartureHour
+          : CONFIG.workdayDepartureHour,
+        minute: weekend
+          ? CONFIG.weekendDepartureMinute
+          : CONFIG.workdayDepartureMinute,
         second: 0,
       },
       CONFIG.timeZone,
     );
-  }
-
-  if (day === 5 || day === 6) {
-    return createDateFromLocalParts(
-      {
-        ...targetDate,
-        hour: CONFIG.weekendDepartureHour,
-        minute: CONFIG.weekendDepartureMinute,
-        second: 0,
-      },
-      CONFIG.timeZone,
-    );
-  }
-
-  return createDateFromLocalParts(
-    {
-      ...targetDate,
-      hour: CONFIG.workdayDepartureHour,
-      minute: CONFIG.workdayDepartureMinute,
-      second: 0,
-    },
-    CONFIG.timeZone,
-  );
+  };
+  const todayDeparture = departureForOffset(0);
+  return todayDeparture > anchorDate ? todayDeparture : departureForOffset(1);
 }
 
 /**

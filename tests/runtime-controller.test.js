@@ -82,6 +82,20 @@ assert.equal(
   true,
 );
 assert.equal(call(`isVehicleConnectedStatus('Charge break')`), true);
+for (const freshness of ['FRESH', 'STALE', 'UNKNOWN']) {
+  for (const power of [50, 51, 100, 499, 500, 2600]) {
+    assert.equal(
+      call(`isSuspectedDisconnect({
+        sessionActive: true, vehicleStatus: 'Unplugged',
+        vehicleCharging: false, vehicleChargingFreshness: '${freshness}',
+        vehicleChargingPowerW: ${power}, vehicleChargingPowerFreshness: '${freshness}',
+        plugPowerW: 0
+      })`),
+      freshness !== 'FRESH' || power <= 50,
+      `${freshness} vehicle power ${power} W`,
+    );
+  }
+}
 assert.equal(
   call(`evaluateTelemetryFreshness(new Date(60000), new Date(0))`),
   'STALE',

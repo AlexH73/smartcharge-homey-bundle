@@ -468,6 +468,241 @@ async function nullSocRegressions() {
     'PASS Transient null SOC: preserve measured charging and Session, resume fresh planning, deny new ON and prioritize stop/expiry/disconnect/waiting',
   );
 }
+async function disconnectRegressions() {
+  const prepare = (session = '2026-07-07 18:00:00') => {
+    const r = make('BATTERY_FULL', 23, old);
+    authorize(r, session);
+    Object.assign(r.homeyMock.devices.mercedes, {
+      driverId: 'homey:app:com.mercedes.mbapi:mercedes-vehicle',
+      available: true,
+      warningMessage: null,
+      lastSeenAt: now,
+    });
+    r.homeyMock.setDeviceState('mercedes', {
+      capabilitiesObj: {
+        text_charging_status: { value: 'Charge break', lastUpdated: old },
+      },
+    });
+    return r;
+  };
+  const noSession = prepare('null');
+  noSession.homeyMock.setDeviceState('mercedes', {
+    capabilitiesObj: { onoff_connector: { value: false, lastUpdated: now } },
+  });
+  const denied = await run(noSession);
+  assert.equal(denied.sessionActive, false);
+  assert.equal(noSession.homeyMock.getLogicValue('ChargeConnectedAt'), 'null');
+  noOn(noSession);
+
+  const shadow = prepare();
+  shadow.homeyMock.setLogicValues({ SmartChargeRuntimeMode: 'shadow' });
+  shadow.homeyMock.setDeviceState('mercedes', {
+    capabilitiesObj: { onoff_connector: { value: false, lastUpdated: now } },
+  });
+  shadow.homeyMock.setDeviceState('plug', {
+    capabilitiesObj: { onoff: true, measure_power: 2600 },
+  });
+  const shadowLogic = shadow.homeyMock.getLogicSnapshot();
+  assert.equal((await run(shadow)).action, 'would_switch_off');
+  assert.deepEqual(shadow.homeyMock.getLogicSnapshot(), shadowLogic);
+  assert.equal(shadow.homeyMock.devices.plug.commands.length, 0);
+
+  const blockedAuto = prepare('null');
+  blockedAuto.homeyMock.setLogicValues({ SmartChargeAutoStartBlocked: true });
+  blockedAuto.homeyMock.setDeviceState('mercedes', {
+    capabilitiesObj: { onoff_connector: { value: false, lastUpdated: now } },
+  });
+  assert.equal((await run(blockedAuto, 'auto-mode')).autoStartBlocked, true);
+  noOn(blockedAuto);
+  assert.equal((await run(blockedAuto, 'manual-on')).actualPlugState, true);
+  assert.equal(
+    blockedAuto.homeyMock.getLogicValue('SmartChargeManualMode'),
+    true,
+  );
+
+  const disconnectDuringPlan = prepare();
+  const fetch = disconnectDuringPlan.fetch;
+  disconnectDuringPlan.fetch = async (...args) => {
+    const response = await fetch(...args);
+    if (String(args[0]).includes('tibber'))
+      disconnectDuringPlan.homeyMock.setDeviceState('mercedes', {
+        capabilitiesObj: {
+          onoff_connector: { value: false, lastUpdated: now },
+        },
+      });
+    return response;
+  };
+  assert.equal((await run(disconnectDuringPlan)).action, 'on_blocked');
+  noOn(disconnectDuringPlan);
+
+  const failedOff = prepare();
+  failedOff.homeyMock.setDeviceState('mercedes', {
+    capabilitiesObj: { onoff_connector: { value: false, lastUpdated: now } },
+  });
+  failedOff.homeyMock.setDeviceState('plug', {
+    capabilitiesObj: { onoff: true, measure_power: 2600 },
+    failSetCapabilityValue: true,
+  });
+  await assert.rejects(run(failedOff), /setCapabilityValue failed/);
+  assert.equal(
+    failedOff.homeyMock.getLogicValue('ChargeConnectedAt'),
+    '2026-07-07 18:00:00',
+  );
+  assert.equal(
+    failedOff.homeyMock.devices.plug.capabilitiesObj.onoff.value,
+    true,
+  );
+
+  for (const observation of [
+    { value: null, lastUpdated: now },
+    { value: false },
+    { value: false, lastUpdated: old },
+    { value: false, lastUpdated: '2026-07-07T20:16:00+02:00' },
+  ]) {
+    const r = prepare('null');
+    r.homeyMock.setDeviceState('mercedes', {
+      capabilitiesObj: { onoff_connector: observation },
+    });
+    assert.equal((await run(r)).sessionActive, true);
+  }
+
+  for (const evidence of ['connector', 'stale-charging', 'unknown-charging']) {
+    const r = prepare();
+    const explicitConnector = evidence === 'connector';
+    const timestamp = explicitConnector
+      ? now
+      : evidence === 'unknown-charging'
+        ? null
+        : old;
+    r.homeyMock.setDeviceState('mercedes', {
+      capabilitiesObj: {
+        text_charging_status: {
+          value: explicitConnector ? 'Charge break' : 'Unplugged',
+          lastUpdated: now,
+        },
+        onoff_connector: {
+          value: explicitConnector ? false : null,
+          lastUpdated: now,
+        },
+        onoff_charging: { value: true, lastUpdated: timestamp },
+        measure_charge_power: {
+          value: 2.6,
+          units: 'kW',
+          lastUpdated: timestamp,
+        },
+      },
+    });
+    r.homeyMock.setDeviceState('plug', {
+      capabilitiesObj: {
+        onoff: true,
+        measure_power: explicitConnector ? 2600 : 0,
+      },
+    });
+    const first = await run(r);
+    assert.equal(first.action, 'switched_off', evidence);
+    assert.equal(
+      first.proposedLifecycleAction,
+      'suspected_disconnect',
+      evidence,
+    );
+    assert.equal(
+      r.homeyMock.getLogicValue('SmartChargeDisconnectObservedAt'),
+      new Date(now).toISOString(),
+      evidence,
+    );
+    const later = '2026-07-07T20:31:00+02:00';
+    r.homeyMock.devices.mercedes.lastSeenAt = later;
+    const completed = await r.runStep({
+      flow: 'runtime-controller',
+      now: later,
+    });
+    assert.equal(completed.error, null);
+    assert.equal(completed.logic.ChargeConnectedAt, 'null', evidence);
+    assert.equal(
+      completed.logic.SmartChargeSessionStatus,
+      'disconnected',
+      evidence,
+    );
+    assert.equal(completed.devices.plug.capabilitiesObj.onoff.value, false);
+    assert.equal(completed.result.continuingExistingCharge, false);
+    if (explicitConnector) {
+      const reconnectedAt = '2026-07-07T20:32:00+02:00';
+      const reconnected = await r.runStep({
+        flow: 'connection-evidence',
+        now: reconnectedAt,
+        set: {
+          devices: {
+            mercedes: {
+              capabilitiesObj: {
+                onoff_connector: { value: true, lastUpdated: reconnectedAt },
+                text_charging_status: {
+                  value: 'Charge break',
+                  lastUpdated: reconnectedAt,
+                },
+                onoff_charging: { value: false, lastUpdated: reconnectedAt },
+                measure_charge_power: {
+                  value: 0,
+                  units: 'kW',
+                  lastUpdated: reconnectedAt,
+                },
+              },
+            },
+            plug: { capabilitiesObj: { measure_power: 0 } },
+          },
+        },
+      });
+      assert.equal(reconnected.error, null);
+      assert.equal(reconnected.logic.ChargeConnectedAt, '2026-07-07 20:32:00');
+      assert.equal(reconnected.logic.SmartChargeAutoStartBlocked, false);
+      assert.equal(reconnected.logic.SmartChargeDisconnectObservedAt, 'null');
+    }
+  }
+  console.log(
+    'PASS Disconnect: explicit fresh connector OFF, no phantom Session, stale charging cannot reset confirmation; missing/stale/future connector remains unknown',
+  );
+}
+
+async function midnightConnectionRegression() {
+  const r = make('BATTERY_FULL', 50, old);
+  authorize(r, 'null');
+  const connectedAt = '2026-07-08T03:00:00+02:00';
+  const first = await r.runStep({
+    flow: 'connection-evidence',
+    now: connectedAt,
+    fixture: 'cheap-night',
+    set: {
+      devices: {
+        mercedes: {
+          capabilitiesObj: {
+            measure_battery: { value: 50, lastUpdated: connectedAt },
+            text_charging_status: {
+              value: 'Charge break',
+              lastUpdated: connectedAt,
+            },
+          },
+        },
+      },
+    },
+  });
+  assert.equal(first.error, null);
+  assert.equal(first.logic.ChargeConnectedAt, '2026-07-08 03:00:00');
+  assert.equal(first.logic.SmartChargeTargetDeparture, '2026-07-08 07:30:00');
+  assert.equal(first.result.action, 'switched_on');
+  const expired = await r.runStep({
+    flow: 'runtime-controller',
+    now: '2026-07-08T07:35:00+02:00',
+    fixture: 'cheap-night',
+  });
+  assert.equal(expired.error, null);
+  assert.equal(expired.result.terminalState, 'expired');
+  assert.equal(expired.result.targetDeparture, '2026-07-08 07:30:00');
+  assert.equal(expired.logic.ChargeConnectedAt, 'null');
+  assert.equal(expired.devices.plug.capabilitiesObj.onoff.value, false);
+  console.log(
+    'PASS Midnight connection targets the same morning; expiry does not move an active Session to the next day',
+  );
+}
+
 async function main() {
   // A stationary car can keep reporting unchanged SOC/status. Homey retains
   // their change timestamps while updating the responding device's heartbeat.
@@ -607,6 +842,8 @@ async function main() {
   await reviewRegressions();
   await preliminaryTimeoutRegressions();
   await nullSocRegressions();
+  await disconnectRegressions();
+  await midnightConnectionRegression();
   console.log(
     'PASS Automatic lifecycle: preliminary plans, missing inputs, no grant, stale SOC, USER_STOP, provider-only AUTO and pre-ON revalidation',
   );

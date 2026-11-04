@@ -12,6 +12,20 @@ is denied by block/terminal/token/grant checks; it can coexist with Manual Charg
 AUTO means permission is available, not plug ON: Session/evidence, battery, planner
 and Actuator gates still apply. `SmartChargeRuntimeMode=active|shadow` is separate.
 
+The next local departure correction selects the earliest configured departure
+strictly after the connection timestamp in Europe/Berlin: weekdays 07:30 and
+weekends 13:00 by default. A weekday connection at 03:00 targets that morning;
+an evening connection targets the following day. At the departure time itself,
+the next day's schedule applies. Weekday/weekend selection uses the departure
+date. An active Session keeps its original connection anchor, so its deadline
+does not roll forward when runtime executes later. This correction is local and
+has not been deployed.
+
+When upgrading a Session originally created before its morning departure under
+the old next-day rule, the same saved connection timestamp now resolves to that
+morning. Its deadline can therefore become earlier; review any such active
+Session during deployment rather than expecting the old next-day deadline.
+
 ## Independent manual charging
 
 Manual ON and Auto Mode require `SmartChargeRuntimeMode=active`; explicit USER_STOP
@@ -77,6 +91,18 @@ heartbeat establishes integration responsiveness, not an independent measurement
 of every retained attribute. A partial update may leave other values cached; this
 depends on the Mercedes integration's data delivery. See the
 [Homey device heartbeat contract](https://apps-sdk-v3.developer.homey.app/Device.html#setLastSeenAt).
+
+The next local disconnect correction gives a fresh Boolean `onoff_connector=false`
+priority over retained charging status and other consumption evidence in AUTO.
+It blocks Session creation/new ON, requests OFF for an active Session, and uses
+the existing 15-minute disconnect confirmation. A missing, non-Boolean,
+timestamp-less, future or stale connector reading remains unknown; the device
+heartbeat does not refresh that reading. Stale/unknown vehicle charging flags or
+charging power no longer cancel disconnect confirmation. Existing measured plug
+consumption still preserves the legacy fallback when no explicit fresh connector
+disconnect is available. This correction is local and has not been deployed.
+Fresh vehicle power above the existing 50 W idle threshold still prevents
+status-based disconnect confirmation even below the 500 W charging threshold.
 
 The existing manual JSON adds `activationStopToken` and `autoGrant` (UTC `at`
 and matching `stopToken`); no additional Logic variable is required. A grant
@@ -170,7 +196,7 @@ history remain local authority during provider outage; this does not permit a
 new ON using stale SOC. The global TTL is unchanged.
 
 When AUTO is blocked or no Session can be established, the runtime calculates
-a preliminary tariff plan from last-known SOC and the existing next-day departure
+a preliminary tariff plan from last-known SOC and the configured departure
 policy anchored to the current time. This planning horizon is an assumption, not
 a connection timestamp. It does not create a Session or connection evidence, clear
 the block, erase manual history, grant AUTO, or write session events to Sheets.

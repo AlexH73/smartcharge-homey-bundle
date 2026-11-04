@@ -71,15 +71,29 @@ function evaluateTelemetryHealth(snapshot, config = CONFIG) {
   return TELEMETRY_HEALTH.HEALTHY;
 }
 
+function hasFreshConnectorDisconnect(snapshot) {
+  return (
+    snapshot.vehicleConnectorConnected === false &&
+    snapshot.vehicleConnectorFreshness === TELEMETRY_FRESHNESS.FRESH
+  );
+}
+
+function hasFreshVehicleChargingEvidence(snapshot, config = CONFIG) {
+  return (
+    (snapshot.vehicleCharging &&
+      snapshot.vehicleChargingFreshness === TELEMETRY_FRESHNESS.FRESH) ||
+    (snapshot.vehicleChargingPowerW >= config.chargingPowerThresholdW &&
+      snapshot.vehicleChargingPowerFreshness === TELEMETRY_FRESHNESS.FRESH)
+  );
+}
+
 function hasTrustworthyConnectionEvidence(snapshot) {
   return (
+    !hasFreshConnectorDisconnect(snapshot) &&
     snapshot.vehicleTelemetryHealth === TELEMETRY_HEALTH.HEALTHY &&
     ((snapshot.vehicleTelemetryFreshness === TELEMETRY_FRESHNESS.FRESH &&
       isVehicleConnectedStatus(snapshot.vehicleStatus)) ||
-      (snapshot.vehicleCharging &&
-        snapshot.vehicleChargingFreshness === TELEMETRY_FRESHNESS.FRESH) ||
-      (snapshot.vehicleChargingPowerW >= CONFIG.chargingPowerThresholdW &&
-        snapshot.vehicleChargingPowerFreshness === TELEMETRY_FRESHNESS.FRESH))
+      hasFreshVehicleChargingEvidence(snapshot))
   );
 }
 
@@ -96,12 +110,15 @@ function evaluateCompletionEvidence(snapshot) {
 }
 
 function isSuspectedDisconnect(snapshot, config = CONFIG) {
+  // Fresh power above idle vetoes disconnect even below the charging threshold.
   return (
     snapshot.sessionActive &&
-    isVehicleUnpluggedStatus(snapshot.vehicleStatus) &&
-    !snapshot.vehicleCharging &&
-    snapshot.vehicleChargingPowerW <= config.idlePowerThresholdW &&
-    snapshot.plugPowerW <= config.idlePowerThresholdW
+    (hasFreshConnectorDisconnect(snapshot) ||
+      (isVehicleUnpluggedStatus(snapshot.vehicleStatus) &&
+        !hasFreshVehicleChargingEvidence(snapshot, config) &&
+        (snapshot.vehicleChargingPowerFreshness !== TELEMETRY_FRESHNESS.FRESH ||
+          snapshot.vehicleChargingPowerW <= config.idlePowerThresholdW) &&
+        snapshot.plugPowerW <= config.idlePowerThresholdW))
   );
 }
 
