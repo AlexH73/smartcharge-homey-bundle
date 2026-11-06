@@ -1,10 +1,11 @@
 # Controlled HomeyScript deployment
 
 SmartCharge deployment tooling supports the official HomeyScript **3.6.3** custom API.
-The installed baseline is [0.6.7+build.20](Release-0.6.7.md), verified by SHA-256
-readback on 2026-11-03. The previous installed set was 0.6.5+build.18. Automatic
-Session creation and waiting-plan reconciliation have been verified. Physical
-charging at the scheduled window remains unverified.
+The installed baseline is [0.6.8+build.21](Release-0.6.8.md), verified by SHA-256
+readback on 2026-11-04. The previous installed set was 0.6.7+build.20. Installation
+preserved the active Session and waiting plan. Controls and AUTO were restored
+after separate authorization; hardware acceptance of the new edge cases remains
+pending.
 The client reads installed scripts and updates existing IDs using only
 `PUT /api/app/com.athom.homeyscript/script/:id` with `{code}`. Names and API
 compatibility mode 1/2 are preserved. Create, delete and run endpoints are not used.
@@ -12,13 +13,13 @@ Other installed HomeyScript versions stop the operation before writes.
 
 ## Implementation and operational status
 
-Status updated 2026-11-03; installation is distinct from charging acceptance.
+Status updated 2026-11-06; installation is distinct from charging acceptance.
 
 | Component | Status | Evidence/boundary |
 | --- | --- | --- |
 | Local client, release validation, provenance checks, Flow audit | IMPLEMENTED / TESTED LOCALLY | Offline regression suites; no exhaustive external-writer detection. |
-| Twelve 0.6.7+build.20 bundles based on develop `5b29b00` plus heartbeat correction | DEPLOYED | Local working-tree installation with per-PUT/full-set hashes and preserved IDs/names/modes/Logic. Runtime/manual controls restored; Connection Evidence repaired to use the real connector event. |
-| Operational charging / hardware acceptance | PLANNED | Separate supervised tests; installation is not unattended readiness. |
+| Twelve 0.6.8+build.21 bundles based on develop `1f4a8b7` | DEPLOYED / AUTO RESTORED | Local working-tree installation with per-PUT/full-set hashes and preserved IDs/names/modes/Logic. Five control Flows and AUTO restored after separate authorization. Existing Session and waiting plan verified. |
+| Operational charging / hardware acceptance | TWO OVERNIGHT CYCLES OBSERVED / EDGE CASES PENDING | Both automatic Sessions reached the target and completed. One fifteen-minute start delay remains unexplained because historical decision events omit runtime ON-veto diagnostics. See the 0.6.8 release notes. |
 | Public CI/release workflows | IMPLEMENTED / VALIDATED LOCALLY | Definitions/artifact tests exist; branch not yet pushed or checked by GitHub Actions. No GitHub Release published for this work. |
 | Private repository, Windows runner and Environment approval | PLANNED | Allowlisted scaffold/template only; repository not created, end-to-end deployment not tested. |
 

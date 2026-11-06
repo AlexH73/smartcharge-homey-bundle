@@ -5,6 +5,20 @@ All notable SmartCharge Homey Bundle changes should be documented here.
 The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 `v1.0.0`.
 
+## 0.6.8 - 2026-11-04
+
+Installed **0.6.8+build.21**; all twelve scripts verified by SHA-256 readback.
+Controls and AUTO were restored; the existing Session and waiting plan were
+verified. See
+[release status](docs/Release-0.6.8.md).
+
+### Fixed
+
+- Prioritize fresh explicit connector disconnection over retained charging data;
+  ignore stale vehicle charging evidence when confirming a disconnect.
+- Calculate the nearest configured departure after the saved connection time,
+  including connections after midnight, weekends and DST transitions.
+
 ## 0.6.7 - 2026-11-03
 
 Installed **0.6.7+build.20**, with all twelve scripts verified by SHA-256 readback.
