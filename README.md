@@ -5,15 +5,15 @@
 </p>
 
 <p align="center">
-  <sub>Historical illustration. Its “19 scenarios”, “Fully Tested” and “guaranteed” labels are not current validation or hardware safety claims. Current simulator coverage is 94 scenarios; supervised operational acceptance is pending.</sub>
+  <sub>Historical illustration. Its “19 scenarios”, “Fully Tested” and “guaranteed” labels are not current validation or hardware safety claims. Current simulator coverage is 97 scenarios; supervised operational acceptance is pending.</sub>
 </p>
 
-[![SmartCharge](https://img.shields.io/badge/SmartCharge-0.6.8-blue)](docs/Release-0.6.8.md)
+[![SmartCharge](https://img.shields.io/badge/SmartCharge-0.6.10-blue)](docs/Release-0.6.10.md)
 [![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![HomeyScript](https://img.shields.io/badge/HomeyScript-runtime-00C7B7)](https://homey.app/en-us/app/com.athom.homeyscript/HomeyScript/)
 [![Tibber](https://img.shields.io/badge/Tibber-price%20API-FF5A5F)](https://developer.tibber.com/)
 [![Google Sheets](https://img.shields.io/badge/Google%20Sheets-analytics-34A853?logo=googlesheets&logoColor=white)](docs/GoogleSheetsSetup.md)
-[![Simulator](https://img.shields.io/badge/Simulator-94%20scenarios-6F42C1)](docs/Simulator.md)
+[![Simulator](https://img.shields.io/badge/Simulator-97%20scenarios-6F42C1)](docs/Simulator.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 SmartCharge is an open-source HomeyScript charging controller that combines Homey
@@ -31,13 +31,15 @@ or available vehicle telemetry to start or stop.
 
 ## Release status
 
-| Release            | Status                                                  | Details                                                                                    |
-| ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| **0.6.8+build.21** | Installed and hash-verified; AUTO waiting plan verified | Disconnect and nearest-departure fixes. [Release status](docs/Release-0.6.8.md).           |
-| **0.6.7+build.20** | Previous installed baseline                             | Parked-vehicle heartbeat correction. [Recovery status](docs/Release-0.6.7.md).             |
-| **0.6.6+build.19** | Superseded recovery installation                        | [Release notes](docs/Release-0.6.6.md).                                                    |
-| **0.6.5+build.18** | Previous installed baseline                             | Actuator correction and release metadata contract. [Release notes](docs/Release-0.6.5.md). |
-| **0.6.4+build.17** | Historical installation                                 | [Release notes](docs/Release-0.6.4.md).                                                    |
+| Release             | Status                                                     | Details                                                                                          |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **0.6.10+build.28** | Installed and hash-verified; AUTO restored                 | Guarded restart after ordinary automatic OFF. [Release status](docs/Release-0.6.10.md).          |
+| **0.6.9+build.24**  | Previous installed baseline; climate ON/OFF observed       | Preconditioning power and durable idle-load protection. [Release status](docs/Release-0.6.9.md). |
+| **0.6.8+build.21**  | Previous installed baseline; two overnight cycles verified | Disconnect and nearest-departure fixes. [Release status](docs/Release-0.6.8.md).                 |
+| **0.6.7+build.20**  | Previous installed baseline                                | Parked-vehicle heartbeat correction. [Recovery status](docs/Release-0.6.7.md).                   |
+| **0.6.6+build.19**  | Superseded recovery installation                           | [Release notes](docs/Release-0.6.6.md).                                                          |
+| **0.6.5+build.18**  | Previous installed baseline                                | Actuator correction and release metadata contract. [Release notes](docs/Release-0.6.5.md).       |
+| **0.6.4+build.17**  | Historical installation                                    | [Release notes](docs/Release-0.6.4.md).                                                          |
 
 Code installation does not establish unattended charging readiness. Supervised
 operational acceptance is still pending. The private GitHub deployment

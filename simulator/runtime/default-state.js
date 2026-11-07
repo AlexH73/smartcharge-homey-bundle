@@ -38,6 +38,7 @@ const DEFAULT_LOGIC_VARIABLES = Object.freeze({
   }),
   SmartChargeAutoStartBlocked: false,
   SmartChargeRuntimeLock: 'null',
+  SmartChargePreconditioningState: 'null',
   SmartChargeUserStopToken: 'null',
   SmartChargeAcceptedStrategy: 'null',
   SmartChargeStabilityDiagnostics: 'null',

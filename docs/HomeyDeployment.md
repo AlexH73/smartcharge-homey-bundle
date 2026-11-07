@@ -1,11 +1,11 @@
 # Controlled HomeyScript deployment
 
 SmartCharge deployment tooling supports the official HomeyScript **3.6.3** custom API.
-The installed baseline is [0.6.8+build.21](Release-0.6.8.md), verified by SHA-256
-readback on 2026-11-04. The previous installed set was 0.6.7+build.20. Installation
-preserved the active Session and waiting plan. Controls and AUTO were restored
-after separate authorization; hardware acceptance of the new edge cases remains
-pending.
+The installed baseline is [0.6.10+build.28](Release-0.6.10.md), verified by SHA-256
+readback on 2026-11-06. The previous installed set was 0.6.9+build.24. Installation
+preserved the active Session, waiting plan and climate state. Controls and AUTO
+were restored after separate authorization; physical expected-cut recovery
+acceptance remains pending.
 The client reads installed scripts and updates existing IDs using only
 `PUT /api/app/com.athom.homeyscript/script/:id` with `{code}`. Names and API
 compatibility mode 1/2 are preserved. Create, delete and run endpoints are not used.
@@ -18,8 +18,8 @@ Status updated 2026-11-06; installation is distinct from charging acceptance.
 | Component | Status | Evidence/boundary |
 | --- | --- | --- |
 | Local client, release validation, provenance checks, Flow audit | IMPLEMENTED / TESTED LOCALLY | Offline regression suites; no exhaustive external-writer detection. |
-| Twelve 0.6.8+build.21 bundles based on develop `1f4a8b7` | DEPLOYED / AUTO RESTORED | Local working-tree installation with per-PUT/full-set hashes and preserved IDs/names/modes/Logic. Five control Flows and AUTO restored after separate authorization. Existing Session and waiting plan verified. |
-| Operational charging / hardware acceptance | TWO OVERNIGHT CYCLES OBSERVED / EDGE CASES PENDING | Both automatic Sessions reached the target and completed. One fifteen-minute start delay remains unexplained because historical decision events omit runtime ON-veto diagnostics. See the 0.6.8 release notes. |
+| Twelve 0.6.10+build.28 bundles based on develop `a743661` plus local preconditioning/recovery changes | DEPLOYED / AUTO RESTORED | Per-PUT/full-set hashes and IDs/names/modes verified. Logic, Session, plan and IDLE climate state preserved; no historical cut seeded. Five control Flows and AUTO restored after separate authorization; WAITING and released runtime lock verified. |
+| Operational charging / hardware acceptance | BASELINE OVERNIGHT/CLIMATE OBSERVED / RECOVERY PENDING | Two 0.6.8 automatic Sessions reached the target. One partial-SOC 0.6.9 climate ON/OFF cycle was observed. A baseline fifteen-minute start delay remains unexplained. Physical expected-cut recovery and remaining edge cases are pending. |
 | Public CI/release workflows | IMPLEMENTED / VALIDATED LOCALLY | Definitions/artifact tests exist; branch not yet pushed or checked by GitHub Actions. No GitHub Release published for this work. |
 | Private repository, Windows runner and Environment approval | PLANNED | Allowlisted scaffold/template only; repository not created, end-to-end deployment not tested. |
 
@@ -155,6 +155,13 @@ than 15 minutes or if live guards/state change; elapsed time is not consent.
 The API cannot prove pending executions drained or external writers stopped.
 
 ### Strict and controlled maintenance
+
+For 0.6.9 preconditioning support, maintenance also requires provisioning
+the new string Logic variable `SmartChargePreconditioningState` with literal text
+`null` if absent, before final preflight/backup. Preserve and validate an existing
+record; do not erase an active inhibition during an update. The deployment client
+does not create Logic variables. The runtime blocks recovery on missing/corrupt
+state. See [candidate behavior and migration](Release-0.6.9.md).
 
 `maintenanceMode` defaults to `strict` for existing proofs. Strict mode still
 requires `pendingExecutionsDrained=true` and `externalWritersQuiesced=true`, based

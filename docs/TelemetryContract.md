@@ -68,6 +68,15 @@ and `batteryDeltaPct`. `resetAt` is already written; `lastDecisionAt`, explicit
 implemented template columns. Old research aliases must not be added as duplicate
 columns. No generic historical Events replay/rebuild tool is implemented.
 
+For an active Session, each `smartcharge_off` replaces `chargeStoppedAt` and
+the available `endBatteryPct`, so tariff pauses or preconditioning stops do not
+freeze the first stop forever. Completion observations may update the final SOC;
+after completion, expiry, reset or confirmed disconnect, later driving telemetry
+does not replace it. A completion decision followed by the final OFF still records
+that OFF timestamp. A lower final SOC clears an obsolete positive battery delta.
+Install the updated Apps Script separately; existing rows need an explicit repair
+from Events and are not automatically rewritten by a Homey update.
+
 ## Status Levels
 
 Every field is classified by implementation maturity.

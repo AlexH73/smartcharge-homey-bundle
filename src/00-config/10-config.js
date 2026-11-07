@@ -61,9 +61,14 @@ const CONFIG = {
   vehicleChargingPowerCapabilityNames: ['measure_charge_power'],
   preconditioningCapabilityNames: [
     'onoff_precond',
+    'climate_active',
     'preconditioning',
     'preconditioning_active',
   ],
+  preconditioningStateVariableName: 'SmartChargePreconditioningState',
+  preconditioningStartGraceSeconds: 180,
+  preconditioningLowPowerW: 5,
+  preconditioningLowPowerSeconds: 180,
 
   workdayDepartureHour: 7,
   workdayDepartureMinute: 30,
@@ -72,7 +77,6 @@ const CONFIG = {
 
   roundToMinutes: 5,
   minChargeMinutes: 30,
-  maxChargeMinutes: 300,
   minHoursAhead: 1,
   maxHoursAhead: 24,
 

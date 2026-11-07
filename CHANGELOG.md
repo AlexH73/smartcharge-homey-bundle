@@ -5,6 +5,55 @@ All notable SmartCharge Homey Bundle changes should be documented here.
 The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 `v1.0.0`.
 
+## 0.6.11 - 2026-11-07
+
+Prepared **0.6.11+build.29**; installation and live plan recalculation pending.
+
+### Fixed
+
+- Keep the latest automatic stop time and available stop SOC across multiple
+  charging windows in Sessions. Preserve final values after completion or
+  disconnect, and clear a stale positive battery delta when the final SOC is lower.
+- Remove the 300-minute automatic planning cap: use the full rounded charging
+  estimate and corresponding tariff slot count to reach the target SOC.
+  Manual Charging retains its independent maximum duration.
+
+## 0.6.10 - 2026-11-06
+
+Installed **0.6.10+build.28**; twelve hashes/IDs/names/API modes verified.
+Controls and AUTO restored; the existing waiting Session and plan verified.
+See [expected-cut recovery](docs/Release-0.6.10.md).
+
+### Fixed
+
+- Permit one guarded tariff/climate recovery from Failure after a recorded,
+  successful ordinary automatic OFF, with fresh integration evidence and a
+  durable attempt reservation. Keep unknown/pre-existing Failure blocked for ON.
+- Stop unconfirmed recovery on the watchdog and preserve idle-load, USER_STOP,
+  lease, Session and expiry checks. Preserve OFF ACK before cut-state errors.
+
+## 0.6.9 - 2026-11-06
+
+Installed **0.6.9+build.24**; all twelve hashes/IDs/names/API modes verified.
+Controls and AUTO restored; the existing waiting Session and plan verified.
+Earlier candidates are superseded.
+See [preconditioning behavior and acceptance](docs/Release-0.6.9.md).
+
+### Added
+
+- Power for operator-started Mercedes preconditioning outside tariff windows,
+  including at full or unavailable SOC, without creating a charging Session or
+  calling Tibber. Resume the saved charging lifecycle after climate ends.
+- Fresh Boolean climate observations, repeat checks before/after ON, and
+  preconditioning regression coverage. USER_STOP and AUTO permission retain priority.
+- Durable idle-load protection: 5 W / 180-second stop, startup timeout and lost
+  power observations deny repeated automatic ON on retained climate data.
+  Requires the new `SmartChargePreconditioningState` string Logic variable.
+
+### Fixed
+
+- Avoid phantom automatic charging Sessions at full or unknown SOC.
+
 ## 0.6.8 - 2026-11-04
 
 Installed **0.6.8+build.21**; all twelve scripts verified by SHA-256 readback.

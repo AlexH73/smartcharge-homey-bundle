@@ -1,0 +1,50 @@
+{
+  "name": "low-soc-full-duration",
+  "description": "Low SOC keeps the full 310-minute estimate and requests six tariff slots.",
+  "now": "2026-07-07T18:00:00+02:00",
+  "fixture": "cheap-night",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-07-07 18:00:00",
+      "ChargeFactor": 3.3,
+      "ChargeReserve": 15
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 11
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "run-decision",
+      "now": "2026-07-07T18:05:00+02:00",
+      "expect": {
+        "result": {
+          "chargeMinutes": 310,
+          "chargeSlots": 6,
+          "shouldChargeNow": false
+        },
+        "reasonIncludes": "Waiting for selected charging plan",
+        "events": ["smartcharge_decision"],
+        "plugOn": false,
+        "plugCommandCount": 0,
+        "tibberCallsDelta": 1
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": false,
+    "plugCommandCount": 0,
+    "eventTypes": ["smartcharge_decision"],
+    "tibberCalls": 1
+  }
+}

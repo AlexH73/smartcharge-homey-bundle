@@ -3,7 +3,7 @@
  *
  * Formula:
  * missing battery percentage * factor + reserve,
- * then rounded and clamped to configured limits.
+ * then rounded with a minimum charging duration.
  *
  * @param {number} battery
  * @param {number} factor
@@ -19,11 +19,7 @@ function calculateChargeMinutes(battery, factor, reserve) {
     (CONFIG.batteryFullPercentage - battery) * factor + reserve;
   const roundedMinutes = roundUp(rawMinutes, CONFIG.roundToMinutes);
 
-  return clamp(
-    roundedMinutes,
-    CONFIG.minChargeMinutes,
-    CONFIG.maxChargeMinutes,
-  );
+  return Math.max(roundedMinutes, CONFIG.minChargeMinutes);
 }
 
 /**

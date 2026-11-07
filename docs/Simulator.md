@@ -52,12 +52,13 @@ node simulator/runner.js --list
 
 `npm test` runs `npm run simulate:all`.
 
-## Current regression coverage (0.6.4+build.17)
+## Current regression coverage (0.6.10 candidate)
 
-There are 94 simulator scenarios; the list below is an illustrative subset, not
+There are 97 simulator scenarios; the list below is an illustrative subset, not
 the full inventory. `node simulator/runner.js --list` is authoritative. Coverage
 includes runtime provider freshness, reconnect/disconnect, command/telemetry failures,
-preconditioning while waiting and Plan Stability shadow characterization.
+fresh preconditioning start/stop at full SOC, rejection of timestamp-less climate
+signals, preconditioning while waiting and Plan Stability shadow characterization.
 
 Additional test suites are not counted as scenario JSON files: 52 manual lifecycle
 and 112 terminal regression cases, planner/cost/persistence tests, Apps Script

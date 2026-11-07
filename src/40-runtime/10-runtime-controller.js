@@ -67,6 +67,28 @@ function runtimeNumberOrNull(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function readPreconditioningDiagnostic(device, now) {
+  let latest = null;
+  for (const name of CONFIG.preconditioningCapabilityNames) {
+    const candidate = readCapabilityDiagnostic(device, [name]);
+    const at = runtimeDateOrNull(candidate.observedAt);
+    if (typeof candidate.value !== 'boolean' || !at || at > now) continue;
+    const latestAt = runtimeDateOrNull(latest?.observedAt);
+    // An equally recent OFF wins over ON. Do not revive a retained true with
+    // the device heartbeat: climate must have its own observation timestamp.
+    if (
+      !latestAt ||
+      at > latestAt ||
+      (at.getTime() === latestAt.getTime() && candidate.value === false)
+    )
+      latest = candidate;
+  }
+  return (
+    latest ||
+    readCapabilityDiagnostic(device, CONFIG.preconditioningCapabilityNames)
+  );
+}
+
 function runtimeBoolean(value) {
   return value === true || String(value).trim().toLowerCase() === 'true';
 }
@@ -136,10 +158,7 @@ async function collectRuntimeSnapshot() {
     mercedes,
     CONFIG.vehicleStatusCapabilityNames,
   );
-  const preconditioning = readCapabilityDiagnostic(
-    mercedes,
-    CONFIG.preconditioningCapabilityNames,
-  );
+  const preconditioning = readPreconditioningDiagnostic(mercedes, now);
   const charging = readCapabilityDiagnostic(
     mercedes,
     CONFIG.vehicleChargingCapabilityNames,
@@ -215,10 +234,14 @@ async function collectRuntimeSnapshot() {
     manualOverride: runtimeBoolean(
       await getVariableValue(CONFIG.smartChargeManualModeVariableName),
     ),
-    preconditioningActive: runtimeBoolean(preconditioning.value),
+    preconditioningActive: preconditioning.value === true,
     preconditioningCapability: preconditioning.name,
     preconditioningRawValue: preconditioning.value,
     preconditioningObservedAt: preconditioning.observedAt,
+    preconditioningFreshness: evaluateTelemetryFreshness(
+      preconditioning.observedAt,
+      now,
+    ),
     plannerShouldCharge: runtimeBoolean(
       await getVariableValue(CONFIG.smartChargeShouldChargeVariableName),
     ),
@@ -226,6 +249,7 @@ async function collectRuntimeSnapshot() {
     plugOn: getCapabilityValue(plug, 'onoff') === true,
     plugPowerW:
       runtimeNumberOrNull(getCapabilityValue(plug, 'measure_power')) ?? 0,
+    plugPower: readCapabilityDiagnostic(plug, ['measure_power']),
     disconnectObservedAt: runtimeDateOrNull(disconnectObservedRaw),
   };
   snapshot.vehicleTelemetryFreshness = evaluateTelemetryFreshness(
@@ -383,6 +407,33 @@ function proposedLifecycleAction(snapshot) {
   return 'none';
 }
 
+async function applyRuntimeLifecycle(snapshot, activeMode) {
+  if (!activeMode) return false;
+  if (evaluateCompletionEvidence(snapshot))
+    return resetRuntimeSession(
+      snapshot,
+      SmartChargeLogger.EVENT_TYPES.BATTERY_FULL,
+      'Target battery reached',
+      'completed',
+    );
+  if (snapshot.expiredSession)
+    return resetRuntimeSession(
+      snapshot,
+      SmartChargeLogger.EVENT_TYPES.SESSION_EXPIRED,
+      'Session expired: target departure is in the past',
+      'expired',
+      true,
+    );
+  if (snapshot.confirmedDisconnect)
+    return resetRuntimeSession(
+      snapshot,
+      SmartChargeLogger.EVENT_TYPES.CHARGER_DISCONNECTED,
+      'Disconnect confirmed after observation period',
+      'disconnected',
+    );
+  return false;
+}
+
 async function runAutomaticRuntimeController() {
   if (runtimeControllerRunning)
     return { skipped: true, reason: 'Runtime controller already running' };
@@ -394,6 +445,20 @@ async function runAutomaticRuntimeController() {
         CONFIG.runtimeControllerDefaultMode,
     ).toLowerCase();
     const activeMode = configuredMode === 'active';
+    const climateResult = await runPreconditioningRuntime(snapshot, activeMode);
+    if (climateResult) {
+      if (climateResult.preconditioningStopReason && snapshot.sessionActive) {
+        // The durable power veto must not freeze ordinary Session cleanup.
+        snapshot = await reconcileDisconnectObservation(snapshot, activeMode);
+        snapshot.expiredSession =
+          getTargetDeparture(
+            parseDateOrFallback(snapshot.chargeConnectedAt, snapshot.now),
+          ) < snapshot.now;
+        if (await applyRuntimeLifecycle(snapshot, activeMode))
+          climateResult.sessionActive = false;
+      }
+      return climateResult;
+    }
     let lifecycleProposal = proposedLifecycleAction(snapshot);
     if (activeMode && canCreateSession(snapshot))
       snapshot = await createRuntimeSession(snapshot);
@@ -456,7 +521,8 @@ async function runAutomaticRuntimeController() {
     const freshOnEvidence =
       snapshot.batteryPct !== null &&
       snapshot.batteryFreshness === TELEMETRY_FRESHNESS.FRESH &&
-      hasTrustworthyConnectionEvidence(snapshot);
+      (hasTrustworthyConnectionEvidence(snapshot) ||
+        snapshot.powerCutRecoveryAllowed);
     const continuingExistingCharge =
       desired.desiredPlugOn &&
       !freshOnEvidence &&
@@ -473,30 +539,7 @@ async function runAutomaticRuntimeController() {
     const action = continuingExistingCharge
       ? 'none'
       : await applyRuntimeActions(snapshot, desired.desiredPlugOn, activeMode);
-    let lifecycleApplied = false;
-    if (activeMode && evaluateCompletionEvidence(snapshot)) {
-      lifecycleApplied = await resetRuntimeSession(
-        snapshot,
-        SmartChargeLogger.EVENT_TYPES.BATTERY_FULL,
-        'Target battery reached',
-        'completed',
-      );
-    } else if (activeMode && snapshot.expiredSession) {
-      lifecycleApplied = await resetRuntimeSession(
-        snapshot,
-        SmartChargeLogger.EVENT_TYPES.SESSION_EXPIRED,
-        'Session expired: target departure is in the past',
-        'expired',
-        true,
-      );
-    } else if (activeMode && snapshot.confirmedDisconnect) {
-      lifecycleApplied = await resetRuntimeSession(
-        snapshot,
-        SmartChargeLogger.EVENT_TYPES.CHARGER_DISCONNECTED,
-        'Disconnect confirmed after observation period',
-        'disconnected',
-      );
-    }
+    const lifecycleApplied = await applyRuntimeLifecycle(snapshot, activeMode);
     // Physical safety reconciliation and terminal cleanup precede any optional
     // tariff request, which may never resolve.
     if (!snapshot.plannerDecision)
@@ -539,9 +582,11 @@ async function runAutomaticRuntimeController() {
       preconditioningCapability: snapshot.preconditioningCapability,
       preconditioningRawValue: snapshot.preconditioningRawValue,
       preconditioningLastUpdated: snapshot.preconditioningObservedAt,
+      preconditioningFreshness: snapshot.preconditioningFreshness,
       runtimeDecisionReason: desired.reason,
       preliminaryPlan,
       continuingExistingCharge,
+      expectedPowerCutRecovery: snapshot.powerCutRecoveryAllowed === true,
       proposedLifecycleAction: lifecycleProposal,
       action,
       plannerShouldCharge: snapshot.plannerShouldCharge,

@@ -547,7 +547,14 @@ function buildSessionUpdate(event, currentSession) {
   }
 
   if (event.eventType === 'smartcharge_off') {
-    if (!hasValue(currentSession.chargeStoppedAt)) {
+    const completedRunningCharge =
+      normalizeStatus(currentSession.status) === 'completed' &&
+      isCompletionEvent(event, currentSession) &&
+      hasValue(currentSession.chargeStartedAt) &&
+      (!hasValue(currentSession.chargeStoppedAt) ||
+        new Date(currentSession.chargeStartedAt) >
+          new Date(currentSession.chargeStoppedAt));
+    if (canUpdateFinalBattery(currentSession) || completedRunningCharge) {
       update.chargeStoppedAt = event.loggedAt;
     }
 
@@ -602,7 +609,11 @@ function getSessionStatus(event, currentSession) {
 
   if (currentStatus === 'completed') return 'completed';
 
-  if (currentStatus === 'expired' || currentStatus === 'manual_reset') {
+  if (
+    currentStatus === 'expired' ||
+    currentStatus === 'manual_reset' ||
+    currentStatus === 'disconnected'
+  ) {
     return currentStatus;
   }
 
@@ -671,11 +682,9 @@ function isTerminalSession(session) {
 }
 
 function canUpdateFinalBattery(currentSession) {
-  if (isTerminalSession(currentSession)) return false;
-
-  return !(
-    hasValue(currentSession.chargeStoppedAt) &&
-    hasValue(currentSession.endBatteryPct)
+  return (
+    !isTerminalSession(currentSession) &&
+    normalizeStatus(currentSession.status) !== 'disconnected'
   );
 }
 
@@ -722,9 +731,8 @@ function addBatteryDelta(update, currentSession) {
   );
 
   if (startBattery === null || endBattery === null) return;
-  if (endBattery < startBattery) return;
-
-  update.batteryDeltaPct = endBattery - startBattery;
+  update.batteryDeltaPct =
+    endBattery < startBattery ? '' : endBattery - startBattery;
 }
 
 function numberOrNull(value) {

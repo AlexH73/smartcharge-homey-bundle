@@ -26,6 +26,92 @@ the old next-day rule, the same saved connection timestamp now resolves to that
 morning. Its deadline can therefore become earlier; review any such active
 Session during deployment rather than expecting the old next-day deadline.
 
+## Power for preconditioning (0.6.9+build.24)
+
+When AUTO is authorized, a fresh Boolean preconditioning signal and fresh,
+trustworthy vehicle connection evidence request socket power independently of
+the tariff plan, SOC and automatic Session. This supports a full battery or
+temporarily missing SOC. SmartCharge does not send climate commands to Mercedes:
+the operator starts and stops preconditioning in the Mercedes application.
+
+Read `onoff_precond`, `climate_active` and the existing compatibility aliases.
+Choose the newest valid, non-future Boolean observation; OFF wins on timestamp
+ties. Climate uses its own capability timestamp under the existing 30-minute
+freshness policy. The provider heartbeat never refreshes retained climate intent.
+Unavailable/warning devices, stale or missing climate observations, and missing
+connection evidence cannot authorize climate power. A fresh connector disconnect
+retains priority. The installed Mercedes integration reports both climate
+capabilities; its [provider mapping](https://github.com/andersdissing/Mercedes-Benz-homey-app/blob/main/drivers/mercedes-vehicle/device.js)
+also handles manual starts from Mercedes me.
+
+The runtime returns PRECONDITIONING without calling Tibber, creating a charging
+Session or modifying the saved tariff strategy. Completion/expiry of an existing
+charging Session is deferred until climate power ends. Then ordinary runtime
+reconciliation resumes: keep power if the charging plan requires it, otherwise
+request OFF. A full battery cannot create a new automatic charging Session.
+
+USER_STOP and the existing AUTO grant retain priority, including after restart.
+Explicit AUTO may grant permission at 100% or unknown SOC only when fresh
+preconditioning and connection evidence already permit cabin power; normal AUTO
+charging recovery retains its SOC checks. MANUAL charging keeps its own lifecycle.
+The sole actuator function checks climate/connection again immediately before
+ON and after its acknowledgement; loss of evidence or intent during ON causes
+compensating OFF. Failed commands retain the existing error/compensation policy.
+Shadow execution changes no Logic, devices or timers.
+
+This implementation uses the existing five-minute watchdog. Detection of start
+and stop can take up to one watchdog interval after Homey receives the vehicle
+update, plus any provider delay; it does not promise immediate switching.
+Installation reuses the existing script IDs and five-minute watchdog without a
+new periodic trigger or app update. Physical acceptance of both vehicle signals
+remains pending.
+
+Cabin power additionally uses the durable `SmartChargePreconditioningState`
+record (schema 1: IDLE, RUNNING, INHIBITED). The startup deadline is saved before
+ON. No observed load above 5 W within 180 seconds inhibits power on the next
+watchdog. After load starts, independent fresh samples at/below 5 W spanning
+180 seconds inhibit power. Samples use the existing 60-second freshness and
+360-second observation-gap rules; a missing/invalid sample is never zero.
+After consumption is observed, losing fresh samples for more than 360 seconds
+also inhibits power. These are watchdog decisions, not background timers.
+
+INHIBITED means automatic ON is denied; it is not a claim that a failed OFF
+command succeeded. Persist inhibition before OFF; a failed OFF is retried by the
+next watchdog. Failed state writes block AUTO and request OFF. Old climate true,
+heartbeat refreshes and a falling SOC alone cannot remove inhibition. A fresh
+positive connection observation after inhibition, a new observed OFF/ON climate
+cycle (except after a known disconnect), or explicit AUTO can authorize a new
+bounded attempt. Session completion, expiry and confirmed-disconnect cleanup
+still run while power is inhibited. MANUAL remains independent.
+
+Deployment migration: while in maintenance, create the string Logic variable
+`SmartChargePreconditioningState` with literal text `null` if it is absent.
+Preserve an existing record; do not reset inhibition as part of an update.
+Missing or corrupt state fails closed. The deployment client preserves Logic
+and does not create this variable automatically.
+
+## Expected power cuts (0.6.10+build.28)
+
+The operator reports that this Mercedes can retain charging Failure after our
+ordinary socket OFF. Schema-1 climate state optionally retains `powerCut`:
+`at`, `expiresAt`, `sessionId`, `stopToken`, `usedAt`, `lease`.
+Record only a successful ordinary automatic OFF with trustworthy connection and
+fresh/recent consumption or freshly completed full SOC. Failure before OFF,
+USER_STOP, failed commands and idle inhibition do not authorize recovery.
+
+An unexpired matching record can authorize one otherwise valid tariff/climate ON
+if Failure appeared after the cut and the known Mercedes integration remains
+available, warning-free and freshly seen, with no fresh connector disconnect.
+It expires at the Session departure, or after the existing 30-minute freshness
+interval without a Session. Reserve before ON; recheck safety, current vehicle
+evidence and lease after the write. A post-ON climate check may use the same
+in-flight reservation, but a later script cannot spend it again. The normal
+vehicle evidence must recover by the first watchdog after the 180-second grace;
+otherwise inhibit OFF. Tariff recovery uses the same load/startup protection.
+Unknown Failure remains excluded from general connection evidence, including
+when a retained charging flag is true. Existing schema-1 records without the
+optional field remain valid. Physical recovery acceptance is pending.
+
 ## Independent manual charging
 
 Manual ON and Auto Mode require `SmartChargeRuntimeMode=active`; explicit USER_STOP

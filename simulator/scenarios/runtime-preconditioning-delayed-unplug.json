@@ -1,0 +1,157 @@
+{
+  "name": "runtime-preconditioning-delayed-unplug",
+  "description": "A car leaves during preconditioning while Mercedes retains connected/active values; fresh idle plug samples inhibit power across later watchdogs, then a fresh reconnect permits ON.",
+  "now": "2026-07-07T18:05:00+02:00",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "null",
+      "SmartChargeSessionStatus": "completed",
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": {
+            "value": 100,
+            "lastUpdated": "2026-07-07T18:05:00+02:00"
+          },
+          "text_charging_status": {
+            "value": "Charge break",
+            "lastUpdated": "2026-07-07T18:05:00+02:00"
+          },
+          "onoff_precond": {
+            "value": true,
+            "lastUpdated": "2026-07-07T18:05:00+02:00"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "expect": {
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCalls": 0,
+        "result": {
+          "action": "switched_on"
+        }
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:10:00+02:00",
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 600,
+                "lastUpdated": "2026-07-07T18:10:00+02:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCalls": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:15:00+02:00",
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 5,
+                "lastUpdated": "2026-07-07T18:15:00+02:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "plugOn": true,
+        "plugCommandCount": 1,
+        "tibberCalls": 0
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:20:00+02:00",
+      "set": {
+        "devices": {
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 2,
+                "lastUpdated": "2026-07-07T18:20:00+02:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "plugOn": false,
+        "plugCommandCount": 2,
+        "tibberCalls": 0,
+        "result": {
+          "preconditioningStopReason": "LOW_POWER"
+        }
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:25:00+02:00",
+      "expect": {
+        "plugOn": false,
+        "plugCommandCount": 2,
+        "tibberCalls": 0,
+        "result": {
+          "action": "none",
+          "preconditioningStopReason": "LOW_POWER"
+        }
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-07-07T18:26:00+02:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 99,
+                "lastUpdated": "2026-07-07T18:26:00+02:00"
+              },
+              "onoff_connector": {
+                "value": true,
+                "lastUpdated": "2026-07-07T18:26:00+02:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "plugOn": true,
+        "plugCommandCount": 3,
+        "tibberCalls": 0,
+        "result": {
+          "action": "switched_on"
+        },
+        "logic": {
+          "ChargeConnectedAt": "null"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "plugOn": true,
+    "plugCommandCount": 3
+  }
+}

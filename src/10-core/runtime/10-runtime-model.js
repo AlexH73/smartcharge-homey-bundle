@@ -6,6 +6,7 @@ const RUNTIME_STATES = Object.freeze({
   PAUSED: 'PAUSED',
   COMPLETED: 'COMPLETED',
   DEGRADED: 'DEGRADED',
+  PRECONDITIONING: 'PRECONDITIONING',
 });
 
 const TELEMETRY_HEALTH = Object.freeze({
@@ -90,6 +91,7 @@ function hasFreshVehicleChargingEvidence(snapshot, config = CONFIG) {
 function hasTrustworthyConnectionEvidence(snapshot) {
   return (
     !hasFreshConnectorDisconnect(snapshot) &&
+    normalizeVehicleStatus(snapshot.vehicleStatus) !== 'failure' &&
     snapshot.vehicleTelemetryHealth === TELEMETRY_HEALTH.HEALTHY &&
     ((snapshot.vehicleTelemetryFreshness === TELEMETRY_FRESHNESS.FRESH &&
       isVehicleConnectedStatus(snapshot.vehicleStatus)) ||
@@ -98,7 +100,24 @@ function hasTrustworthyConnectionEvidence(snapshot) {
 }
 
 function canCreateSession(snapshot) {
-  return !snapshot.sessionActive && hasTrustworthyConnectionEvidence(snapshot);
+  return (
+    !snapshot.sessionActive &&
+    snapshot.batteryPct !== null &&
+    snapshot.batteryPct >= 0 &&
+    snapshot.batteryPct < snapshot.targetBatteryPct &&
+    hasTrustworthyConnectionEvidence(snapshot)
+  );
+}
+
+function canPowerPreconditioning(snapshot) {
+  return (
+    snapshot.mercedes?.available !== false &&
+    !snapshot.mercedes?.warningMessage &&
+    snapshot.preconditioningActive === true &&
+    snapshot.preconditioningFreshness === TELEMETRY_FRESHNESS.FRESH &&
+    (hasTrustworthyConnectionEvidence(snapshot) ||
+      snapshot.powerCutRecoveryAllowed === true)
+  );
 }
 
 function evaluateCompletionEvidence(snapshot) {

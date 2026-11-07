@@ -35,7 +35,9 @@ Do not silently modify an already approved release artifact.
 `ChargeReserve` is added charging time in **minutes**, not a battery percentage;
 the legacy telemetry name `chargeReservePct` remains for compatibility.
 `chargingPowerKw=2.6` is nominal power for estimated cost only. Automatic planning
-uses `maxChargeMinutes=300`; the separate Manual Charging maximum is 360 minutes.
+uses the full rounded estimate to reach 100%, without a 300-minute cap. Available
+time before departure and tariff coverage can still limit the plan; the separate
+Manual Charging maximum remains 360 minutes.
 Tibber uses the first home returned by the configured GraphQL query: validate this
 selection for multi-home accounts; there is no automatic tariff-provider selector.
 

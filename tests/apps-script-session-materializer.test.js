@@ -178,6 +178,80 @@ function runCompletedSessionRegression() {
   assert.equal(session.resetAt, '2026-07-08T04:46:00Z');
 }
 
+function runMultipleChargeWindowsRegression() {
+  for (const finalBattery of [95, 100, 0]) {
+    let session = { status: 'active', startBatteryPct: 71 };
+    const events = [
+      ['smartcharge_on', '2026-11-06T21:15:00Z', 71],
+      ['smartcharge_off', '2026-11-06T21:20:00Z', 70],
+      ['smartcharge_on', '2026-11-07T10:00:00Z', 71],
+      ['smartcharge_off', '2026-11-07T11:40:00Z', finalBattery],
+    ];
+    for (const [eventType, loggedAt, battery] of events) {
+      session = applyEvent(session, { eventType, loggedAt, battery });
+    }
+    assert.equal(session.chargeStoppedAt, '2026-11-07T11:40:00Z');
+    assert.equal(session.endBatteryPct, finalBattery);
+    assert.equal(
+      session.batteryDeltaPct,
+      finalBattery < 71 ? '' : finalBattery - 71,
+    );
+    session = applyEvent(session, {
+      eventType: 'charger_disconnected',
+      loggedAt: '2026-11-07T11:55:00Z',
+      battery: 46,
+    });
+    session = applyEvent(session, {
+      eventType: 'smartcharge_off',
+      loggedAt: '2026-11-07T12:00:00Z',
+      battery: 11,
+    });
+    assert.equal(session.chargeStoppedAt, '2026-11-07T11:40:00Z');
+    assert.equal(session.endBatteryPct, finalBattery);
+    assert.equal(
+      session.status,
+      finalBattery === 100 ? 'completed' : 'disconnected',
+    );
+    session = applyEvent(session, {
+      eventType: 'smartcharge_off',
+      loggedAt: '2026-11-07T12:05:00Z',
+      battery: 10,
+    });
+    assert.equal(session.chargeStoppedAt, '2026-11-07T11:40:00Z');
+    assert.equal(session.endBatteryPct, finalBattery);
+  }
+}
+
+function runCompletionBeforeFinalOffRegression() {
+  let session = {
+    status: 'charging',
+    startBatteryPct: 71,
+    chargeStartedAt: '2026-11-07T10:00:00Z',
+    chargeStoppedAt: '2026-11-06T21:20:00Z',
+    endBatteryPct: 70,
+  };
+  session = applyEvent(session, {
+    eventType: 'smartcharge_decision',
+    loggedAt: '2026-11-07T11:40:00Z',
+    battery: 100,
+    reasonCode: 'BATTERY_FULL',
+  });
+  assert.equal(session.status, 'completed');
+  assert.equal(session.endBatteryPct, 100);
+  session = applyEvent(session, {
+    eventType: 'smartcharge_off',
+    loggedAt: '2026-11-07T11:40:03Z',
+    battery: 100,
+  });
+  assert.equal(session.chargeStoppedAt, '2026-11-07T11:40:03Z');
+  session = applyEvent(session, {
+    eventType: 'smartcharge_off',
+    loggedAt: '2026-11-07T12:00:00Z',
+    battery: 100,
+  });
+  assert.equal(session.chargeStoppedAt, '2026-11-07T11:40:03Z');
+}
+
 function runManualResetRegression() {
   let session = {};
 
@@ -822,4 +896,6 @@ assert.equal(
   'completed',
 );
 
+runMultipleChargeWindowsRegression();
+runCompletionBeforeFinalOffRegression();
 console.log('PASS apps-script-session-materializer');

@@ -113,7 +113,12 @@ async function executeRuntimePlugCommand(
 ) {
   if (!forceOff && desiredOn === getCapabilityValue(snapshot.plug, 'onoff'))
     return 'none';
-  if (!desiredOn && !state && reasonCode === 'AUTOMATIC_RECONCILIATION') {
+  if (
+    !desiredOn &&
+    !state &&
+    (reasonCode === 'AUTOMATIC_RECONCILIATION' ||
+      reasonCode.startsWith('PRECONDITIONING'))
+  ) {
     const safety = await readRuntimeSafety();
     if (safety.manual || isManualRunning(safety.state)) return 'off_blocked';
   }
@@ -195,21 +200,26 @@ async function executeRuntimePlugCommand(
         return 'on_blocked';
       if (desiredOn && !state) {
         const current = await collectRuntimeSnapshot();
+        await annotateAutomaticPowerCutRecovery(current);
         const safety = await readRuntimeSafety();
+        const validRequest = canStartAutomaticPower(
+          current,
+          snapshot,
+          reasonCode,
+        );
         if (
           safety.blocked ||
           safety.manual ||
-          !current.sessionActive ||
-          current.sessionId !==
-            (snapshot.chargeConnectedAt || snapshot.sessionId) ||
-          current.batteryFreshness !== TELEMETRY_FRESHNESS.FRESH ||
-          current.batteryPct === null ||
-          current.batteryPct < 0 ||
-          current.batteryPct >= current.targetBatteryPct ||
-          !hasTrustworthyConnectionEvidence(current) ||
+          !validRequest ||
           (runtimeOwnedLock &&
             (await getVariableValue(CONFIG.runtimeLockVariableName)) !==
               runtimeOwnedLock)
+        )
+          return 'on_blocked';
+        if (
+          !hasTrustworthyConnectionEvidence(current) &&
+          current.powerCutRecoveryAllowed &&
+          !(await reserveAutomaticPowerCutRecovery(current, reasonCode))
         )
           return 'on_blocked';
       }
@@ -280,9 +290,24 @@ async function executeRuntimePlugCommand(
         physicalStateVerified: false,
       }),
     );
+    if (!desiredOn && !state && !forceOff) {
+      try {
+        await rememberAutomaticPowerCut(snapshot, reasonCode);
+      } catch (error) {
+        await emit(
+          SmartChargeLogger.EVENT_TYPES.SMARTCHARGE_ERROR,
+          'POWER_CUT_STATE_FAILED',
+          snapshot,
+          null,
+          error.message,
+        );
+        throw error; // OFF ACK is already queued and must remain before this error.
+      }
+    }
     let compensated = false;
     if (desiredOn) {
       let safety;
+      let preconditioningEnded = false;
       try {
         safety = await readRuntimeSafety();
       } catch (error) {
@@ -293,7 +318,17 @@ async function executeRuntimePlugCommand(
         ).catch((writeError) => log(writeError.message));
         log(`Post-command recovery blocked: ${error.message}`);
       }
+      if (!state && reasonCode === 'PRECONDITIONING') {
+        try {
+          const current = await collectRuntimeSnapshot();
+          await annotateAutomaticPowerCutRecovery(current, true);
+          preconditioningEnded = !canPowerPreconditioning(current);
+        } catch {
+          preconditioningEnded = true;
+        }
+      }
       if (
+        preconditioningEnded ||
         (!state && safety.blocked) ||
         (state &&
           (!safety.manualAllowed ||
@@ -304,7 +339,7 @@ async function executeRuntimePlugCommand(
         await executeRuntimePlugCommand(
           snapshot,
           false,
-          'USER_STOP',
+          preconditioningEnded ? 'PRECONDITIONING_ENDED' : 'USER_STOP',
           state,
           true,
           events,
@@ -787,6 +822,7 @@ async function requestManualModeSafely(action) {
     await updateVariableByName(CONFIG.smartChargeManualModeVariableName, false);
     // Old automatic session timestamps are not fresh connection evidence.
     const snapshot = await collectRuntimeSnapshot();
+    await annotateAutomaticPowerCutRecovery(snapshot);
     if (getCapabilityValue(snapshot.plug, 'onoff') !== false) {
       await executeRuntimePlugCommand(snapshot, false, 'AUTO_MODE_PREPARE');
       if (getCapabilityValue(snapshot.plug, 'onoff') !== false)
@@ -795,17 +831,20 @@ async function requestManualModeSafely(action) {
     const battery = readVehicleCapabilityDiagnostic(snapshot.mercedes, [
       'measure_battery',
     ]);
+    const preconditioningRequested = canPowerPreconditioning(snapshot);
     if (
       (await getVariableValue(CONFIG.userStopTokenVariableName)) !== stopToken
     )
       return requestManualMode('stop');
     if (
-      !hasTrustworthyConnectionEvidence(snapshot) ||
-      evaluateTelemetryFreshness(battery.observedAt, now) !==
-        TELEMETRY_FRESHNESS.FRESH ||
-      snapshot.batteryPct === null ||
-      snapshot.batteryPct < 0 ||
-      snapshot.batteryPct >= CONFIG.batteryFullPercentage
+      (!hasTrustworthyConnectionEvidence(snapshot) &&
+        !snapshot.powerCutRecoveryAllowed) ||
+      (!preconditioningRequested &&
+        (evaluateTelemetryFreshness(battery.observedAt, now) !==
+          TELEMETRY_FRESHNESS.FRESH ||
+          snapshot.batteryPct === null ||
+          snapshot.batteryPct < 0 ||
+          snapshot.batteryPct >= CONFIG.batteryFullPercentage))
     ) {
       await updateVariableByName(CONFIG.autoStartBlockedVariableName, true);
       return {

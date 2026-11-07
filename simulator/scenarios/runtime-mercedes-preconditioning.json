@@ -1,6 +1,6 @@
 {
   "name": "runtime-mercedes-preconditioning",
-  "description": "Preconditioning cannot keep the plug on while the production planner requests waiting.",
+  "description": "A preconditioning flag without its own timestamp cannot override tariff waiting.",
   "now": "2026-07-07T18:05:00+02:00",
   "initial": {
     "logic": {

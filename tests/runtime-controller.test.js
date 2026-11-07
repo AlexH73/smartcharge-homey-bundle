@@ -69,14 +69,16 @@ assert.equal(
 );
 assert.equal(
   call(`canCreateSession({
-    sessionActive: false, vehicleStatus: 'Charge', vehicleTelemetryHealth: 'HEALTHY',
+    sessionActive: false, batteryPct: 50, targetBatteryPct: 100,
+    vehicleStatus: 'Charge', vehicleTelemetryHealth: 'HEALTHY',
     vehicleTelemetryFreshness: 'UNKNOWN'
   })`),
   false,
 );
 assert.equal(
   call(`canCreateSession({
-    sessionActive: false, vehicleStatus: 'Charge', vehicleTelemetryHealth: 'HEALTHY',
+    sessionActive: false, batteryPct: 50, targetBatteryPct: 100,
+    vehicleStatus: 'Charge', vehicleTelemetryHealth: 'HEALTHY',
     vehicleTelemetryFreshness: 'FRESH'
   })`),
   true,
