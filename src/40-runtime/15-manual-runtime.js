@@ -1,6 +1,31 @@
 // Manual intent and timers are durable Homey Logic values. No timers sleep inside
 // HomeyScript: event/scheduled triggers observe independent provider samples.
 let runtimeOwnedLock = null;
+async function publishControlStatus() {
+  try {
+    if (
+      String(
+        await getVariableValue(CONFIG.runtimeModeVariableName),
+      ).toLowerCase() !== 'active'
+    )
+      return;
+    let status = 'ERROR';
+    try {
+      const safety = await readRuntimeSafety();
+      if (!['ERROR', 'STOPPING'].includes(safety.state.status))
+        status = safety.manualAllowed
+          ? 'MANUAL'
+          : safety.blocked
+            ? 'STOP'
+            : 'AUTO';
+    } catch {
+      // Invalid safety state must never be displayed as an available AUTO mode.
+    }
+    await tryUpdateVariableByName(CONFIG.controlStatusVariableName, status);
+  } catch (error) {
+    log(`Control status unavailable: ${error.message}`);
+  }
+}
 async function writeManualState(state) {
   await updateVariableByName(
     CONFIG.manualStateVariableName,
@@ -619,6 +644,7 @@ async function runRecoveryBlocked(error, activeMode) {
       error.message,
     );
   }
+  await publishControlStatus();
   return {
     runtimeState: 'ERROR',
     desiredPlugState: false,
@@ -730,6 +756,7 @@ async function runRuntimeController() {
     runtimeOwnedLock = null;
     if ((await getVariableValue(CONFIG.runtimeLockVariableName)) === ownedLock)
       await updateVariableByName(CONFIG.runtimeLockVariableName, 'null');
+    await publishControlStatus();
   }
 }
 
@@ -738,11 +765,13 @@ async function requestManualMode(action) {
     return await requestManualModeSafely(action);
   } catch (error) {
     return runRecoveryBlocked(error, true);
+  } finally {
+    await publishControlStatus();
   }
 }
 
 async function requestManualModeSafely(action) {
-  const now = new Date();
+  let now = new Date();
   const activeMode =
     String(
       await getVariableValue(CONFIG.runtimeModeVariableName),
@@ -775,6 +804,27 @@ async function requestManualModeSafely(action) {
       },
     };
   }
+  if (action === 'toggle') {
+    if (['ERROR', 'STOPPING'].includes(safety.state.status))
+      return runRuntimeController();
+    const last = runtimeDateOrNull(safety.state.controlToggle?.at);
+    if (last && now - last < CONFIG.manualToggleDebounceSeconds * 1000)
+      return { skipped: true, reason: 'Control toggle debounce' };
+    if ((await getVariableValue(CONFIG.runtimeLockVariableName)) !== 'null')
+      return { skipped: true, reason: 'Runtime controller already running' };
+    const controlToggle = {
+      at: now.toISOString(),
+      id: `${now.toISOString()}:${Math.random()}`,
+    };
+    await writeManualState({ ...safety.state, controlToggle });
+    safety = await readRuntimeSafety(now);
+    if (
+      safety.state.controlToggle?.id !== controlToggle.id ||
+      safety.stopToken !== stopToken
+    )
+      return { skipped: true, reason: 'Control toggle superseded' };
+    action = safety.manualAllowed ? 'auto' : 'start';
+  }
   if (action === 'start') {
     if (isManualRunning(safety.state)) return runRuntimeController();
     stopToken = `${now.toISOString()}:${Math.random()}`;
@@ -786,6 +836,9 @@ async function requestManualModeSafely(action) {
       id: `manual:${now.toISOString()}`,
       startedAt: now.toISOString(),
       activationStopToken: stopToken,
+      ...(safety.state.controlToggle
+        ? { controlToggle: safety.state.controlToggle }
+        : {}),
     };
     await writeManualState(state);
     if (
@@ -811,6 +864,7 @@ async function requestManualModeSafely(action) {
     if (isManualRunning(safety.state)) {
       await requestManualMode('stop');
       stopToken = await getVariableValue(CONFIG.userStopTokenVariableName);
+      now = new Date();
     }
     const current = await readRuntimeSafety(now);
     if (
@@ -820,7 +874,7 @@ async function requestManualModeSafely(action) {
     )
       return { runtimeState: 'ERROR', runtimeDecisionReason: 'COMMAND_FAILED' };
     await updateVariableByName(CONFIG.smartChargeManualModeVariableName, false);
-    // Old automatic session timestamps are not fresh connection evidence.
+    // Arming AUTO is permission for future decisions, not evidence for ON.
     const snapshot = await collectRuntimeSnapshot();
     await annotateAutomaticPowerCutRecovery(snapshot);
     if (getCapabilityValue(snapshot.plug, 'onoff') !== false) {
@@ -828,32 +882,13 @@ async function requestManualModeSafely(action) {
       if (getCapabilityValue(snapshot.plug, 'onoff') !== false)
         throw new Error('Auto Mode requires verified OFF');
     }
-    const battery = readVehicleCapabilityDiagnostic(snapshot.mercedes, [
-      'measure_battery',
-    ]);
-    const preconditioningRequested = canPowerPreconditioning(snapshot);
     if (
       (await getVariableValue(CONFIG.userStopTokenVariableName)) !== stopToken
     )
       return requestManualMode('stop');
-    if (
-      (!hasTrustworthyConnectionEvidence(snapshot) &&
-        !snapshot.powerCutRecoveryAllowed) ||
-      (!preconditioningRequested &&
-        (evaluateTelemetryFreshness(battery.observedAt, now) !==
-          TELEMETRY_FRESHNESS.FRESH ||
-          snapshot.batteryPct === null ||
-          snapshot.batteryPct < 0 ||
-          snapshot.batteryPct >= CONFIG.batteryFullPercentage))
-    ) {
-      await updateVariableByName(CONFIG.autoStartBlockedVariableName, true);
-      return {
-        desiredPlugState: false,
-        autoStartBlocked: true,
-        runtimeDecisionReason: 'RECOVERY_BLOCKED',
-      };
-    }
-    const latest = await readRuntimeSafety(now);
+    // Runtime and the actuator still require fresh vehicle evidence, demand and
+    // a matching grant before any physical ON. Full/absent/stale SOC can wait.
+    const latest = await readRuntimeSafety();
     if (
       latest.state.id !== current.state.id ||
       latest.manual ||
@@ -866,7 +901,7 @@ async function requestManualModeSafely(action) {
       };
     await writeManualState({
       ...latest.state,
-      autoGrant: { at: now.toISOString(), stopToken },
+      autoGrant: { at: new Date().toISOString(), stopToken },
     });
     await updateVariableByName(CONFIG.autoStartBlockedVariableName, false);
     if (

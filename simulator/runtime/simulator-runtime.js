@@ -57,6 +57,7 @@ class SimulatorRuntime {
         stabilityShadow: createStabilityShadowInput(this, step),
         liveStabilityShadowEnabled: this.scenario.liveStabilityShadow === true,
         stabilityShadowFailure: step.stabilityShadowFailure || null,
+        args: step.args || [],
       });
       applyStabilityShadowResult(this, result);
     } catch (caughtError) {

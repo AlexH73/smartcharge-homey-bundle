@@ -5,6 +5,27 @@ All notable SmartCharge Homey Bundle changes should be documented here.
 The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 `v1.0.0`.
 
+## 0.6.13 - 2026-11-08
+
+Prepared **0.6.13+build.31**; deployment and control-Flow migration pending.
+
+### Added
+
+- A primary MANUAL/AUTO toggle using the existing Manual Override On script with
+  argument `toggle`, plus an independent STOP. Persist the last accepted toggle
+  in manual state with a three-second debounce and stop-token revalidation.
+- Optional `SmartChargeControlStatus` Text value displays AUTO, MANUAL, STOP or
+  ERROR. Display failures never affect actuator decisions. Legacy argument-free
+  Manual ON and explicit AUTO entrypoints retain their behavior.
+
+### Fixed
+
+- Allow explicit AUTO to arm waiting with the socket OFF at full, stale or
+  unavailable SOC, or before vehicle connection. Preserve manual recovery,
+  stop-token, lease and OFF checks. Runtime and actuator demand/freshness checks
+  still gate physical ON; later fresh charging or climate demand needs no second
+  AUTO press.
+
 ## 0.6.12 - 2026-11-08
 
 Prepared **0.6.12+build.30**; installation pending.

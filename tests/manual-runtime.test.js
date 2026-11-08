@@ -455,16 +455,18 @@ async function main() {
       true,
     );
   });
-  await test('Auto Mode requires fresh connection and is explicit', async () => {
+  await test('Auto Mode arms while waiting; fresh evidence starts the next Session', async () => {
     const r = runtime();
     await run(r, 'manual-on');
     await run(r, 'manual-off', 1);
     await run(r, 'auto-mode', 2);
     assert.equal(
       r.homeyMock.getLogicValue('SmartChargeAutoStartBlocked'),
-      true,
+      false,
     );
-    await run(r, 'auto-mode', 3, {
+    assert.equal(r.homeyMock.getLogicValue('ChargeConnectedAt'), 'null');
+    assert.equal(r.homeyMock.devices.plug.capabilitiesObj.onoff.value, false);
+    await run(r, 'runtime-controller', 3, {
       devices: {
         mercedes: {
           capabilitiesObj: {
@@ -480,10 +482,10 @@ async function main() {
     );
     assert.notEqual(r.homeyMock.getLogicValue('ChargeConnectedAt'), 'null');
   });
-  for (const [label, socAt, statusAt, soc, allowed] of [
+  for (const [label, socAt, statusAt, soc, canCreateSession] of [
     ['stale vehicle', -3600, -3600, 44, false],
     ['fresh SOC only', 3, -3600, 44, false],
-    ['fresh status only', -3600, 3, 44, false],
+    ['fresh status only', -3600, 3, 44, true],
     ['full battery', 3, 3, 100, false],
     ['recovered capabilities without connection event', 3, 3, 44, true],
   ]) {
@@ -507,12 +509,47 @@ async function main() {
       });
       assert.equal(
         r.homeyMock.getLogicValue('SmartChargeAutoStartBlocked'),
-        !allowed,
+        false,
       );
-      if (!allowed)
+      assert.ok(state(r).autoGrant);
+      if (!canCreateSession) {
         assert.equal(r.homeyMock.getLogicValue('ChargeConnectedAt'), 'null');
+      }
+      if (socAt < 0 || statusAt < 0 || soc === 100) {
+        assert.equal(
+          r.homeyMock.devices.plug.capabilitiesObj.onoff.value,
+          false,
+        );
+      }
       assert.equal(state(r).startedAt, base);
       assert.equal(state(r).endedAt, at(1));
+    });
+  }
+  for (const [label, soc, status] of [
+    ['disconnected full vehicle', 100, 'Unplugged'],
+    ['missing SOC and connection', null, null],
+    ['unknown charging failure', 44, 'Failure'],
+  ]) {
+    await test(`Auto Mode waits with ${label}`, async () => {
+      const r = runtime();
+      await run(r, 'manual-off', 1);
+      const out = await run(r, 'auto-mode', 3, {
+        devices: {
+          mercedes: {
+            capabilitiesObj: {
+              measure_battery: { value: soc, lastUpdated: at(3) },
+              text_charging_status: { value: status, lastUpdated: at(3) },
+            },
+          },
+        },
+      });
+      assert.equal(out.logic.SmartChargeAutoStartBlocked, false);
+      assert.ok(state(r).autoGrant);
+      assert.equal(out.devices.plug.capabilitiesObj.onoff.value, false);
+      assert.equal(
+        out.devices.plug.commands.some((command) => command.value === true),
+        false,
+      );
     });
   }
   await test('Reactivation preserves automatic block without reusing old deadline', async () => {

@@ -512,7 +512,11 @@ async function disconnectRegressions() {
   blockedAuto.homeyMock.setDeviceState('mercedes', {
     capabilitiesObj: { onoff_connector: { value: false, lastUpdated: now } },
   });
-  assert.equal((await run(blockedAuto, 'auto-mode')).autoStartBlocked, true);
+  await run(blockedAuto, 'auto-mode');
+  assert.equal(
+    blockedAuto.homeyMock.getLogicValue('SmartChargeAutoStartBlocked'),
+    false,
+  );
   noOn(blockedAuto);
   assert.equal((await run(blockedAuto, 'manual-on')).actualPlugState, true);
   assert.equal(
@@ -794,7 +798,11 @@ async function main() {
   await run(stale, 'auto-mode');
   assert.equal(
     stale.homeyMock.getLogicValue('SmartChargeAutoStartBlocked'),
-    true,
+    false,
+  );
+  assert.ok(
+    JSON.parse(stale.homeyMock.getLogicValue('SmartChargeManualState'))
+      .autoGrant,
   );
   noOn(stale);
   const socOnly = make();

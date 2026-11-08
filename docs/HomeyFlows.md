@@ -17,9 +17,9 @@ additional ingress to audit and quiesce.
 | --- | --- | --- | --- |
 | Runtime Watchdog | Every five minutes | `SMARTCHARGE - Runtime Controller` | One periodic caller; no vehicle availability, automatic Session or SOC condition. Manual deadlines/recovery still need ticks. |
 | Connection Evidence | Real trustworthy charger-connected event | `SMARTCHARGE - Connection Evidence` | Records UTC evidence and invokes Runtime Controller itself. No timer, retained-status polling or second Runtime action. |
-| Manual ON | Explicit operator button | `SMARTCHARGE - Manual Override On` | No direct plug ON, flag writes or block clearing. Starts Manual Charging only. |
+| MANUAL / AUTO | Explicit operator button | `SMARTCHARGE - Manual Override On`, argument `toggle` | Use the installed HomeyScript `runWithArg` card. AUTO/STOP -> manual start; active MANUAL -> AUTO. Three-second durable debounce; no direct plug commands. |
 | USER_STOP | Explicit operator stop button | `SMARTCHARGE - Manual Override Off` | No vehicle, Session or busy condition; no Delay/logger before the action. |
-| Auto Mode | Separate explicit operator button | `SMARTCHARGE - Auto Mode` | Never timer/startup/connection; requires safe state and fresh telemetry; may immediately request ON. |
+| Auto Mode (compatibility/recovery) | Explicit operator invocation only | `SMARTCHARGE - Auto Mode` | The separate everyday AUTO Flow is removed after migration. Script remains available for supervised recovery; never scheduled. Can arm waiting at full/stale/unknown SOC. |
 | Startup Recovery (optional) | Homey startup after Logic/devices are available | `SMARTCHARGE - Runtime Controller` | Never reset persisted state/block/token/lock or call Auto Mode. Enable watchdog after supervised recovery. |
 
 For the observed Mercedes-Benz integration the connected-event card is
@@ -32,6 +32,24 @@ an unconnected action does not run. The audit conservatively includes disconnect
 cards for maintenance because their existence cannot prove safe execution state.
 
 ## Manual Charging and Durable Auto Block
+
+The primary button has a fixed name; its current mode is exposed as the optional
+Text Logic variable `SmartChargeControlStatus` (initial value `STOP`). Runtime and
+explicit controls update it to `AUTO`, `MANUAL`, `STOP` or `ERROR`. It is display
+only and never read for control decisions. No custom device or dynamic button
+skin is installed. STOP is a separate, always reachable control and is never
+debounced. A toggle in ERROR/STOPPING performs existing recovery, not a new ON.
+Returning to AUTO uses the existing safe manual-stop/OFF preparation before
+Runtime selects charging, climate power or waiting; an applicable plan may turn
+power back ON. The debounce is best effort across independent invocations, not
+an atomic device-command queue (see the concurrency boundary below).
+
+For migration, preserve the existing Manual ON Flow ID and change its sole action
+to HomeyScript `runWithArg`, the same script ID, argument `toggle`. Rename it to
+MANUAL / AUTO, preserve the separate STOP Flow, and remove the obsolete AUTO Flow
+only after installed hashes, caller references and the new topology are verified.
+Retain a private export of the old Flow for rollback. Argument-free script calls
+continue to mean idempotent Manual ON, not toggle.
 
 Manual ON and Auto Mode require `SmartChargeRuntimeMode=active`. Explicit USER_STOP
 remains available in shadow mode. Manual Charging does not depend on an automatic

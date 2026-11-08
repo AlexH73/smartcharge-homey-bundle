@@ -127,6 +127,7 @@ const sharedBundleGlobals = {
   runAutomaticRuntimeController: 'readonly',
   executeRuntimePlugCommand: 'readonly',
   requestManualMode: 'readonly',
+  publishControlStatus: 'readonly',
   idleManualState: 'readonly',
   parseManualState: 'readonly',
   isManualRunning: 'readonly',

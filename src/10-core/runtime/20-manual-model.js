@@ -74,6 +74,14 @@ function parseManualState(raw, now) {
     )
       throw new Error('Invalid automatic permission');
   }
+  if (
+    state.controlToggle &&
+    (!runtimeDateOrNull(state.controlToggle.at) ||
+      new Date(state.controlToggle.at) > now ||
+      typeof state.controlToggle.id !== 'string' ||
+      !state.controlToggle.id)
+  )
+    throw new Error('Invalid control toggle record');
   return state;
 }
 

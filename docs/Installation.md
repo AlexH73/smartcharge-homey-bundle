@@ -55,6 +55,7 @@ on startup or during a 0.6.3 -> 0.6.4 update.
 | `SmartChargeLastLogKey` | Text | empty string | Decision log deduplication. |
 | `ChargeConnectedAt` | Text | `null` | Automatic Session identity, local `YYYY-MM-DD HH:mm:ss`. |
 | `SmartChargeActiveChargeSlot` | Text | `null` | Selected current tariff slot, scoped to the Session and user-stop token; prevents mid-hour replanning stops. |
+| `SmartChargeControlStatus` | Text | `STOP` | Optional display-only AUTO/MANUAL/STOP/ERROR status. Never authorizes power. |
 | `ChargeFactor` | Number | `2` | Minutes per missing battery percentage point. |
 | `ChargeReserve` | Number | `20` | Additional reserve minutes. |
 | `ChargeMinutes` | Number | `0` | Planner output. |

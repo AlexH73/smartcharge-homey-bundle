@@ -113,7 +113,7 @@ async function runPreliminaryPlanning(snapshot = null, publish = false) {
       reason: error.message,
     };
   }
-  result.reason = `Preliminary (${result.batteryFreshness || 'UNKNOWN'}, SOC age ${result.batteryAgeMinutes ?? 'unknown'} min): ${result.reason}; physical ON requires explicit AUTO and fresh evidence`;
+  result.reason = `Preliminary (${result.batteryFreshness || 'UNKNOWN'}, SOC age ${result.batteryAgeMinutes ?? 'unknown'} min): ${result.reason}; physical ON requires AUTO permission and fresh evidence`;
   if (publish) {
     for (const [name, value] of [
       [CONFIG.smartChargeShouldChargeVariableName, false],

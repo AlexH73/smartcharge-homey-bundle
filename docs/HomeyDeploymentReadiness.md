@@ -20,7 +20,7 @@ existing 0.6.3/0.6.4 installation. API maintenance/write procedures have one own
 | Terminal lifecycle | USER_STOP, LOW_POWER, BATTERY_FULL, MAX_DURATION_REACHED and COMMAND_FAILED deny Automatic Charging; automatic Session remains independent. | Failed OFF leaves ERROR without false completion. |
 | Durable Auto Block | Boolean block, terminal record, stop token and grant validation deny automatic ON. | Logic writes are not transactional; simultaneous failure of all protective persistence cannot establish durable denial after restart. |
 | Manual ON | Saves a new activation while preserving block=true; duplicate ON does not extend deadline. | ERROR/STOPPING use recovery, not a new activation. |
-| Auto Mode | Explicit grant bound to current stop token; inactive manual lifecycle, clear lease, cached `onoff=false`, fresh connection evidence and fresh SOC 0..<100. | Grant and device request are not atomic with concurrent Stop; cached OFF is not physical verification. |
+| Auto Mode | Explicit grant bound to current stop token; inactive manual lifecycle, clear lease, cached `onoff=false`. Full/stale/unknown SOC can arm waiting; physical charging ON requires fresh connection evidence and SOC 0..<100. | Grant and device request are not atomic with concurrent Stop; cached OFF is not physical verification. |
 | Vehicle | Non-future provider timestamps; 30-minute freshness for automatic permission/evidence. | Retained status or restored subscription cannot be re-stamped as a new connection. |
 | Plug power | Two independent fresh samples >500 W >=30 seconds apart confirm start; <=5 W samples spanning >=180 seconds afterwards complete Manual Charging. | Samples <=60 seconds old, gaps <=360 seconds; repeated timestamp is not new evidence. Five-minute sampling cannot prove continuity. |
 | Missing timestamp | No start/LOW_POWER confirmation, no invented 0 W. | USER_STOP and the original 360-minute deadline still require invocation. |
@@ -133,7 +133,7 @@ using it. This remains PLANNED.
   blocked runtime/legacy calls: no new ON, automatic Session preserved.
 - [ ] Restart after Stop: verify durable denial without startup state resets.
   Remain OFF when recovery is ambiguous.
-- [ ] Stale real vehicle data must deny Auto Mode. Do not mutate production SOC
+- [ ] Stale real vehicle data may arm waiting in Auto Mode, but must deny new charging ON. Do not mutate production SOC
   or timestamps to manufacture a passing result.
 - [ ] Test logger/materializer on a workbook copy, measure latency and cadence.
   Local fault-injection coverage does not justify damaging live Logic/API.

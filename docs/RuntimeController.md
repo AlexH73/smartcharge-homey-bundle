@@ -1,5 +1,14 @@
 # Runtime State Controller
 
+The primary control invokes the existing Manual Override On entry with argument
+`toggle`. The persisted manual record may contain optional `controlToggle` with
+`at` and unique `id`; legacy records remain valid. Accepted presses less than
+three seconds apart are ignored, including after a script restart. STOP bypasses
+the debounce; an intervening stop token or a replaced reservation cancels the
+toggle. ERROR/STOPPING never becomes a new manual activation through this button.
+RuntimeLock remains best effort across independent executions. Display-only
+`SmartChargeControlStatus` is updated from safety state, not from cached UI intent.
+
 ## Active tariff hour continuity
 
 Automatic planning records its selected current tariff slot in the separate
@@ -73,9 +82,12 @@ reconciliation resumes: keep power if the charging plan requires it, otherwise
 request OFF. A full battery cannot create a new automatic charging Session.
 
 USER_STOP and the existing AUTO grant retain priority, including after restart.
-Explicit AUTO may grant permission at 100% or unknown SOC only when fresh
-preconditioning and connection evidence already permit cabin power; normal AUTO
-charging recovery retains its SOC checks. MANUAL charging keeps its own lifecycle.
+Explicit AUTO may grant permission while the socket is OFF, including at 100%,
+with unknown/stale SOC, or without a connected vehicle. This arms future automatic
+decisions; it does not authorize physical ON without demand and fresh evidence.
+Normal charging still requires fresh SOC below target and trustworthy connection;
+preconditioning retains its independent fresh climate and connection checks.
+MANUAL charging keeps its own lifecycle.
 The sole actuator function checks climate/connection again immediately before
 ON and after its acknowledgement; loss of evidence or intent during ON causes
 compensating OFF. Failed commands retain the existing error/compensation policy.
@@ -342,17 +354,17 @@ still apply. Null SOC cannot authorize a new ON, even with a fresh capability
 timestamp; fresh SOC restores normal planning for the same Session.
 
 A terminal manual record, including BATTERY_FULL, describes that activation only.
-Fresh provider data alone never clears its durable block. After a trip and real
-reconnection, explicitly select Auto Mode with fresh SOC below target and fresh
-trustworthy connected/charging status. The watchdog can then establish a new
-automatic Session without the Connection Evidence Flow. USER_STOP likewise
-requires an explicit operator decision. All automatic ON paths require a valid
-AUTO grant matching the current stop token, even for IDLE manual history.
+Fresh provider data alone never clears its durable block. Explicitly select Auto
+Mode to arm waiting, even before a trip or reconnection and at full SOC. The
+watchdog can establish a new automatic Session when trustworthy connection and
+below-target SOC become available; new ON still requires fresh SOC. USER_STOP
+likewise requires an explicit operator decision. All automatic ON paths require
+a valid AUTO grant matching the current stop token, even for IDLE manual history.
 
-If Mercedes does not supply fresh samples while parked, automatic re-entry is
-unavailable safely. Obtain a real provider update (for example through the vehicle
-or its app, if the integration forwards it), verify fresh SOC and connected status
-in Homey, then select Auto Mode. Refresh behavior is not guaranteed by this bundle.
+If Mercedes does not supply fresh samples while parked, AUTO can remain armed
+with the socket OFF. A real provider update (for example through the vehicle or
+its app, if the integration forwards it) must supply fresh SOC and connection
+evidence before a new charging ON. Refresh behavior is not guaranteed by this bundle.
 If fresh connection evidence remains unavailable, use explicit Manual Charging
 with its existing power observations and deadline, or wait for telemetry. Never
 rewrite Mercedes timestamps or trigger a synthetic connection event to bypass

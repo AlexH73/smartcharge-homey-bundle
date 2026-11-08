@@ -444,8 +444,9 @@ async function main() {
     );
   });
   for (const timestamp of [null, at(-3600), at(100)])
-    await test(`Auto rejects unsafe SOC timestamp ${timestamp}`, async () => {
+    await test(`Auto waits without ON for unsafe SOC timestamp ${timestamp}`, async () => {
       const r = await finish('LOW_POWER');
+      const before = r.homeyMock.devices.plug.commands.length;
       await run(r, 'auto-mode', 1, {
         devices: {
           mercedes: {
@@ -461,7 +462,11 @@ async function main() {
       });
       assert.equal(
         r.homeyMock.getLogicValue('SmartChargeAutoStartBlocked'),
-        true,
+        false,
+      );
+      assert.equal(
+        r.homeyMock.devices.plug.commands.slice(before).some((x) => x.value),
+        false,
       );
     });
   await test('Auto Mode requires clear lease and verified OFF', async () => {
@@ -486,8 +491,9 @@ async function main() {
     );
   });
   for (const timestamp of [null, at(-3600), at(100)])
-    await test(`Auto rejects stale or missing connection evidence ${timestamp}`, async () => {
+    await test(`Auto waits without ON for stale or missing connection evidence ${timestamp}`, async () => {
       const r = await finish('LOW_POWER');
+      const before = r.homeyMock.devices.plug.commands.length;
       await run(r, 'auto-mode', 1, {
         devices: {
           mercedes: {
@@ -503,7 +509,11 @@ async function main() {
       });
       assert.equal(
         r.homeyMock.getLogicValue('SmartChargeAutoStartBlocked'),
-        true,
+        false,
+      );
+      assert.equal(
+        r.homeyMock.devices.plug.commands.slice(before).some((x) => x.value),
+        false,
       );
     });
   for (const grant of [

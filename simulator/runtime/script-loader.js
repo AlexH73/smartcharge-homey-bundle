@@ -33,6 +33,7 @@ class ScriptLoader {
     stabilityShadow,
     liveStabilityShadowEnabled,
     stabilityShadowFailure,
+    args = [],
   }) {
     const entryPath = FLOW_ENTRIES[flow];
 
@@ -56,6 +57,7 @@ class ScriptLoader {
       'stabilityShadow',
       'liveStabilityShadowEnabled',
       'stabilityShadowFailure',
+      'args',
       `${this.sharedCode}\n\n${entryCode}`,
     );
 
@@ -68,6 +70,7 @@ class ScriptLoader {
       stabilityShadow,
       liveStabilityShadowEnabled,
       stabilityShadowFailure,
+      args,
     );
   }
 

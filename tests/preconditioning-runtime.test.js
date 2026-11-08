@@ -925,6 +925,29 @@ async function idlePowerRegressions() {
   );
   await idlePowerRegressions();
   await powerCutRecoveryRegressions();
+  const waitingAuto = make();
+  waitingAuto.homeyMock.setDeviceState('mercedes', {
+    capabilitiesObj: {
+      measure_battery: { value: 100, lastUpdated: '2026-07-06T18:00:00+02:00' },
+      onoff_precond: { value: false, lastUpdated: now },
+    },
+  });
+  await run(waitingAuto, { flow: 'manual-off' });
+  const armed = await run(waitingAuto, { flow: 'auto-mode' });
+  assert.equal(armed.logic.SmartChargeAutoStartBlocked, false);
+  assert.equal(power(waitingAuto), false);
+  assert.equal(armed.logic.ChargeConnectedAt, 'null');
+  const climateAt = '2026-07-07T18:10:00+02:00';
+  const heated = await run(waitingAuto, {
+    now: climateAt,
+    set: patch({
+      onoff_precond: { value: true, lastUpdated: climateAt },
+      text_charging_status: { value: 'Charge break', lastUpdated: climateAt },
+    }),
+  });
+  assert.equal(power(waitingAuto), true);
+  assert.equal(heated.result.runtimeState, 'PRECONDITIONING');
+  assert.equal(heated.logic.ChargeConnectedAt, 'null');
   console.log(
     'PASS preconditioning runtime: full/missing SOC, independent Session, freshness, connection, grant, shadow and in-flight stop',
   );

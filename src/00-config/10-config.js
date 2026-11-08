@@ -30,6 +30,8 @@ const CONFIG = {
   smartChargeSessionStatusVariableName: 'SmartChargeSessionStatus',
   smartChargeManualModeVariableName: 'SmartChargeManualMode',
   manualStateVariableName: 'SmartChargeManualState',
+  controlStatusVariableName: 'SmartChargeControlStatus',
+  manualToggleDebounceSeconds: 3,
   autoStartBlockedVariableName: 'SmartChargeAutoStartBlocked',
   runtimeLockVariableName: 'SmartChargeRuntimeLock',
   userStopTokenVariableName: 'SmartChargeUserStopToken',
