@@ -377,7 +377,17 @@ async function runCanonicalDecision(options = {}) {
     chargeSlots,
   });
 
-  const plan = selectBestChargePlan(continuousPlan, multiWindowPlan);
+  const plan = await retainActiveChargeSlot(
+    selectBestChargePlan(continuousPlan, multiWindowPlan),
+    {
+      prices,
+      now,
+      targetDeparture,
+      sessionId: formatLocal(connectedAt),
+      plugOn: plug.capabilitiesObj.onoff?.value,
+      mutateDecisionState,
+    },
+  );
   const costEstimate = plan
     ? estimatePlanCosts({
         plan,

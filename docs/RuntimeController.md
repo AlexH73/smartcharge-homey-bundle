@@ -1,5 +1,27 @@
 # Runtime State Controller
 
+## Active tariff hour continuity
+
+Automatic planning records its selected current tariff slot in the separate
+`SmartChargeActiveChargeSlot` Text variable (initialize to literal `null`). The
+schema-1 record contains `sessionId`, UTC `slotStart` and `stopToken`. It is
+independent of the diagnostic-only Plan Stability anchor.
+
+If the socket remains ON in that same slot and Session, SOC-driven replanning
+keeps the slot even when fewer, slightly cheaper future hours would otherwise
+replace it. Future slots are retained too: a partly elapsed hour must not count
+as a full replacement hour. Cost allocation still uses remaining required minutes.
+The record expires at the tariff slot boundary; an old Session or stop token
+cannot extend it. Missing/corrupt state falls back to ordinary planning with a
+console diagnostic. Shadow execution does not write this record.
+
+This changes only the proposed tariff plan. Manual OFF, completion, departure,
+disconnect, grant checks, stale telemetry and climate idle protection remain
+owned by Runtime and can still turn power OFF. Provision the variable during
+maintenance before deploying this correction. Existing records need no manual
+clearing at Session completion because their Session identity and slot expiry
+prevent reuse.
+
 Baseline: SmartCharge 0.6.4+build.17. This page owns runtime semantics, not Flow
 installation or deployment status. Use [Homey Flows](HomeyFlows.md) for the current
 five-minute topology and [Homey deployment](HomeyDeployment.md) for status.

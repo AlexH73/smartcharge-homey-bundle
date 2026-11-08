@@ -23,6 +23,7 @@ const CONFIG = {
 
   smartChargePlannedStartVariableName: 'SmartChargePlannedStart',
   smartChargePlannedEndVariableName: 'SmartChargePlannedEnd',
+  activeChargeSlotVariableName: 'SmartChargeActiveChargeSlot',
   smartChargeShouldChargeVariableName: 'SmartChargeShouldCharge',
   smartChargeReasonVariableName: 'SmartChargeReason',
   smartChargeTargetDepartureVariableName: 'SmartChargeTargetDeparture',

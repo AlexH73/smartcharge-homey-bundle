@@ -5,6 +5,18 @@ All notable SmartCharge Homey Bundle changes should be documented here.
 The project follows semantic release tags such as `v0.4.0`, `v0.5.0`, and
 `v1.0.0`.
 
+## 0.6.12 - 2026-11-08
+
+Prepared **0.6.12+build.30**; installation pending.
+
+### Fixed
+
+- Preserve an already selected, powered tariff hour when SOC rounding removes
+  that hour from the cheapest remaining plan. Future windows can still change;
+  the hold expires at the hour boundary and cannot override Runtime safety or
+  completion. A separate optional `SmartChargeActiveChargeSlot` Logic Text record
+  is required; missing/corrupt state retains the previous planning behavior.
+
 ## 0.6.11 - 2026-11-07
 
 Prepared **0.6.11+build.29**; installation and live plan recalculation pending.

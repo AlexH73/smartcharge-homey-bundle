@@ -54,6 +54,7 @@ on startup or during a 0.6.3 -> 0.6.4 update.
 | `SMARTCHARGE_LOG_WEBHOOK_URL` | Text | `YOUR_WEBHOOK_URL`, or `null` for no sink | Private optional logging URL. |
 | `SmartChargeLastLogKey` | Text | empty string | Decision log deduplication. |
 | `ChargeConnectedAt` | Text | `null` | Automatic Session identity, local `YYYY-MM-DD HH:mm:ss`. |
+| `SmartChargeActiveChargeSlot` | Text | `null` | Selected current tariff slot, scoped to the Session and user-stop token; prevents mid-hour replanning stops. |
 | `ChargeFactor` | Number | `2` | Minutes per missing battery percentage point. |
 | `ChargeReserve` | Number | `20` | Additional reserve minutes. |
 | `ChargeMinutes` | Number | `0` | Planner output. |

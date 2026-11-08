@@ -115,6 +115,7 @@ const sharedBundleGlobals = {
   isVehicleUnpluggedStatus: 'readonly',
   runRuntimeController: 'readonly',
   runCanonicalDecision: 'readonly',
+  retainActiveChargeSlot: 'readonly',
   runPreliminaryPlanning: 'readonly',
   runtimeOwnedLock: 'readonly',
   runtimeBoolean: 'readonly',

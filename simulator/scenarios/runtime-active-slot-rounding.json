@@ -1,0 +1,241 @@
+{
+  "name": "runtime-active-slot-rounding",
+  "description": "A 250 to 240 minute SOC recalculation retains the active hour, but a tariff gap and full SOC still stop charging.",
+  "now": "2026-11-08T04:05:00+01:00",
+  "fixture": "active-slot-rounding",
+  "initial": {
+    "logic": {
+      "ChargeConnectedAt": "2026-11-07 14:35:00",
+      "SmartChargeActiveChargeSlot": "null",
+      "ChargeFactor": 3.3,
+      "ChargeReserve": 15,
+      "SmartChargeRuntimeMode": "active"
+    },
+    "devices": {
+      "mercedes": {
+        "capabilitiesObj": {
+          "measure_battery": 30,
+          "text_charging_status": "Charge break"
+        }
+      },
+      "plug": {
+        "capabilitiesObj": {
+          "onoff": false,
+          "measure_power": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "flow": "runtime-controller",
+      "now": "2026-11-08T04:05:00+01:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 30,
+                "lastUpdated": "2026-11-08T04:05:00+01:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-11-08T04:05:00+01:00"
+              }
+            }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 0,
+                "lastUpdated": "2026-11-08T04:05:00+01:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "chargeMinutes": 250,
+          "shouldChargeNow": true
+        },
+        "plugOn": true,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-11-08T04:10:00+01:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 32,
+                "lastUpdated": "2026-11-08T04:10:00+01:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-11-08T04:10:00+01:00"
+              }
+            }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 2591,
+                "lastUpdated": "2026-11-08T04:10:00+01:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "chargeMinutes": 240,
+          "shouldChargeNow": true,
+          "plannedStart": "2026-11-08 04:00:00"
+        },
+        "plugOn": true,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-11-08T05:00:00+01:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 48,
+                "lastUpdated": "2026-11-08T05:00:00+01:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-11-08T05:00:00+01:00"
+              }
+            }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 2591,
+                "lastUpdated": "2026-11-08T05:00:00+01:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": true
+        },
+        "plugOn": true,
+        "plugCommandCount": 1
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-11-08T06:00:00+01:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 52,
+                "lastUpdated": "2026-11-08T06:00:00+01:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-11-08T06:00:00+01:00"
+              }
+            }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 2591,
+                "lastUpdated": "2026-11-08T06:00:00+01:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": false
+        },
+        "plugOn": false,
+        "plugCommandCount": 2
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-11-08T10:00:00+01:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 52,
+                "lastUpdated": "2026-11-08T10:00:00+01:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-11-08T10:00:00+01:00"
+              }
+            }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 2591,
+                "lastUpdated": "2026-11-08T10:00:00+01:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "result": {
+          "shouldChargeNow": true
+        },
+        "plugOn": true,
+        "plugCommandCount": 3
+      }
+    },
+    {
+      "flow": "runtime-controller",
+      "now": "2026-11-08T12:45:00+01:00",
+      "set": {
+        "devices": {
+          "mercedes": {
+            "capabilitiesObj": {
+              "measure_battery": {
+                "value": 100,
+                "lastUpdated": "2026-11-08T12:45:00+01:00"
+              },
+              "text_charging_status": {
+                "value": "Charge break",
+                "lastUpdated": "2026-11-08T12:45:00+01:00"
+              }
+            }
+          },
+          "plug": {
+            "capabilitiesObj": {
+              "measure_power": {
+                "value": 2591,
+                "lastUpdated": "2026-11-08T12:45:00+01:00"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "plugOn": false,
+        "plugCommandCount": 4
+      }
+    }
+  ]
+}
